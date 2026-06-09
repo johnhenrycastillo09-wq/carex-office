@@ -446,7 +446,8 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div style="font-size:0.68rem;font-weight:700;color:var(--gray500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Auto-generated Project Name</div>
 <div id="np_namePreview" style="font-size:0.88rem;font-weight:800;color:var(--text);">—</div>
 </div>
-<div class="fg"><label>Start Date <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startDate" type="date"/></div>
+<div class="fg"><label>Scheduled Date <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startDate" type="date"/></div>
+<div class="fg"><label>Scheduled Time <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startTime" type="time"/></div>
 <div class="fg"><label>Target End Date</label><input id="np_endDate" type="date"/></div>
 <div class="fg full" id="np_workerSection">
 <label>Assign Workers <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — same worker can be assigned to multiple types on same site)</span></label>
@@ -455,14 +456,12 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <select id="np_workerSelect" style="display:none;"></select>
 <div id="np_assignedList" style="display:none;"></div>
 </div>
-<div class="fg full">
-<label>Shop Drawings / Plans (Google Drive Links)</label>
-<div id="np_driveLinksPreview" style="margin-bottom:0.5rem;"></div>
-<div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-<input id="np_driveLink" placeholder="Paste Google Drive link..." style="flex:1;min-width:180px;" type="url"/>
-<input id="np_driveLinkName" placeholder="Label (e.g. Floor plan, As-built)" style="width:180px;padding:0.5rem 0.78rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);" type="text"/>
-<button class="btn btn-secondary btn-sm" onclick="addProjectDriveLink()">+ Add File</button>
-</div>
+<div class="fg full" id="np_shopDrawingsSection">
+<label>Shop Drawings / Plans <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type)</span></label>
+<div id="np_shopDrawingsByType" style="display:flex;flex-direction:column;gap:0.6rem;margin-top:0.35rem;"></div>
+<input id="np_driveLink" type="hidden"/>
+<input id="np_driveLinkName" type="hidden"/>
+<div id="np_driveLinksPreview" style="display:none;"></div>
 </div>
 <div class="fg full"><label>Notes</label><textarea id="np_notes" placeholder="Additional notes..."></textarea></div>
 </div>
@@ -1019,6 +1018,8 @@ function openNewProjectModal(type){
   document.getElementById('np_driveLinksPreview').innerHTML='';
   document.getElementById('np_startDate').value='';
   document.getElementById('np_endDate').value='';
+  var stEl=document.getElementById('np_startTime');if(stEl)stEl.value='';
+  projectShopDrawingsByType={};
   document.querySelectorAll('#np_typeCheckboxes input[type=checkbox]').forEach(cb=>{cb.checked=false;});
   if(type){var cb=document.querySelector('#np_typeCheckboxes input[value="'+type+'"]');if(cb)cb.checked=true;}
   document.getElementById('np_conflictWarning').style.display='none';
@@ -1044,6 +1045,7 @@ function renderWorkersByType(){
   types.forEach(function(t){
     var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
     var assigned=projectWorkersByType[t]||[];
+    var assignedIds=assigned.map(function(a){return a.id;});
     var chips=assigned.map(function(a){
       return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:'+c.bg+';color:'+c.color+';border:1.5px solid '+c.border+';border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
         +'<span style="width:16px;height:16px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.48rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
@@ -1051,7 +1053,9 @@ function renderWorkersByType(){
         +'<button data-wtype="'+t+'" data-wid="'+a.id+'" onclick="removeWorkerFromType(this.dataset.wtype,this.dataset.wid)" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.35);font-size:0.75rem;padding:0;line-height:1;">x</button>'
         +'</span>';
     }).join('');
-    var opts=workers.map(function(w){
+    // Only show workers NOT already assigned to this type
+    var availableWorkers=workers.filter(function(w){return assignedIds.indexOf(w.id)===-1;});
+    var opts=availableWorkers.map(function(w){
       return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
     }).join('');
     html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.65rem 0.85rem;background:'+c.bg+'20;">'
@@ -1064,21 +1068,22 @@ function renderWorkersByType(){
       +'</div>';
   });
   container.innerHTML=html;
+  renderShopDrawingsByType();
 }
 
 
+
 function addWorkerToType(type,sel){
-  var id=sel.value;if(!id){return;}
+  var id=sel.value;if(!id)return;
   var worker=workers.find(function(w){return w.id===id;});if(!worker)return;
   if(!projectWorkersByType[type])projectWorkersByType[type]=[];
-  // Allow same worker on same site (different type) - only block duplicate within same type
   if(projectWorkersByType[type].find(function(a){return a.id===id;})){sel.value='';return;}
   projectWorkersByType[type].push({id:worker.id,name:worker.name});
   sel.value='';
   renderWorkersByType();
 }
 
-function removeWorkerFromType(btn,type,id){
+function removeWorkerFromType(type,id){
   if(!projectWorkersByType[type])return;
   projectWorkersByType[type]=projectWorkersByType[type].filter(function(a){return a.id!==id;});
   renderWorkersByType();
@@ -1153,6 +1158,61 @@ function renderProjectDriveLinksPreview(){
   const el=document.getElementById('np_driveLinksPreview');
   el.innerHTML=projectDriveLinks.map((l,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.42rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;background:var(--gray50);margin-bottom:0.35rem;"><span>&#128196;</span><span style="flex:1;font-size:0.78rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(l.name)}</span><a href="${esc(l.url)}" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;text-decoration:none;white-space:nowrap;">Open</a><button onclick="projectDriveLinks.splice(${i},1);renderProjectDriveLinksPreview()" style="background:#fee2e2;color:var(--danger);border:1.5px solid #fecaca;border-radius:6px;padding:0.18rem 0.45rem;font-size:0.68rem;font-weight:700;cursor:pointer;font-family:inherit;">x</button></div>`).join('');
 }
+var projectShopDrawingsByType={};
+
+function renderShopDrawingsByType(){
+  var types=getSelectedTypes();
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var colors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var container=document.getElementById('np_shopDrawingsByType');
+  if(!container)return;
+  Object.keys(projectShopDrawingsByType).forEach(function(t){if(types.indexOf(t)===-1)delete projectShopDrawingsByType[t];});
+  types.forEach(function(t){if(!projectShopDrawingsByType[t])projectShopDrawingsByType[t]=[];});
+  if(types.length===0){container.innerHTML='';return;}
+  var html='';
+  types.forEach(function(t){
+    var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var links=projectShopDrawingsByType[t]||[];
+    var linkItems=links.map(function(l,i){
+      return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;background:#fff;margin-bottom:0.28rem;">'
+        +'<span style="font-size:0.75rem;">&#128196;</span>'
+        +'<span style="flex:1;font-size:0.75rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(l.name)+'</span>'
+        +'<a href="'+esc(l.url)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;white-space:nowrap;">Open</a>'
+        +'<button data-type="'+t+'" data-idx="'+i+'" onclick="removeShopDrawing(this.dataset.type,parseInt(this.dataset.idx))" style="background:#fee2e2;color:var(--danger);border:1.5px solid #fecaca;border-radius:5px;padding:0.12rem 0.38rem;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:inherit;">x</button>'
+        +'</div>';
+    }).join('');
+    html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.6rem 0.8rem;background:'+c.bg+'15;">'
+      +'<div style="font-size:0.63rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">'+esc(labels[t]||t)+' — Shop Drawings</div>'
+      +linkItems
+      +'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.3rem;">'
+      +'<input id="np_sdLink_'+t+'" placeholder="Paste Google Drive link..." style="flex:1;min-width:150px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="url"/>'
+      +'<input id="np_sdName_'+t+'" placeholder="Label (e.g. Floor plan)" style="width:140px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="text"/>'
+      +'<button data-type="'+t+'" onclick="addShopDrawing(this.dataset.type)" class="btn btn-secondary btn-sm">+ Add</button>'
+      +'</div>'
+      +'</div>';
+  });
+  container.innerHTML=html;
+}
+
+function addShopDrawing(type){
+  var urlEl=document.getElementById('np_sdLink_'+type);
+  var nameEl=document.getElementById('np_sdName_'+type);
+  if(!urlEl)return;
+  var url=urlEl.value.trim();
+  if(!url){alert('Please paste a Google Drive link first.');return;}
+  var name=nameEl?nameEl.value.trim()||'Document':'Document';
+  if(!projectShopDrawingsByType[type])projectShopDrawingsByType[type]=[];
+  projectShopDrawingsByType[type].push({url:url,name:name});
+  urlEl.value='';if(nameEl)nameEl.value='';
+  renderShopDrawingsByType();
+}
+
+function removeShopDrawing(type,idx){
+  if(!projectShopDrawingsByType[type])return;
+  projectShopDrawingsByType[type].splice(idx,1);
+  renderShopDrawingsByType();
+}
+
 function saveNewProject(){
   var types=getSelectedTypes();
   var client2=document.getElementById('np_client').value.trim();
@@ -1186,8 +1246,10 @@ function saveNewProject(){
   var primaryType=types[0];
   var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,
     startDate:document.getElementById('np_startDate').value,
+    startTime:(document.getElementById('np_startTime')?document.getElementById('np_startTime').value:''),
     endDate:document.getElementById('np_endDate').value,
     driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),
+    shopDrawingsByType:JSON.parse(JSON.stringify(projectShopDrawingsByType)),
     notes:document.getElementById('np_notes').value.trim(),
     assignees:allAssignees,
     assigneesByType:JSON.parse(JSON.stringify(projectWorkersByType)),
@@ -1286,6 +1348,7 @@ function openProjectDetail(id){
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.location||'--')+'</div></div>'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Start Date</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.startDate)+'</div></div>'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Target End</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.endDate)+'</div></div>'
+    +'<div style="grid-column:1/-1;margin-top:0.3rem;"><button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" onclick="openEditDatesModal(this.dataset.pid)">&#9998; Edit Dates / Time</button></div>'
     +'</div>'
     +'<div style="margin-bottom:1.1rem;">'
     +'<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">'
@@ -1314,29 +1377,34 @@ function openProjectDetail(id){
 }
 
 function switchDetailTab(btn){
-  var tabId=btn.dataset.tabid;
-  var projId=btn.dataset.projid;
-  var t=btn.dataset.type;
+  if(!btn)return;
+  var tabId=btn.getAttribute('data-tabid');
+  var projId=btn.getAttribute('data-projid');
+  var t=btn.getAttribute('data-type');
+  if(!tabId||!projId||!t)return;
   var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
   var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0'};
-  // Reset all tabs in this project's tab bar
   var bar=document.getElementById('detTabBar_'+projId);
   if(bar){
     bar.querySelectorAll('.det-tab').forEach(function(b){
-      var bt=b.dataset.type;
-      var bc=typeColors[bt]||{bg:'var(--gray50)',color:'var(--gray500)',border:'var(--gray200)'};
-      b.style.background='var(--gray50)';b.style.color='var(--gray500)';b.style.borderColor='var(--gray200)';
+      b.style.background='var(--gray50)';
+      b.style.color='var(--gray500)';
+      b.style.borderColor='var(--gray200)';
     });
   }
-  // Hide all panels for this project
-  document.querySelectorAll('.det-tab-panel').forEach(function(p){
-    if(p.id&&p.id.startsWith('detpanel_'+projId+'_'))p.style.display='none';
-  });
-  // Activate clicked tab
-  btn.style.background=c.bg;btn.style.color=c.color;btn.style.borderColor=c.border;
+  var modal=document.getElementById('projectDetailModal');
+  if(modal){
+    modal.querySelectorAll('.det-tab-panel').forEach(function(panel){
+      if(panel.id&&panel.id.indexOf('detpanel_'+projId+'_')===0)panel.style.display='none';
+    });
+  }
+  btn.style.background=c.bg;
+  btn.style.color=c.color;
+  btn.style.borderColor=c.border;
   var panel=document.getElementById(tabId);
   if(panel)panel.style.display='block';
 }
+
 
 function buildStepsHtml(p,steps){
   var sh='';
@@ -1386,22 +1454,7 @@ function buildStepsHtml(p,steps){
 
 
 
-function switchDetailTab(btn,tabId){
-  var modal=document.getElementById('projectDetailModal');
-  modal.querySelectorAll('.det-tab').forEach(function(b){
-    b.classList.remove('active');
-    b.style.background='var(--gray50)';b.style.color='var(--gray500)';b.style.borderColor='var(--gray200)';
-  });
-  modal.querySelectorAll('.det-tab-panel').forEach(function(p){p.style.display='none';});
-  btn.classList.add('active');
-  // Restore active color from data
-  var t=tabId.replace('tab_','');
-  var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
-  var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0'};
-  btn.style.background=c.bg;btn.style.color=c.color;btn.style.borderColor=c.border;
-  var panel=document.getElementById(tabId);
-  if(panel)panel.style.display='block';
-}
+
 
 
 
@@ -2913,6 +2966,26 @@ function openEditProjectModal(id){
 }
 
 // ══ INIT ══
+function openEditDatesModal(pid){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  document.getElementById('ed_pid').value=pid;
+  document.getElementById('ed_startDate').value=p.startDate||'';
+  document.getElementById('ed_startTime').value=p.startTime||'';
+  document.getElementById('ed_endDate').value=p.endDate||'';
+  openModal('editDatesModal');
+}
+function saveEditDates(){
+  var pid=document.getElementById('ed_pid').value;
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  p.startDate=document.getElementById('ed_startDate').value;
+  p.startTime=document.getElementById('ed_startTime').value;
+  p.endDate=document.getElementById('ed_endDate').value;
+  save('cesv2_projects',projects);
+  closeModal('editDatesModal');
+  openProjectDetail(pid);
+  showToast('Dates updated!');
+}
+
 updateHeaderDate();
 // Restore last visited page
 (function(){
@@ -3194,5 +3267,20 @@ setInterval(updateHeaderDate,60000);
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newGrilleModal')">Cancel</button><button class="btn btn-primary" onclick="saveGrille()">Save Order</button></div>
 </div>
 </div>
+<div class="modal-overlay" id="editDatesModal">
+<div class="modal" style="max-width:420px;">
+<div class="modal-header"><h2>Edit Project Dates</h2><button class="modal-close" onclick="closeModal('editDatesModal')">X Close</button></div>
+<div class="modal-body">
+<input type="hidden" id="ed_pid"/>
+<div class="form-grid">
+<div class="fg"><label>Scheduled Date</label><input id="ed_startDate" type="date"/></div>
+<div class="fg"><label>Scheduled Time</label><input id="ed_startTime" type="time"/></div>
+<div class="fg full"><label>Target End Date</label><input id="ed_endDate" type="date"/></div>
+</div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editDatesModal')">Cancel</button><button class="btn btn-primary" onclick="saveEditDates()">Save</button></div>
+</div>
+</div>
+
 </body>
 </html>
