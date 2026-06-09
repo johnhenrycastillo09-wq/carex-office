@@ -88,15 +88,15 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 .badge-closed{background:var(--gray100);color:var(--gray500);}
 .progress-wrap{background:var(--gray200);border-radius:20px;height:5px;overflow:hidden;margin-top:0.3rem;}
 .progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--primary),var(--primary-mid));transition:width 0.4s;}
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.cal-header{font-size:0.63rem;font-weight:800;color:var(--gray500);text-align:center;padding:0.35rem 0;text-transform:uppercase;}
-.cal-day{min-height:65px;border-radius:7px;padding:0.3rem;border:1.5px solid var(--gray200);background:var(--white);cursor:pointer;transition:all 0.15s;}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-header{font-size:0.72rem;font-weight:800;color:var(--gray500);text-align:center;padding:0.5rem 0;text-transform:uppercase;}
+.cal-day{min-height:110px;border-radius:7px;padding:0.45rem;border:1.5px solid var(--gray200);background:var(--white);cursor:pointer;transition:all 0.15s;}
 .cal-day:hover{border-color:var(--primary);background:var(--primary-light);}
 .cal-day.today{border-color:var(--primary);background:var(--primary-light);}
 .cal-day.other-month{background:var(--gray50);opacity:0.5;}
-.cal-day-num{font-size:0.7rem;font-weight:800;color:var(--text);margin-bottom:0.2rem;}
+.cal-day-num{font-size:0.82rem;font-weight:800;color:var(--text);margin-bottom:0.3rem;}
 .cal-day.today .cal-day-num{color:var(--primary);}
-.cal-event{font-size:0.56rem;font-weight:700;padding:0.08rem 0.28rem;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-event{font-size:0.65rem;font-weight:700;padding:0.12rem 0.35rem;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-event.ducting{background:#dbeafe;color:#1d4ed8;}
 .cal-event.sprinkler{background:#dcfce7;color:#15803d;}
 .cal-event.airbal{background:#fef9c3;color:#92400e;}
@@ -446,9 +446,11 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div style="font-size:0.68rem;font-weight:700;color:var(--gray500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Auto-generated Project Name</div>
 <div id="np_namePreview" style="font-size:0.88rem;font-weight:800;color:var(--text);">—</div>
 </div>
-<div class="fg"><label>Scheduled Date <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startDate" type="date"/></div>
-<div class="fg"><label>Scheduled Time <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startTime" type="time"/></div>
-<div class="fg"><label>Target End Date</label><input id="np_endDate" type="date"/></div>
+<input type="hidden" id="np_startDate"/><input type="hidden" id="np_startTime"/><input type="hidden" id="np_endDate"/>
+<div class="fg full" id="np_schedulesSection">
+<label>Scheduled Dates &amp; Times <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — optional)</span></label>
+<div id="np_schedulesByType" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.35rem;"></div>
+</div>
 <div class="fg full" id="np_workerSection">
 <label>Assign Workers <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — same worker can be assigned to multiple types on same site)</span></label>
 <div id="np_workersByType" style="display:flex;flex-direction:column;gap:0.7rem;margin-top:0.35rem;"></div>
@@ -605,9 +607,9 @@ let currentJobId=null;
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function save(k,d){localStorage.setItem(k,JSON.stringify(d));}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-function fmtDate(d){if(!d)return'--';try{return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch(e){return'--';}}
+function fmtDate(d){if(!d||d==='undefined'||d==='null')return'--';try{const r=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return r.includes('NaN')?'--':r;}catch(e){return'--';}}
 function fmtDateTime(d){if(!d)return'--';try{return new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return'--';}}
-function fmtTime(t){if(!t)return'';try{const[h,m]=t.split(':');const d=new Date();d.setHours(+h,+m);return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}catch(e){return t;}}
+function fmtTime(t){if(!t||t==='NaN:NaN'||t==='undefined')return'';try{const parts=t.split(':');if(parts.length<2||isNaN(+parts[0])||isNaN(+parts[1]))return'';const d=new Date();d.setHours(+parts[0],+parts[1]);const r=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return r.includes('NaN')?'':r;}catch(e){return''}}
 function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show toast-'+(type==='error'?'error':'success');setTimeout(()=>t.className='toast',3000);}
 function addMonths(date,months){const d=new Date(date+'T00:00:00');d.setMonth(d.getMonth()+months);return d.toISOString().split('T')[0];}
@@ -621,12 +623,12 @@ const WF={
     {id:'fabrication',title:'Fabrication of Duct Sections',desc:'Cut GI sheets, bend to form duct sections, assemble per SMACNA standards, apply sealant on joints'},
     {id:'hangers',title:'Hangers and Supports Installation',desc:'Mark hanger locations per approved drawings, drill and fix anchors, install threaded rods and hangers'},
     {id:'installation',title:'Duct Installation',desc:'Lift and position fabricated duct sections, connect and seal all joints, ensure proper alignment and slope'},
-    {id:'lighttest',title:'Light Leakage Test',desc:'Perform light leakage test on duct joints before tapping from FCU unit, seal any detected leaks'},
+    
     {id:'insulation',title:'Insulation',desc:'Apply insulation material per specifications, ensure vapor barriers are intact'},
     {id:'grilles',title:'Installation of Grilles',desc:'Install supply and return grilles per approved layout and coordination drawings'},
     {id:'airbalancing',title:'Air Balancing',desc:'Balance airflow per design specifications using Balometer, adjust dampers and fan speeds'},
-    {id:'ducttest',title:'Duct Leakage Test (Light or Smoke)',desc:'Select test type required by the mall/building. Perform light leakage test or smoke test on duct joints. Seal any detected leaks. Mark Pass or Fail.'},
-    {id:'testing',title:'Testing and Commissioning',desc:'Conduct final air leakage test, inspect alignment sealing and supports, submit inspection reports for approval'},
+    {id:'ducttest',title:'Duct Leakage Test — Final (Light or Smoke)',desc:'Final leakage test required by the mall/building before turnover. Select test type: Light Test or Smoke Test. Seal any detected leaks. Mark Pass or Fail. Attach the signed test certificate via Drive Link.'},
+    
     {id:'punchlist',title:'Punch List',desc:'Address all punch list items identified during inspection'},
     {id:'asbuilt',title:'As-Built Plan',desc:'Upload final as-built drawings to Google Drive, submit link here'},
     {id:'inspection',title:'Consultant Inspection and Turnover',desc:'Coordinate with QA/QC and consultants for final inspection, address punch list, prepare for turnover'},
@@ -790,14 +792,28 @@ function renderCalendar(){
 
   for(let d=1;d<=daysInMonth;d++){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    let dp=projects.filter(p=>p.startDate===ds);
+    let dp=[];
+    projects.forEach(function(proj){
+      var allTypes=proj.types&&proj.types.length>1?proj.types:[proj.type];
+      if(allTypes.length>1&&proj.schedulesByType&&Object.keys(proj.schedulesByType).length>0){
+        allTypes.forEach(function(t){
+          var sched=proj.schedulesByType[t];
+          if(sched&&sched.startDate===ds){
+            var virtual=Object.assign({},proj,{_calType:t,startDate:sched.startDate,startTime:sched.startTime||''});
+            dp.push(virtual);
+          }
+        });
+      } else {
+        if(proj.startDate===ds)dp.push(proj);
+      }
+    });
     let dj=jobs.filter(j=>j.schedDate===ds);
     let dpms=stores.filter(s=>s.nextCleaning===ds);
 
     // Apply type filter
     if(cf!=='all'){
       if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(cf)){
-        dp=dp.filter(p=>p.type===cf);
+        dp=dp.filter(p=>p.type===cf||(p._calType===cf));
         dj=[];dpms=[];
       } else if(cf==='pms'){dp=[];dj=[];}
       else if(cf==='job'){dp=[];dpms=[];}
@@ -814,13 +830,15 @@ function renderCalendar(){
       const workers=(p.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
       const time=p.startTime?p.startTime:'';
       var pct=Math.round(((p.steps||[]).filter(function(s){return s.status==='completed';}).length)/Math.max((p.steps||[]).length,1)*100);
-      var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+      var allTypes=p._calType?[p._calType]:(p.types&&p.types.length>1?p.types:[p.type]);
       var typeLabels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
-      var typeLabel=allTypes.map(function(t){return typeLabels[t]||t;}).join(' + ');
+      var typeLabel=p._calType?(typeLabels[p._calType]||p._calType):allTypes.map(function(t){return typeLabels[t]||t;}).join(' + ');
       var calClassMap={ducting:'ducting',sprinkler:'sprinkler',airbalancing:'airbal',fcuinstall:'fcu',fcudismantling:'fcu'};
       var typeBgMap={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcuinstall:'#f3e8ff',fcudismantling:'#f1f5f9'};
       var typeClrMap={ducting:'#1d4ed8',sprinkler:'#15803d',airbalancing:'#92400e',fcuinstall:'#7e22ce',fcudismantling:'#374151'};
       var typeAbbrMap={ducting:'DUC',sprinkler:'SPR',airbalancing:'AIR',fcuinstall:'FCU',fcudismantling:'DIS'};
+      // For virtual entries (_calType), use that specific type for color
+      var displayType=p._calType||allTypes[0];
       var baseAttrs='data-pid="'+p.id+'" '
         +'data-title="'+esc(p.name)+'" '
         +'data-client="'+esc(p.client||'')+'" '
@@ -836,9 +854,9 @@ function renderCalendar(){
         var strips=allTypes.map(function(t){
           return '<span style="background:'+(typeBgMap[t]||'#e8f1fb')+';color:'+(typeClrMap[t]||'#1d4ed8')+';font-size:0.48rem;font-weight:800;padding:0 3px;border-radius:2px;margin-right:1px;">'+(typeAbbrMap[t]||t.slice(0,3).toUpperCase())+'</span>';
         }).join('');
-        return'<div class="cal-event '+(calClassMap[allTypes[0]]||'fcu')+'" '+baseAttrs+'>'+strips+' '+esc(p.name.slice(0,10))+'</div>';
+        return'<div class="cal-event '+(calClassMap[displayType]||'fcu')+'" '+baseAttrs+'>'+strips+' '+esc(p.name.slice(0,10))+'</div>';
       } else {
-        return'<div class="cal-event '+(calClassMap[p.type]||'fcu')+'" '+baseAttrs+'>'+esc(p.name.slice(0,14))+'</div>';
+        return'<div class="cal-event '+(calClassMap[displayType]||'fcu')+'" '+baseAttrs+'>'+esc(p.name.slice(0,14))+'</div>';
       }
     }).join('');
 
@@ -1020,7 +1038,7 @@ function projectItemHtml(p){
 }
 function renderAllProjects(filter='all'){const el=document.getElementById('allProjectsList');let list=filter==='active'?projects.filter(p=>p.status!=='completed'):filter==='completed'?projects.filter(p=>p.status==='completed'):projects;if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No projects found</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal()">+ Create Project</button></div>';return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
 function filterProjects(f,el){document.querySelectorAll('#page-projects .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderAllProjects(f);}
-function renderTypeProjects(type){const el=document.getElementById(type+'List');if(!el)return;const list=projects.filter(p=>p.type===type||(p.types&&p.types.includes(type)));if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${PT[type]?.icon||'P'}</div><div class="empty-title">No ${PT[type]?.label||type} projects yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal('${type}')">+ Create Project</button></div>`;return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
+function renderTypeProjects(type){const el=document.getElementById(type+'List');if(!el)return;const list=projects.filter(p=>p.type===type);if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${PT[type]?.icon||'P'}</div><div class="empty-title">No ${PT[type]?.label||type} projects yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal('${type}')">+ Create Project</button></div>`;return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
 
 function openNewProjectModal(type){
   projectWorkerAssignees=[];
@@ -1032,6 +1050,7 @@ function openNewProjectModal(type){
   document.getElementById('np_endDate').value='';
   var stEl=document.getElementById('np_startTime');if(stEl)stEl.value='';
   projectShopDrawingsByType={};
+  projectSchedulesByType={};
   document.querySelectorAll('#np_typeCheckboxes input[type=checkbox]').forEach(cb=>{cb.checked=false;});
   if(type){var cb=document.querySelector('#np_typeCheckboxes input[value="'+type+'"]');if(cb)cb.checked=true;}
   document.getElementById('np_conflictWarning').style.display='none';
@@ -1081,6 +1100,7 @@ function renderWorkersByType(){
   });
   container.innerHTML=html;
   renderShopDrawingsByType();
+  renderSchedulesByType();
 }
 
 
@@ -1225,6 +1245,92 @@ function removeShopDrawing(type,idx){
   renderShopDrawingsByType();
 }
 
+var projectSchedulesByType={};
+
+function renderSchedulesByType(){
+  var types=getSelectedTypes();
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var colors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var container=document.getElementById('np_schedulesByType');
+  if(!container)return;
+  Object.keys(projectSchedulesByType).forEach(function(t){if(types.indexOf(t)===-1)delete projectSchedulesByType[t];});
+  types.forEach(function(t){if(!projectSchedulesByType[t])projectSchedulesByType[t]={startDate:'',startTime:'',endDate:''};});
+  if(types.length===0){container.innerHTML='<div style="font-size:0.75rem;color:var(--gray400);">Select project type(s) above to set schedules.</div>';return;}
+  var html='';
+  types.forEach(function(t){
+    var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var sched=projectSchedulesByType[t]||{};
+    html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.6rem 0.85rem;background:'+c.bg+'15;">'
+      +'<div style="font-size:0.63rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.45rem;">'+esc(labels[t]||t)+'</div>'
+      +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Scheduled Date</label>'
+      +'<input type="date" id="np_sd_'+t+'" value="'+(sched.startDate||'')+'" onchange="updateScheduleByType(\''+t+'\')" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Scheduled Time</label>'
+      +'<input type="time" id="np_st_'+t+'" value="'+(sched.startTime||'')+'" onchange="updateScheduleByType(\''+t+'\')" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Target End Date</label>'
+      +'<input type="date" id="np_ed_'+t+'" value="'+(sched.endDate||'')+'" onchange="updateScheduleByType(\''+t+'\')" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'</div></div>';
+  });
+  container.innerHTML=html;
+}
+
+function updateScheduleByType(type){
+  if(!projectSchedulesByType[type])projectSchedulesByType[type]={};
+  var sd=document.getElementById('np_sd_'+type);
+  var st=document.getElementById('np_st_'+type);
+  var ed=document.getElementById('np_ed_'+type);
+  projectSchedulesByType[type].startDate=sd?sd.value:'';
+  projectSchedulesByType[type].startTime=st?st.value:'';
+  projectSchedulesByType[type].endDate=ed?ed.value:'';
+}
+
+function buildEditSchedulesHtml(p){
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var colors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var html='';
+  allTypes.forEach(function(t){
+    var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var sched=(p.schedulesByType&&p.schedulesByType[t])||{startDate:p.startDate||'',startTime:p.startTime||'',endDate:p.endDate||''};
+    html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.6rem 0.85rem;background:'+c.bg+'15;">'
+      +'<div style="font-size:0.63rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.45rem;">'+esc(labels[t]||t)+'</div>'
+      +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Scheduled Date</label>'
+      +'<input type="date" id="ep_sd_'+t+'" value="'+(sched.startDate||'')+'" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Scheduled Time</label>'
+      +'<input type="time" id="ep_st_'+t+'" value="'+(sched.startTime||'')+'" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'<div><label style="font-size:0.65rem;font-weight:700;color:var(--gray500);display:block;margin-bottom:0.2rem;">Target End Date</label>'
+      +'<input type="date" id="ep_ed_'+t+'" value="'+(sched.endDate||'')+'" style="padding:0.35rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+      +'</div></div>';
+  });
+  return html;
+}
+
+function buildDetailSchedulesHtml(p){
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var colors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  if(allTypes.length===1){
+    var sched=(p.schedulesByType&&p.schedulesByType[allTypes[0]])||{startDate:p.startDate,startTime:p.startTime,endDate:p.endDate};
+    return'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Scheduled</div>'
+      +'<div style="font-size:0.84rem;font-weight:700;">'+fmtDate(sched.startDate)+(sched.startTime?' at '+fmtTime(sched.startTime):'')+'</div></div>'
+      +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Target End</div>'
+      +'<div style="font-size:0.84rem;font-weight:700;">'+fmtDate(sched.endDate)+'</div></div>';
+  }
+  var html='<div style="grid-column:1/-1;">';
+  allTypes.forEach(function(t){
+    var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var sched=(p.schedulesByType&&p.schedulesByType[t])||{startDate:p.startDate,startTime:p.startTime,endDate:p.endDate};
+    html+='<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;border:1.5px solid '+c.border+';border-radius:8px;background:'+c.bg+'20;margin-bottom:0.3rem;">'
+      +'<span style="font-size:0.65rem;font-weight:800;color:'+c.color+';min-width:90px;">'+esc(labels[t]||t)+'</span>'
+      +'<span style="font-size:0.78rem;font-weight:700;color:var(--text);">'+(fmtDate(sched.startDate)||'No date set')+(sched.startTime?' at '+fmtTime(sched.startTime):'')+'</span>'
+      +(sched.endDate?'<span style="font-size:0.7rem;color:var(--gray500);margin-left:0.5rem;">→ '+fmtDate(sched.endDate)+'</span>':'')
+      +'</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
 function saveNewProject(){
   var types=getSelectedTypes();
   var client2=document.getElementById('np_client').value.trim();
@@ -1257,9 +1363,10 @@ function saveNewProject(){
   });
   var primaryType=types[0];
   var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,
-    startDate:document.getElementById('np_startDate').value,
-    startTime:(document.getElementById('np_startTime')?document.getElementById('np_startTime').value:''),
-    endDate:document.getElementById('np_endDate').value,
+    startDate:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].startDate||'':''),
+    startTime:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].startTime||'':''),
+    endDate:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].endDate||'':''),
+    schedulesByType:JSON.parse(JSON.stringify(projectSchedulesByType||{})),
     driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),
     shopDrawingsByType:JSON.parse(JSON.stringify(projectShopDrawingsByType)),
     notes:document.getElementById('np_notes').value.trim(),
@@ -1359,8 +1466,7 @@ function openProjectDetail(id){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-bottom:1.1rem;">'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Client</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.client||'--')+'</div></div>'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.location||'--')+'</div></div>'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Start Date</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.startDate)+'</div></div>'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Target End</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.endDate)+'</div></div>'
+    +(buildDetailSchedulesHtml(p))
     +'</div>'
     +'<div style="margin-bottom:1.1rem;">'
     +'<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">'
@@ -1426,7 +1532,7 @@ function buildStepsHtml(p,steps){
     var stepNum=s.status==='completed'?'V':s.status==='failed'?'X':(i+1);
     var passFailBtns='';
     var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;
-    if(['ducttest','hydrotesting','testing','handover','piping','electrical','lighttest','smoketest'].indexOf(baseId)!==-1){
+    if(['ducttest','hydrotesting','handover','piping','electrical','smoketest'].indexOf(baseId)!==-1){
       if(baseId==='ducttest'){
         passFailBtns='<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;">'
           +'<label style="font-size:0.65rem;font-weight:800;color:var(--gray500);">Test Type:</label>'
@@ -1460,7 +1566,9 @@ function buildStepsHtml(p,steps){
       +'<div class="step-actions">'+completeBtns+passFailBtns
       +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepNote(this.dataset.pid,this.dataset.sid)">Add Note</button>'
       +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepDriveLink(this.dataset.pid,this.dataset.sid)">Drive Link</button>'
+      +(['airbalancing','ducttest','asbuilt'].indexOf(baseId)!==-1?(
       +(s.notNeeded?'<button class="btn btn-warning btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="toggleStepNotNeeded(this.dataset.pid,this.dataset.sid)" style="background:#fef9c3;color:#92400e;border-color:#fde68a;">&#10003; Not Needed</button>':'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="toggleStepNotNeeded(this.dataset.pid,this.dataset.sid)">Not Needed</button>')
+      ):'')
       +'</div></div></div>';
   });
   return sh;
@@ -2985,13 +3093,13 @@ function autoCreateProjectRecords(p){
   }
 
   // 4. Auto-create Grilles Order (for ducting projects)
-  if(p.type==='ducting'&&typeof grilles!=='undefined'){
+  if((p.type==='ducting'||(p.types&&p.types.includes('ducting')))&&typeof grilles!=='undefined'){
     var newGrille={id:uid(),title:'Grilles - '+pname,projectId:pid,orderType:'project',status:'pending',items:[],notes:'Auto-created for ducting project: '+pname,createdAt:new Date().toISOString()};
     grilles.push(newGrille);
     save('cesv2_grilles',grilles);
   }
 
-  showToast('Project records auto-created (PTW, Delivery, Equipment'+(p.type==='ducting'?', Grilles':'')+')');
+  showToast('Project records auto-created (PTW, Delivery, Equipment'+((p.type==='ducting'||(p.types&&p.types.includes('ducting')))?', Grilles':'')+')');
 }
 
 // ══ DELIVERY REMINDER CHECK ══
@@ -3117,9 +3225,12 @@ function openEditProjectModal(id){
   var html='<div class="form-grid">'
     +'<div class="fg"><label>Client / Store Name</label><input id="ep_client" value="'+esc(p.client||'')+'" type="text"/></div>'
     +'<div class="fg"><label>Location</label><input id="ep_location" value="'+esc(p.location||'')+'" type="text"/></div>'
-    +'<div class="fg"><label>Scheduled Date</label><input id="ep_startDate" value="'+(p.startDate||'')+'" type="date"/></div>'
-    +'<div class="fg"><label>Scheduled Time</label><input id="ep_startTime" value="'+(p.startTime||'')+'" type="time"/></div>'
-    +'<div class="fg"><label>Target End Date</label><input id="ep_endDate" value="'+(p.endDate||'')+'" type="date"/></div>'
+    +'<input type="hidden" id="ep_startDate" value="'+(p.startDate||'')+'"/>'
+    +'<input type="hidden" id="ep_startTime" value="'+(p.startTime||'')+'"/>'
+    +'<input type="hidden" id="ep_endDate" value="'+(p.endDate||'')+'"/>'
+    +'<div class="fg full"><label>Scheduled Dates &amp; Times <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type)</span></label>'
+    +'<div id="ep_schedulesByType" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.35rem;">'+buildEditSchedulesHtml(p)+'</div>'
+    +'</div>'
     +'<div class="fg full"><label>Notes</label><textarea id="ep_notes" style="min-height:60px;">'+esc(p.notes||'')+'</textarea></div>'
     +'</div>'
     +'<div style="margin-top:1rem;">'
@@ -3156,9 +3267,18 @@ function saveEditProject(){
   var p=projects.find(function(x){return x.id===id;});if(!p)return;
   p.client=document.getElementById('ep_client').value.trim();
   p.location=document.getElementById('ep_location').value.trim();
-  p.startDate=document.getElementById('ep_startDate').value;
-  p.startTime=document.getElementById('ep_startTime').value;
-  p.endDate=document.getElementById('ep_endDate').value;
+  var allTypesEdit=p.types&&p.types.length>1?p.types:[p.type];
+  if(!p.schedulesByType)p.schedulesByType={};
+  allTypesEdit.forEach(function(t){
+    var sd=document.getElementById('ep_sd_'+t);
+    var st=document.getElementById('ep_st_'+t);
+    var ed=document.getElementById('ep_ed_'+t);
+    p.schedulesByType[t]={startDate:sd?sd.value:'',startTime:st?st.value:'',endDate:ed?ed.value:''};
+  });
+  var firstSched=p.schedulesByType[allTypesEdit[0]]||{};
+  p.startDate=firstSched.startDate||document.getElementById('ep_startDate').value||'';
+  p.startTime=firstSched.startTime||document.getElementById('ep_startTime').value||'';
+  p.endDate=firstSched.endDate||document.getElementById('ep_endDate').value||'';
   p.notes=document.getElementById('ep_notes').value.trim();
   // Save workers by type from editWorkersByType
   if(window.editWorkersByType){
@@ -3329,6 +3449,25 @@ if(typeof equipment==='undefined')window.equipment=JSON.parse(localStorage.getIt
 if(typeof toolboxTalks==='undefined')window.toolboxTalks=JSON.parse(localStorage.getItem('cesv2_toolboxTalks')||'[]');
 if(typeof dtrs==='undefined')window.dtrs=JSON.parse(localStorage.getItem('cesv2_dtrs')||'[]');
 if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('cesv2_grilles')||'[]');
+// Data migration: fix projects with incorrect type assignments
+(function migrateProjects(){
+  var changed=false;
+  projects.forEach(function(p){
+    // If project has types array, ensure p.type matches the first selected type
+    if(p.types&&p.types.length>0){
+      if(p.type!==p.types[0]){
+        p.type=p.types[0];
+        changed=true;
+      }
+    }
+    // If project has no types array, create it from p.type
+    if(!p.types||p.types.length===0){
+      p.types=[p.type];
+      changed=true;
+    }
+  });
+  if(changed){save('cesv2_projects',projects);console.log('Projects migrated: type alignment fixed');}
+})();
 renderDashboard();
 setInterval(updateHeaderDate,60000);
 </script>
