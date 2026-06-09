@@ -448,11 +448,12 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div class="fg"><label>Start Date <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startDate" type="date"/></div>
 <div class="fg"><label>Target End Date</label><input id="np_endDate" type="date"/></div>
-<div class="fg full">
-<label>Assign Workers (conflict check included)</label>
-<div id="np_assignedList" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.45rem;min-height:22px;"></div>
-<select id="np_workerSelect" onchange="addWorkerToProject()"><option value="">Select worker to assign</option></select>
-<div id="np_conflictWarning" style="display:none;margin-top:0.4rem;padding:0.45rem 0.7rem;background:#fef9c3;border:1.5px solid #fde68a;border-radius:8px;font-size:0.73rem;color:#92400e;font-weight:600;"></div>
+<div class="fg full" id="np_workerSection">
+<label>Assign Workers <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — same worker can be assigned to multiple types on same site)</span></label>
+<div id="np_workersByType" style="display:flex;flex-direction:column;gap:0.7rem;margin-top:0.35rem;"></div>
+<div id="np_conflictWarning" style="display:none;"></div>
+<select id="np_workerSelect" style="display:none;"></select>
+<div id="np_assignedList" style="display:none;"></div>
 </div>
 <div class="fg full">
 <label>Shop Drawings / Plans (Google Drive Links)</label>
@@ -1012,22 +1013,75 @@ function renderTypeProjects(type){const el=document.getElementById(type+'List');
 
 function openNewProjectModal(type){
   projectWorkerAssignees=[];
+  projectWorkersByType={};
   ['np_client','np_location','np_notes','np_driveLink','np_driveLinkName'].forEach(i=>{var el=document.getElementById(i);if(el)el.value='';});
   projectDriveLinks=[];
   document.getElementById('np_driveLinksPreview').innerHTML='';
   document.getElementById('np_startDate').value='';
   document.getElementById('np_endDate').value='';
-  // Reset all checkboxes
   document.querySelectorAll('#np_typeCheckboxes input[type=checkbox]').forEach(cb=>{cb.checked=false;});
-  // Pre-check if type provided
   if(type){var cb=document.querySelector('#np_typeCheckboxes input[value="'+type+'"]');if(cb)cb.checked=true;}
-  document.getElementById('np_assignedList').innerHTML='';
   document.getElementById('np_conflictWarning').style.display='none';
-  document.getElementById('o_project').innerHTML='<option value="">None / General</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  document.getElementById('np_workerSelect').innerHTML='<option value="">Select worker to assign</option>'+workers.map(w=>`<option value="${w.id}">${esc(w.name)} (${w.type==='regular'?'Regular':'Sub-con'})</option>`).join('');
+  document.getElementById('o_project').innerHTML='<option value="">None / General</option>'+projects.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('');
   updateMultiTypeLabel();
   autoFillProjectName();
+  renderWorkersByType();
   openModal('newProjectModal');
+}
+
+var projectWorkersByType={};
+
+function renderWorkersByType(){
+  var types=getSelectedTypes();
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var colors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var container=document.getElementById('np_workersByType');
+  if(!container)return;
+  Object.keys(projectWorkersByType).forEach(function(t){if(types.indexOf(t)===-1)delete projectWorkersByType[t];});
+  types.forEach(function(t){if(!projectWorkersByType[t])projectWorkersByType[t]=[];});
+  if(types.length===0){container.innerHTML='<div style="font-size:0.75rem;color:var(--gray400);padding:0.4rem;">Select project type(s) above to assign workers.</div>';return;}
+  var html='';
+  types.forEach(function(t){
+    var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var assigned=projectWorkersByType[t]||[];
+    var chips=assigned.map(function(a){
+      return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:'+c.bg+';color:'+c.color+';border:1.5px solid '+c.border+';border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
+        +'<span style="width:16px;height:16px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.48rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
+        +esc(a.name)
+        +'<button data-wtype="'+t+'" data-wid="'+a.id+'" onclick="removeWorkerFromType(this.dataset.wtype,this.dataset.wid)" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.35);font-size:0.75rem;padding:0;line-height:1;">x</button>'
+        +'</span>';
+    }).join('');
+    var opts=workers.map(function(w){
+      return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
+    }).join('');
+    html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.65rem 0.85rem;background:'+c.bg+'20;">'
+      +'<div style="font-size:0.65rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.45rem;">'+esc(labels[t]||t)+'</div>'
+      +'<div id="np_chips_'+t+'" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;min-height:18px;">'+chips+'</div>'
+      +'<select data-wtype="'+t+'" onchange="addWorkerToType(this.dataset.wtype,this)" style="font-size:0.78rem;padding:0.3rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-family:inherit;outline:none;background:#fff;color:var(--text);">'
+      +'<option value="">+ Assign worker to '+esc(labels[t]||t)+'</option>'
+      +opts
+      +'</select>'
+      +'</div>';
+  });
+  container.innerHTML=html;
+}
+
+
+function addWorkerToType(type,sel){
+  var id=sel.value;if(!id){return;}
+  var worker=workers.find(function(w){return w.id===id;});if(!worker)return;
+  if(!projectWorkersByType[type])projectWorkersByType[type]=[];
+  // Allow same worker on same site (different type) - only block duplicate within same type
+  if(projectWorkersByType[type].find(function(a){return a.id===id;})){sel.value='';return;}
+  projectWorkersByType[type].push({id:worker.id,name:worker.name});
+  sel.value='';
+  renderWorkersByType();
+}
+
+function removeWorkerFromType(btn,type,id){
+  if(!projectWorkersByType[type])return;
+  projectWorkersByType[type]=projectWorkersByType[type].filter(function(a){return a.id!==id;});
+  renderWorkersByType();
 }
 function addWorkerToProject(){
   const sel=document.getElementById('np_workerSelect');const id=sel.value;if(!id)return;
@@ -1074,6 +1128,7 @@ function updateMultiTypeLabel(){
     else{preview.textContent='Combined project: '+types.map(t=>labels[t]).join(' + ');}
   }
   autoFillProjectName();
+  renderWorkersByType();
 }
 function autoFillProjectName(){
   var client=document.getElementById('np_client').value.trim();
@@ -1114,12 +1169,29 @@ function saveNewProject(){
       var stepId=t+'_'+s.id;
       if(!seenIds[stepId]){
         seenIds[stepId]=true;
-        steps.push({...s,id:stepId,typeLabel:labels[t],status:'pending',notes:'',completedDate:'',driveLink:''});
+        var sc=Object.assign({},s);
+        sc.id=stepId;sc.typeLabel=labels[t];sc.status='pending';sc.notes='';sc.completedDate='';sc.driveLink='';
+        steps.push(sc);
       }
     });
   });
+  // Merge all per-type assignees into flat list (allow duplicates across types)
+  var allAssignees=[];
+  var seen={};
+  types.forEach(function(t){
+    (projectWorkersByType[t]||[]).forEach(function(a){
+      if(!seen[a.id]){seen[a.id]=true;allAssignees.push(a);}
+    });
+  });
   var primaryType=types[0];
-  var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,startDate:document.getElementById('np_startDate').value,endDate:document.getElementById('np_endDate').value,driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),notes:document.getElementById('np_notes').value.trim(),assignees:JSON.parse(JSON.stringify(projectWorkerAssignees)),steps:steps,status:'active',createdAt:new Date().toISOString(),dailyProgress:[]};
+  var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,
+    startDate:document.getElementById('np_startDate').value,
+    endDate:document.getElementById('np_endDate').value,
+    driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),
+    notes:document.getElementById('np_notes').value.trim(),
+    assignees:allAssignees,
+    assigneesByType:JSON.parse(JSON.stringify(projectWorkersByType)),
+    steps:steps,status:'active',createdAt:new Date().toISOString(),dailyProgress:[]};
   projects.push(p);save('cesv2_projects',projects);autoCreateProjectRecords(p);closeModal('newProjectModal');renderDashboard();renderAllProjects();
   types.forEach(function(t){renderTypeProjects(t);});
 }
@@ -1130,47 +1202,52 @@ function openProjectDetail(id){
   var ts=(p.steps||[]).length;
   var pct=ts>0?Math.round(cs/ts*100):0;
   document.getElementById('projectDetailTitle').textContent=p.name;
-  var sh='';
-  (p.steps||[]).forEach(function(s,i){
-    var stepClass='workflow-step '+(s.status||'pending');
-    var stepNum=s.status==='completed'?'V':s.status==='failed'?'X':(i+1);
-    var passFailBtns='';
-    var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;if(['ducttest','hydrotesting','testing','handover','piping','electrical','lighttest','smoketest'].indexOf(baseId)!==-1){
-      if(baseId==='ducttest'){
-        passFailBtns='<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;">'
-          +'<label style="font-size:0.65rem;font-weight:800;color:var(--gray500);">Test Type:</label>'
-          +'<select id="ductTestType_'+p.id+'" style="padding:0.28rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;background:#fff;">'
-          +'<option value="light">Light Leakage Test</option>'
-          +'<option value="smoke">Smoke Test</option>'
-          +'<option value="both">Both (Light + Smoke)</option>'
-          +'</select></div>';
-        passFailBtns+='<button class="btn btn-success btn-xs" onclick="updateDuctTest(\''+p.id+'\',\'pass\')">&#9989; Pass</button>'
-          +'<button class="btn btn-danger btn-xs" onclick="updateDuctTest(\''+p.id+'\',\'fail\')">&#10060; Fail</button>';
-      } else {
-        passFailBtns='<button class="btn btn-success btn-xs" onclick="updateStepResult(\''+p.id+'\',\''+s.id+'\',\'pass\')">&#9989; Pass</button>'
-          +'<button class="btn btn-danger btn-xs" onclick="updateStepResult(\''+p.id+'\',\''+s.id+'\',\'fail\')">&#10060; Fail</button>';
-      }
-    }
-    var completeBtns='';
-    if(s.status!=='completed'){completeBtns+='<button class="btn btn-success btn-xs" onclick="updateStep(\''+p.id+'\',\''+s.id+'\',\'completed\')">Mark Complete</button>';}
-    if(s.status==='completed'){completeBtns+='<button class="btn btn-secondary btn-xs" onclick="updateStep(\''+p.id+'\',\''+s.id+'\',\'pending\')">Reopen</button>';}
-    var testResultHtml='';
-    if(s.completedDate){
-      testResultHtml='<div style="font-size:0.63rem;color:var(--success);margin-top:0.18rem;">Completed: '+fmtDate(s.completedDate)+(s.testTypeLabel?' - '+s.testTypeLabel:'')+(s.testResult?' - <strong style="color:'+(s.testResult==='pass'?'var(--success)':'var(--danger)')+';">'+(s.testResult==='pass'?'PASSED':'FAILED')+'</strong>':'')+'</div>';
-    }
-    sh+='<div class="'+stepClass+'">'
-      +'<div class="step-num">'+stepNum+'</div>'
-      +'<div class="step-content">'
-      +'<div class="step-title">'+esc(s.title)+(s.typeLabel?'<span style="font-size:0.58rem;font-weight:800;padding:0.08rem 0.4rem;border-radius:8px;background:#dbeafe;color:#1d4ed8;margin-left:0.4rem;vertical-align:middle;text-transform:uppercase;">'+esc(s.typeLabel)+'</span>':'')+'</div>'
-      +'<div class="step-desc">'+esc(s.desc)+'</div>'
-      +(s.notes?'<div style="font-size:0.7rem;color:var(--gray600);margin-top:0.28rem;padding:0.38rem 0.55rem;background:var(--gray50);border-radius:6px;">Note: '+esc(s.notes)+'</div>':'')
-      +(s.driveLink?'<a href="'+esc(s.driveLink)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;display:inline-flex;align-items:center;gap:0.22rem;margin-top:0.28rem;text-decoration:none;">View Document</a>':'')
-      +testResultHtml
-      +'<div class="step-actions">'+completeBtns+passFailBtns
-      +'<button class="btn btn-secondary btn-xs" onclick="addStepNote(\''+p.id+'\',\''+s.id+'\')">Add Note</button>'
-      +'<button class="btn btn-secondary btn-xs" onclick="addStepDriveLink(\''+p.id+'\',\''+s.id+'\')">Drive Link</button>'
-      +'</div></div></div>';
-  });
+
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var typeColors={
+    ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe',light:'#eff6ff'},
+    sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0',light:'#f0fdf4'},
+    airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a',light:'#fefce8'},
+    fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff',light:'#faf5ff'},
+    fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0',light:'#f8fafc'}
+  };
+
+  var stepsHtml='';
+  if(allTypes.length>1){
+    var tabHeaders='<div style="display:flex;flex-wrap:wrap;margin-bottom:-1px;position:relative;z-index:1;" id="detTabBar_'+id+'">';
+    allTypes.forEach(function(t,ti){
+      var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0'};
+      var typeSteps=(p.steps||[]).filter(function(s){return s.id.startsWith(t+'_');});
+      var done=typeSteps.filter(function(s){return s.status==='completed';}).length;
+      var total=typeSteps.length;
+      var isActive=ti===0;
+      tabHeaders+='<button class="det-tab'+(isActive?' det-tab-active':'')+'" data-tabid="detpanel_'+id+'_'+t+'" data-projid="'+id+'" data-type="'+t+'" onclick="switchDetailTab(this)" style="font-size:0.72rem;font-weight:800;padding:0.38rem 0.85rem;border-radius:8px 8px 0 0;border:1.5px solid '+(isActive?c.border:'var(--gray200)')+';border-bottom:none;background:'+(isActive?c.bg:'var(--gray50)')+';color:'+(isActive?c.color:'var(--gray500)')+';cursor:pointer;font-family:inherit;margin-right:3px;">'+esc(labels[t]||t)+' <span style="font-size:0.6rem;opacity:0.8;">('+done+'/'+total+')</span></button>';
+    });
+    tabHeaders+='</div>';
+    stepsHtml+=tabHeaders;
+    allTypes.forEach(function(t,ti){
+      var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0',light:'#f0f7ff'};
+      var typeSteps=(p.steps||[]).filter(function(s){return s.id.startsWith(t+'_');});
+      var typeWorkers=(p.assigneesByType&&p.assigneesByType[t])||[];
+      if(!typeWorkers.length)typeWorkers=p.assignees||[];
+      var workerChips=typeWorkers.map(function(a){
+        return '<span style="display:inline-flex;align-items:center;gap:0.28rem;background:'+c.bg+';color:'+c.color+';border:1.5px solid '+c.border+';border-radius:20px;padding:0.18rem 0.5rem;font-size:0.7rem;font-weight:700;">'
+          +'<span style="width:15px;height:15px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.45rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
+          +esc(a.name)+'</span>';
+      }).join('');
+      var sh=buildStepsHtml(p,typeSteps);
+      stepsHtml+='<div id="detpanel_'+id+'_'+t+'" class="det-tab-panel" style="display:'+(ti===0?'block':'none')+';border:1.5px solid '+c.border+';border-radius:0 8px 8px 8px;padding:0.85rem;background:'+c.light+';">'
+        +'<div style="margin-bottom:0.65rem;">'
+        +'<div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Workers for '+esc(labels[t]||t)+'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:0.3rem;">'+(workerChips||'<span style="font-size:0.75rem;color:var(--gray400);">No workers assigned</span>')+'</div>'
+        +'</div>'
+        +'<div class="workflow-steps">'+sh+'</div>'
+        +'</div>';
+    });
+  } else {
+    stepsHtml='<div class="workflow-steps">'+buildStepsHtml(p,p.steps||[])+'</div>';
+  }
 
   var dpHtml='';
   (p.dailyProgress||[]).forEach(function(dp){
@@ -1195,6 +1272,14 @@ function openProjectDetail(id){
       +'</div>';
   }
 
+  var workerSection='';
+  if(allTypes.length===1){
+    workerSection='<div style="margin-bottom:1.1rem;">'
+      +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Assigned Workers</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:0.38rem;">'+renderProjectAssignees(p)+'</div>'
+      +'</div>';
+  }
+
   document.getElementById('projectDetailBody').innerHTML=
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-bottom:1.1rem;">'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Client</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.client||'--')+'</div></div>'
@@ -1209,13 +1294,10 @@ function openProjectDetail(id){
     +'</div>'
     +'<div class="progress-wrap" style="height:9px;"><div class="progress-fill" style="width:'+pct+'%"></div></div>'
     +'</div>'
-    +'<div style="margin-bottom:1.1rem;">'
-    +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Assigned Workers</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:0.38rem;">'+renderProjectAssignees(p)+'</div>'
-    +'</div>'
+    +workerSection
     +renderProjectDriveLinks(p)
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Workflow Steps</div>'
-    +'<div class="workflow-steps">'+sh+'</div>'
+    +stepsHtml
     +'<div style="margin-top:1.1rem;">'
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Daily Progress Log</div>'
     +dpHtml
@@ -1230,6 +1312,98 @@ function openProjectDetail(id){
 
   openModal('projectDetailModal');
 }
+
+function switchDetailTab(btn){
+  var tabId=btn.dataset.tabid;
+  var projId=btn.dataset.projid;
+  var t=btn.dataset.type;
+  var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0'};
+  // Reset all tabs in this project's tab bar
+  var bar=document.getElementById('detTabBar_'+projId);
+  if(bar){
+    bar.querySelectorAll('.det-tab').forEach(function(b){
+      var bt=b.dataset.type;
+      var bc=typeColors[bt]||{bg:'var(--gray50)',color:'var(--gray500)',border:'var(--gray200)'};
+      b.style.background='var(--gray50)';b.style.color='var(--gray500)';b.style.borderColor='var(--gray200)';
+    });
+  }
+  // Hide all panels for this project
+  document.querySelectorAll('.det-tab-panel').forEach(function(p){
+    if(p.id&&p.id.startsWith('detpanel_'+projId+'_'))p.style.display='none';
+  });
+  // Activate clicked tab
+  btn.style.background=c.bg;btn.style.color=c.color;btn.style.borderColor=c.border;
+  var panel=document.getElementById(tabId);
+  if(panel)panel.style.display='block';
+}
+
+function buildStepsHtml(p,steps){
+  var sh='';
+  steps.forEach(function(s,i){
+    var stepClass='workflow-step '+(s.status||'pending');
+    var stepNum=s.status==='completed'?'V':s.status==='failed'?'X':(i+1);
+    var passFailBtns='';
+    var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;
+    if(['ducttest','hydrotesting','testing','handover','piping','electrical','lighttest','smoketest'].indexOf(baseId)!==-1){
+      if(baseId==='ducttest'){
+        passFailBtns='<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;">'
+          +'<label style="font-size:0.65rem;font-weight:800;color:var(--gray500);">Test Type:</label>'
+          +'<select id="ductTestType_'+p.id+'" style="padding:0.28rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;background:#fff;">'
+          +'<option value="light">Light Leakage Test</option>'
+          +'<option value="smoke">Smoke Test</option>'
+          +'<option value="both">Both (Light + Smoke)</option>'
+          +'</select></div>';
+        passFailBtns+='<button class="btn btn-success btn-xs" data-pid="'+p.id+'" data-res="pass" onclick="updateDuctTest(this.dataset.pid,this.dataset.res)">&#9989; Pass</button>'
+          +'<button class="btn btn-danger btn-xs" data-pid="'+p.id+'" data-res="fail" onclick="updateDuctTest(this.dataset.pid,this.dataset.res)">&#10060; Fail</button>';
+      } else {
+        passFailBtns='<button class="btn btn-success btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" data-res="pass" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">&#9989; Pass</button>'
+          +'<button class="btn btn-danger btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" data-res="fail" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">&#10060; Fail</button>';
+      }
+    }
+    var completeBtns='';
+    if(s.status!=='completed'){completeBtns+='<button class="btn btn-success btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" data-st="completed" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">Mark Complete</button>';}
+    if(s.status==='completed'){completeBtns+='<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" data-st="pending" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">Reopen</button>';}
+    var testResultHtml='';
+    if(s.completedDate){
+      testResultHtml='<div style="font-size:0.63rem;color:var(--success);margin-top:0.18rem;">Completed: '+fmtDate(s.completedDate)+(s.testTypeLabel?' - '+s.testTypeLabel:'')+(s.testResult?' - <strong style="color:'+(s.testResult==='pass'?'var(--success)':'var(--danger)')+';">'+(s.testResult==='pass'?'PASSED':'FAILED')+'</strong>':'')+' </div>';
+    }
+    sh+='<div class="'+stepClass+'">'
+      +'<div class="step-num">'+stepNum+'</div>'
+      +'<div class="step-content">'
+      +'<div class="step-title">'+esc(s.title)+'</div>'
+      +'<div class="step-desc">'+esc(s.desc)+'</div>'
+      +(s.notes?'<div style="font-size:0.7rem;color:var(--gray600);margin-top:0.28rem;padding:0.38rem 0.55rem;background:var(--gray50);border-radius:6px;">Note: '+esc(s.notes)+'</div>':'')
+      +(s.driveLink?'<a href="'+esc(s.driveLink)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;display:inline-flex;align-items:center;gap:0.22rem;margin-top:0.28rem;text-decoration:none;">View Document</a>':'')
+      +testResultHtml
+      +'<div class="step-actions">'+completeBtns+passFailBtns
+      +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepNote(this.dataset.pid,this.dataset.sid)">Add Note</button>'
+      +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepDriveLink(this.dataset.pid,this.dataset.sid)">Drive Link</button>'
+      +'</div></div></div>';
+  });
+  return sh;
+}
+
+
+
+function switchDetailTab(btn,tabId){
+  var modal=document.getElementById('projectDetailModal');
+  modal.querySelectorAll('.det-tab').forEach(function(b){
+    b.classList.remove('active');
+    b.style.background='var(--gray50)';b.style.color='var(--gray500)';b.style.borderColor='var(--gray200)';
+  });
+  modal.querySelectorAll('.det-tab-panel').forEach(function(p){p.style.display='none';});
+  btn.classList.add('active');
+  // Restore active color from data
+  var t=tabId.replace('tab_','');
+  var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+  var c=typeColors[t]||{bg:'#e8f1fb',color:'var(--primary)',border:'#b3d0f0'};
+  btn.style.background=c.bg;btn.style.color=c.color;btn.style.borderColor=c.border;
+  var panel=document.getElementById(tabId);
+  if(panel)panel.style.display='block';
+}
+
+
 
 function addWorkerToJobEdit(sel){
   const val=sel.value;if(!val)return;
