@@ -536,6 +536,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="fg"><label>FCU Configuration</label><select id="s_fcuConfig"><option value="">Select</option><option value="ceiling_cassette">Ceiling Cassette</option><option value="ducted">Ducted Type</option><option value="wall_mounted">Wall Mounted</option><option value="window_type">Window Type (Split)</option></select></div>
 <div class="fg"><label>Safety Officer Required?</label><select id="s_safetyOfficer"><option value="no">No</option><option value="yes">Yes</option></select></div>
 <div class="fg"><label>Last FCU Cleaned</label><input id="s_lastCleaned" type="date"/></div>
+<div class="fg"><label>Scheduled Cleaning Time</label><input id="s_schedTime" type="time"/></div>
 <div class="fg"><label>Last Y-Strainer Cleaned</label><input id="s_lastYstrainer" type="date"/></div>
 <div class="fg full"><label>Notes / Problems</label><textarea id="s_notes" placeholder="Any known issues or special instructions..."></textarea></div>
 </div>
@@ -581,7 +582,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div class="modal-overlay" id="projectDetailModal">
 <div class="modal" style="max-width:780px;">
-<div class="modal-header"><h2 id="projectDetailTitle">Project Details</h2><button class="modal-close" onclick="closeModal('projectDetailModal')">X Close</button></div>
+<div class="modal-header"><h2 id="projectDetailTitle">Project Details</h2><div style="display:flex;gap:0.4rem;align-items:center;"><button id="projectDetailEditBtn" class="btn btn-secondary btn-xs" data-pid="" onclick="openEditProjectModal(this.dataset.pid)">&#9998; Edit</button><button class="modal-close" onclick="closeModal('projectDetailModal')">X Close</button></div></div>
 <div class="modal-body" id="projectDetailBody"></div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('projectDetailModal')">Close</button></div>
 </div>
@@ -852,7 +853,7 @@ function renderCalendar(){
         +'data-client="'+esc(s.name)+'" '
         +'data-location="'+esc(s.location||'')+'" '
         +'data-workers="" '
-        +'data-time="" '
+        +'data-time="'+(s.schedTime||'')+'"\ '
         +'data-type="PMS Cleaning" '
         +'data-fcu="'+esc(String(s.fcuCount||0))+' units" '
         +'data-safety="'+esc(s.safetyOfficer==='yes'?'Safety Officer Required':'No safety officer needed')+'" '
@@ -1264,6 +1265,7 @@ function openProjectDetail(id){
   var ts=(p.steps||[]).length;
   var pct=ts>0?Math.round(cs/ts*100):0;
   document.getElementById('projectDetailTitle').textContent=p.name;
+  document.getElementById('projectDetailEditBtn').setAttribute('data-pid',p.id);
 
   var allTypes=p.types&&p.types.length>1?p.types:[p.type];
   var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
@@ -1317,7 +1319,7 @@ function openProjectDetail(id){
       +'<div style="display:flex;justify-content:space-between;margin-bottom:0.28rem;">'
       +'<span style="font-size:0.7rem;font-weight:800;color:var(--primary);">'+fmtDate(dp.date)+'</span>'
       +'<span style="font-size:0.7rem;font-weight:700;color:var(--success);">'+dp.completion+'% complete</span>'
-      +'</div><div style="font-size:0.78rem;color:var(--text);">'+esc(dp.done)+'</div></div>';
+      +'</div><div style="font-size:0.78rem;color:var(--text);white-space:pre-wrap;">'+esc(dp.done)+'</div>'+(dp.mediaLink?'<a href="'+esc(dp.mediaLink)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.2rem;margin-top:0.25rem;">&#128247; View Photo/Video</a>':'')+'</div>';
   });
 
   var statusHtml='';
@@ -1367,7 +1369,8 @@ function openProjectDetail(id){
     +'<div style="display:flex;gap:0.45rem;margin-top:0.45rem;flex-wrap:wrap;">'
     +'<input type="date" id="dp_date_'+p.id+'" value="'+new Date().toISOString().split('T')[0]+'" style="padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;">'
     +'<input type="number" id="dp_pct_'+p.id+'" placeholder="% done" min="0" max="100" style="width:75px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;">'
-    +'<input type="text" id="dp_done_'+p.id+'" placeholder="What was done today..." style="flex:1;min-width:140px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;">'
+    +'<textarea id="dp_done_'+p.id+'" placeholder="Describe what was done today (paragraph)..." style="flex:1;min-width:200px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;resize:vertical;min-height:60px;"></textarea>'
+    +'<input type="url" id="dp_mediaLink_'+p.id+'" placeholder="Photo/Video Drive link (optional)" style="flex:1;min-width:160px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;">'
     +'<button class="btn btn-primary btn-xs" onclick="addDailyProgress(\''+p.id+'\')">Add</button>'
     +'</div></div>'
     +statusHtml
@@ -1447,6 +1450,7 @@ function buildStepsHtml(p,steps){
       +'<div class="step-actions">'+completeBtns+passFailBtns
       +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepNote(this.dataset.pid,this.dataset.sid)">Add Note</button>'
       +'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="addStepDriveLink(this.dataset.pid,this.dataset.sid)">Drive Link</button>'
+      +(s.notNeeded?'<button class="btn btn-warning btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="toggleStepNotNeeded(this.dataset.pid,this.dataset.sid)" style="background:#fef9c3;color:#92400e;border-color:#fde68a;">&#10003; Not Needed</button>':'<button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" data-sid="'+s.id+'" onclick="toggleStepNotNeeded(this.dataset.pid,this.dataset.sid)">Not Needed</button>')
       +'</div></div></div>';
   });
   return sh;
@@ -1617,9 +1621,9 @@ function renderPmsTable(){
   }).join('');
   updatePmsStats();
 }
-function openAddStoreModal(){editingStoreId=null;['s_name','s_location','s_notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('s_fcuCount').value='';document.getElementById('s_fcuType').value='';document.getElementById('s_fcuConfig').value='';document.getElementById('s_safetyOfficer').value='no';document.getElementById('s_lastCleaned').value='';document.getElementById('s_lastYstrainer').value='';document.getElementById('storeModalTitle').textContent='Add Store for PMS';openModal('addStoreModal');}
-function openEditStoreModal(id){const s=stores.find(x=>x.id===id);if(!s)return;editingStoreId=id;document.getElementById('s_name').value=s.name||'';document.getElementById('s_location').value=s.location||'';document.getElementById('s_fcuCount').value=s.fcuCount||'';document.getElementById('s_fcuType').value=s.fcuType||'';document.getElementById('s_fcuConfig').value=s.fcuConfig||'';document.getElementById('s_safetyOfficer').value=s.safetyOfficer||'no';document.getElementById('s_lastCleaned').value=s.lastCleaned||'';document.getElementById('s_lastYstrainer').value=s.lastYstrainer||'';document.getElementById('s_notes').value=s.notes||'';document.getElementById('storeModalTitle').textContent='Edit Store';openModal('addStoreModal');}
-function saveStore(){const name=document.getElementById('s_name').value.trim();if(!name){alert('Please enter a store name.');return;}const data={name,location:document.getElementById('s_location').value.trim(),fcuCount:document.getElementById('s_fcuCount').value,fcuType:document.getElementById('s_fcuType').value,fcuConfig:document.getElementById('s_fcuConfig').value,safetyOfficer:document.getElementById('s_safetyOfficer').value,lastCleaned:document.getElementById('s_lastCleaned').value,lastYstrainer:document.getElementById('s_lastYstrainer').value,notes:document.getElementById('s_notes').value.trim()};if(editingStoreId){Object.assign(stores.find(s=>s.id===editingStoreId),data);showToast('Store updated!');}else{stores.push({id:uid(),...data});showToast('Store added!');}save('cesv2_stores',stores);closeModal('addStoreModal');renderPmsTable();renderDashboard();}
+function openAddStoreModal(){editingStoreId=null;['s_name','s_location','s_notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('s_fcuCount').value='';document.getElementById('s_fcuType').value='';document.getElementById('s_fcuConfig').value='';document.getElementById('s_safetyOfficer').value='no';document.getElementById('s_lastCleaned').value='';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value='';document.getElementById('s_lastYstrainer').value='';document.getElementById('storeModalTitle').textContent='Add Store for PMS';openModal('addStoreModal');}
+function openEditStoreModal(id){const s=stores.find(x=>x.id===id);if(!s)return;editingStoreId=id;document.getElementById('s_name').value=s.name||'';document.getElementById('s_location').value=s.location||'';document.getElementById('s_fcuCount').value=s.fcuCount||'';document.getElementById('s_fcuType').value=s.fcuType||'';document.getElementById('s_fcuConfig').value=s.fcuConfig||'';document.getElementById('s_safetyOfficer').value=s.safetyOfficer||'no';document.getElementById('s_lastCleaned').value=s.lastCleaned||'';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value=s.schedTime||'';document.getElementById('s_lastYstrainer').value=s.lastYstrainer||'';document.getElementById('s_notes').value=s.notes||'';document.getElementById('storeModalTitle').textContent='Edit Store';openModal('addStoreModal');}
+function saveStore(){const name=document.getElementById('s_name').value.trim();if(!name){alert('Please enter a store name.');return;}const data={name,location:document.getElementById('s_location').value.trim(),fcuCount:document.getElementById('s_fcuCount').value,fcuType:document.getElementById('s_fcuType').value,fcuConfig:document.getElementById('s_fcuConfig').value,safetyOfficer:document.getElementById('s_safetyOfficer').value,lastCleaned:document.getElementById('s_lastCleaned').value,schedTime:(document.getElementById('s_schedTime')?document.getElementById('s_schedTime').value:''),lastYstrainer:document.getElementById('s_lastYstrainer').value,notes:document.getElementById('s_notes').value.trim()};if(editingStoreId){Object.assign(stores.find(s=>s.id===editingStoreId),data);showToast('Store updated!');}else{stores.push({id:uid(),...data});showToast('Store added!');}save('cesv2_stores',stores);closeModal('addStoreModal');renderPmsTable();renderDashboard();}
 function markPmsCleaned(id){const s=stores.find(x=>x.id===id);if(!s)return;const today=new Date().toISOString().split('T')[0];s.lastCleaned=today;const link=prompt('Paste Google Drive link for the service report (optional):');if(link){if(!s.serviceReports)s.serviceReports=[];s.serviceReports.push({date:today,link});}save('cesv2_stores',stores);renderPmsTable();renderDashboard();showToast('PMS cleaning recorded!');}
 function deleteStore(id){if(!confirm('Delete this store?'))return;stores=stores.filter(s=>s.id!==id);save('cesv2_stores',stores);renderPmsTable();renderDashboard();showToast('Store deleted.');}
 
@@ -2664,36 +2668,104 @@ function addDailyProgress(pid){
   var date=document.getElementById('dp_date_'+pid).value;
   var completion=document.getElementById('dp_pct_'+pid).value;
   var done=document.getElementById('dp_done_'+pid).value.trim();
+  var mediaLinkEl=document.getElementById('dp_mediaLink_'+pid);
+  var mediaLink=mediaLinkEl?mediaLinkEl.value.trim():'';
   if(!done){alert('Please describe what was done today.');return;}
   if(!p.dailyProgress)p.dailyProgress=[];
-  p.dailyProgress.push({id:uid(),date:date,completion:completion||0,done:done,createdAt:new Date().toISOString()});
+  p.dailyProgress.push({id:uid(),date:date,completion:completion||0,done:done,mediaLink:mediaLink,createdAt:new Date().toISOString()});
   save('cesv2_projects',projects);
+  document.getElementById('dp_done_'+pid).value='';
+  if(mediaLinkEl)mediaLinkEl.value='';
   openProjectDetail(pid);
-  showToast('Daily progress added!');
+  showToast('Progress logged!');
 }
 
+
 function completeProject(id){
-  if(!confirm('Mark this project as completed?'))return;
   var p=projects.find(function(x){return x.id===id;});if(!p)return;
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var missing=[];
+
+  // Check required steps per type
+  allTypes.forEach(function(t){
+    var typeSteps=(p.steps||[]).filter(function(s){return s.id.startsWith(t+'_')||(!s.id.includes('_')&&p.types&&p.types.length===1);});
+
+    if(t==='ducting'){
+      // ducttest must have a driveLink OR be marked not needed
+      var ducttest=typeSteps.find(function(s){return s.id.endsWith('_ducttest')||s.id==='ducttest';});
+      if(ducttest&&!ducttest.driveLink&&!ducttest.notNeeded&&ducttest.status!=='completed'){
+        missing.push('Ducting: Duct Leakage Test (Light/Smoke) must be completed with a certificate/file attached, or marked as Not Needed');
+      }
+      var asbuilt=typeSteps.find(function(s){return s.id.endsWith('_asbuilt')||s.id==='asbuilt';});
+      if(asbuilt&&!asbuilt.driveLink&&!asbuilt.notNeeded){
+        missing.push('Ducting: As-Built Plan must have a file attached, or marked as Not Needed');
+      }
+      var airbal=typeSteps.find(function(s){return s.id.endsWith('_airbalancing')||s.id==='airbalancing';});
+      if(airbal&&!airbal.driveLink&&!airbal.notNeeded&&airbal.status!=='completed'){
+        missing.push('Ducting: Air Balancing must be completed with a certificate/file attached, or marked as Not Needed');
+      }
+    }
+    if(t==='sprinkler'){
+      var hydro=typeSteps.find(function(s){return s.id.endsWith('_hydrotesting')||s.id==='hydrotesting';});
+      if(hydro&&!hydro.driveLink&&!hydro.notNeeded&&hydro.status!=='completed'){
+        missing.push('Sprinkler: Hydrostatic Pressure Testing must be completed with a certificate/file attached, or marked as Not Needed');
+      }
+      var asbuilt2=typeSteps.find(function(s){return s.id.endsWith('_asbuilt')||s.id==='asbuilt';});
+      if(asbuilt2&&!asbuilt2.driveLink&&!asbuilt2.notNeeded){
+        missing.push('Sprinkler: As-Built Plan must have a file attached, or marked as Not Needed');
+      }
+    }
+    if(t==='airbalancing'){
+      var handover=typeSteps.find(function(s){return s.id.endsWith('_handover')||s.id==='handover';});
+      if(handover&&!handover.driveLink&&!handover.notNeeded&&handover.status!=='completed'){
+        missing.push('Air Balancing: Final Handover must be completed with a signed certificate/file, or marked as Not Needed');
+      }
+    }
+  });
+
+  if(missing.length>0){
+    var msg='Cannot complete project. The following are required:\n\n'+missing.join('\n\n')+'\n\nYou can attach a Drive link to each step, or click "Not Needed" on the step to skip the requirement.';
+    alert(msg);
+    return;
+  }
+
+  if(!confirm('Mark this project as completed?'))return;
   p.status='completed';
   p.completedAt=new Date().toISOString();
   save('cesv2_projects',projects);
+
   // Auto-return equipment linked to this project
   var today=new Date().toISOString().split('T')[0];
   var autoReturned=0;
   (equipment||[]).forEach(function(eq){
     if(eq.projectId===id&&eq.status==='deployed'){
-      eq.status='returned';
-      eq.actualReturn=today;
-      autoReturned++;
+      eq.status='returned';eq.actualReturn=today;autoReturned++;
     }
   });
-  if(autoReturned>0){save('cesv2_equipment',equipment);showToast('Project completed! '+autoReturned+' equipment auto-returned.');}
-  else showToast('Project completed!');
+  if(autoReturned>0)save('cesv2_equipment',equipment);
+
+  // Auto-complete linked PTWs
+  var ptwUpdated=0;
+  (ptws||[]).forEach(function(ptw){
+    if(ptw.projectId===id&&ptw.status==='active'){
+      ptw.status='completed';ptwUpdated++;
+    }
+  });
+  if(ptwUpdated>0)save('cesv2_ptws',ptws);
+
+  var msg='Project completed!';
+  if(autoReturned>0)msg+=' '+autoReturned+' equipment auto-returned.';
+  if(ptwUpdated>0)msg+=' '+ptwUpdated+' PTW(s) auto-completed.';
+  showToast(msg);
+
+  // Auto-generate completion report
+  generateCompletionReport(id);
+
   closeModal('projectDetailModal');
   renderDashboard();
   renderAllProjects();
 }
+
 
 function reopenProject(id){
   if(!confirm('Reopen this project?'))return;
@@ -2962,8 +3034,208 @@ function openEditJobModal(id){
 }
 
 function openEditProjectModal(id){
-  openProjectDetail(id);
+  var p=projects.find(function(x){return x.id===id;});if(!p)return;
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
+
+  // Build service reports section per type
+  var srSection='';
+  allTypes.forEach(function(t){
+    var c=typeColors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var typeReports=(p.serviceReports&&p.serviceReports[t])||[];
+    var reportItems=typeReports.map(function(r,i){
+      return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;background:#fff;margin-bottom:0.28rem;">'
+        +'<span style="font-size:0.75rem;">&#128203;</span>'
+        +'<span style="flex:1;font-size:0.75rem;font-weight:700;color:var(--text);">'+esc(r.name)+'</span>'
+        +'<a href="'+esc(r.url)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;">Open</a>'
+        +'<button data-pid="'+id+'" data-type="'+t+'" data-idx="'+i+'" onclick="removeProjectSR(this.dataset.pid,this.dataset.type,parseInt(this.dataset.idx))" style="background:#fee2e2;color:var(--danger);border:1.5px solid #fecaca;border-radius:5px;padding:0.12rem 0.38rem;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:inherit;">x</button>'
+        +'</div>';
+    }).join('');
+    srSection+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.6rem 0.8rem;background:'+c.bg+'15;margin-bottom:0.5rem;">'
+      +'<div style="font-size:0.63rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">'+esc(labels[t]||t)+' — Service Reports & Certificates</div>'
+      +reportItems
+      +'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.3rem;">'
+      +'<input id="ep_srLink_'+t+'" placeholder="Paste Google Drive link..." style="flex:1;min-width:150px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="url"/>'
+      +'<input id="ep_srName_'+t+'" placeholder="Label (e.g. Air Balancing Report)" style="width:160px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="text"/>'
+      +'<button data-pid="'+id+'" data-type="'+t+'" onclick="addProjectSR(this.dataset.pid,this.dataset.type)" class="btn btn-secondary btn-sm">+ Add</button>'
+      +'</div>'
+      +'</div>';
+  });
+
+  var html='<div class="form-grid">'
+    +'<div class="fg"><label>Client / Store Name</label><input id="ep_client" value="'+esc(p.client||'')+'" type="text"/></div>'
+    +'<div class="fg"><label>Location</label><input id="ep_location" value="'+esc(p.location||'')+'" type="text"/></div>'
+    +'<div class="fg"><label>Scheduled Date</label><input id="ep_startDate" value="'+(p.startDate||'')+'" type="date"/></div>'
+    +'<div class="fg"><label>Scheduled Time</label><input id="ep_startTime" value="'+(p.startTime||'')+'" type="time"/></div>'
+    +'<div class="fg"><label>Target End Date</label><input id="ep_endDate" value="'+(p.endDate||'')+'" type="date"/></div>'
+    +'<div class="fg full"><label>Notes</label><textarea id="ep_notes" style="min-height:60px;">'+esc(p.notes||'')+'</textarea></div>'
+    +'</div>'
+    +'<div style="margin-top:1rem;">'
+    +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Service Reports & Certificates (per type)</div>'
+    +srSection
+    +'</div>';
+
+  document.getElementById('editProjectBody').innerHTML=html;
+  document.getElementById('editProjectSaveBtn').setAttribute('data-pid',id);
+  openModal('editProjectModal');
 }
+
+function saveEditProject(){
+  var id=document.getElementById('editProjectSaveBtn').getAttribute('data-pid');
+  var p=projects.find(function(x){return x.id===id;});if(!p)return;
+  p.client=document.getElementById('ep_client').value.trim();
+  p.location=document.getElementById('ep_location').value.trim();
+  p.startDate=document.getElementById('ep_startDate').value;
+  p.startTime=document.getElementById('ep_startTime').value;
+  p.endDate=document.getElementById('ep_endDate').value;
+  p.notes=document.getElementById('ep_notes').value.trim();
+  // Update name from client+location
+  if(p.client||p.location){
+    p.name=(p.client||'')+(p.location?(p.client?' - ':'')+p.location:'');
+  }
+  save('cesv2_projects',projects);
+  closeModal('editProjectModal');
+  openProjectDetail(id);
+  renderAllProjects();
+  showToast('Project updated!');
+}
+
+function addProjectSR(pid,type){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var urlEl=document.getElementById('ep_srLink_'+type);
+  var nameEl=document.getElementById('ep_srName_'+type);
+  if(!urlEl)return;
+  var url=urlEl.value.trim();
+  if(!url){alert('Please paste a Google Drive link.');return;}
+  var name=nameEl?nameEl.value.trim()||'Report':'Report';
+  if(!p.serviceReports)p.serviceReports={};
+  if(!p.serviceReports[type])p.serviceReports[type]=[];
+  p.serviceReports[type].push({url:url,name:name});
+  save('cesv2_projects',projects);
+  urlEl.value='';if(nameEl)nameEl.value='';
+  openEditProjectModal(pid);
+  showToast('Report added!');
+}
+
+function removeProjectSR(pid,type,idx){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  if(!p.serviceReports||!p.serviceReports[type])return;
+  p.serviceReports[type].splice(idx,1);
+  save('cesv2_projects',projects);
+  openEditProjectModal(pid);
+}
+
+function toggleStepNotNeeded(pid,sid){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var s=(p.steps||[]).find(function(x){return x.id===sid;});if(!s)return;
+  s.notNeeded=!s.notNeeded;
+  if(s.notNeeded){s.status='completed';s.completedDate=new Date().toISOString().split('T')[0];}
+  else{s.status='pending';s.completedDate='';}
+  save('cesv2_projects',projects);
+  openProjectDetail(pid);
+  showToast(s.notNeeded?'Step marked as Not Needed':'Step reopened');
+}
+
+function generateCompletionReport(id){
+  var p=projects.find(function(x){return x.id===id;});if(!p)return;
+  var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var completedSteps=(p.steps||[]).filter(function(s){return s.status==='completed';});
+  var totalSteps=(p.steps||[]).length;
+
+  var reportHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Completion Report - '+esc(p.name)+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;color:#1a2942;}'
+    +'h1{color:#0a2f52;border-bottom:3px solid #0a2f52;padding-bottom:10px;}'
+    +'h2{color:#1a6bb5;margin-top:25px;}'
+    +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:20px 0;}'
+    +'.info-item label{font-size:11px;font-weight:800;color:#666;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:3px;}'
+    +'.info-item span{font-size:14px;font-weight:700;}'
+    +'.step{padding:8px 12px;border-left:3px solid #bbf7d0;background:#f0fdf4;margin-bottom:6px;border-radius:0 6px 6px 0;}'
+    +'.step.pending{border-color:#e2e8f0;background:#f8fafc;}'
+    +'.progress-bar{background:#e2e8f0;border-radius:10px;height:12px;margin:8px 0;}'
+    +'.progress-fill{background:linear-gradient(90deg,#1a6bb5,#0a2f52);border-radius:10px;height:12px;}'
+    +'.section{margin:20px 0;padding:15px;border:1px solid #e2e8f0;border-radius:8px;}'
+    +'@media print{body{margin:20px;}}'
+    +'</style></head><body>'
+    +'<div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;">'
+    +'<div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#0a2f52,#1a6bb5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">CES</div>'
+    +'<div><div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.08em;">Carex Engineering Services</div>'
+    +'<h1 style="margin:0;font-size:20px;">Project Completion Report</h1></div></div>'
+    +'<div class="info-grid">'
+    +'<div class="info-item"><label>Project Name</label><span>'+esc(p.name)+'</span></div>'
+    +'<div class="info-item"><label>Project Type(s)</label><span>'+allTypes.map(function(t){return labels[t]||t;}).join(', ')+'</span></div>'
+    +'<div class="info-item"><label>Client / Store</label><span>'+esc(p.client||'—')+'</span></div>'
+    +'<div class="info-item"><label>Location</label><span>'+esc(p.location||'—')+'</span></div>'
+    +'<div class="info-item"><label>Date Started</label><span>'+fmtDate(p.startDate)+'</span></div>'
+    +'<div class="info-item"><label>Date Completed</label><span>'+fmtDate(p.completedAt?p.completedAt.split("T")[0]:'')+'</span></div>'
+    +'</div>'
+    +'<div class="section">'
+    +'<h2 style="margin-top:0;">Overall Progress</h2>'
+    +'<div class="progress-bar"><div class="progress-fill" style="width:'+Math.round(completedSteps.length/Math.max(totalSteps,1)*100)+'%"></div></div>'
+    +'<div style="font-size:13px;font-weight:700;">'+completedSteps.length+' of '+totalSteps+' steps completed ('+Math.round(completedSteps.length/Math.max(totalSteps,1)*100)+'%)</div>'
+    +'</div>';
+
+  // Steps per type
+  allTypes.forEach(function(t){
+    var typeSteps=(p.steps||[]).filter(function(s){return s.id.startsWith(t+'_')||(!s.id.includes('_')&&allTypes.length===1);});
+    reportHtml+='<div class="section"><h2 style="margin-top:0;">'+esc(labels[t]||t)+' — Workflow Steps</h2>';
+    typeSteps.forEach(function(s){
+      reportHtml+='<div class="step '+(s.status==='completed'?'':'pending')+'">'
+        +'<strong>'+esc(s.title)+'</strong>'
+        +(s.status==='completed'?' <span style="color:#15803d;font-size:12px;">✓ Completed'+(s.completedDate?' on '+fmtDate(s.completedDate):'')+'</span>':' <span style="color:#92400e;font-size:12px;">Pending</span>')
+        +(s.testResult?' — Test: <strong style="color:'+(s.testResult==='pass'?'#15803d':'#dc2626')+';">'+(s.testResult==='pass'?'PASSED':'FAILED')+'</strong>':'')
+        +(s.notes?'<div style="font-size:12px;color:#555;margin-top:4px;">Note: '+esc(s.notes)+'</div>':'')
+        +(s.driveLink?'<div style="font-size:12px;margin-top:4px;"><a href="'+esc(s.driveLink)+'" style="color:#1a6bb5;">View Certificate/File</a></div>':'')
+        +'</div>';
+    });
+    // Service reports for this type
+    var typeReports=(p.serviceReports&&p.serviceReports[t])||[];
+    if(typeReports.length>0){
+      reportHtml+='<div style="margin-top:10px;"><strong style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.05em;">Attached Reports & Certificates:</strong>';
+      typeReports.forEach(function(r){
+        reportHtml+='<div style="font-size:13px;margin-top:4px;">&#128203; <a href="'+esc(r.url)+'" style="color:#1a6bb5;">'+esc(r.name)+'</a></div>';
+      });
+      reportHtml+='</div>';
+    }
+    reportHtml+='</div>';
+  });
+
+  // Daily progress log
+  if(p.dailyProgress&&p.dailyProgress.length>0){
+    reportHtml+='<div class="section"><h2 style="margin-top:0;">Daily Progress Log</h2>';
+    p.dailyProgress.forEach(function(dp){
+      reportHtml+='<div style="padding:8px 12px;border-left:3px solid #b3d0f0;background:#eff6ff;margin-bottom:8px;border-radius:0 6px 6px 0;">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+        +'<strong style="font-size:13px;">'+fmtDate(dp.date)+'</strong>'
+        +'<span style="font-size:12px;color:#15803d;font-weight:700;">'+dp.completion+'% complete</span>'
+        +'</div>'
+        +'<div style="font-size:13px;white-space:pre-wrap;">'+esc(dp.done)+'</div>'
+        +(dp.mediaLink?'<div style="margin-top:4px;font-size:12px;"><a href="'+esc(dp.mediaLink)+'" style="color:#1a6bb5;">&#128247; View Photo/Video</a></div>':'')
+        +'</div>';
+    });
+    reportHtml+='</div>';
+  }
+
+  // Notes
+  if(p.notes){
+    reportHtml+='<div class="section"><h2 style="margin-top:0;">Notes</h2><div style="font-size:14px;white-space:pre-wrap;">'+esc(p.notes)+'</div></div>';
+  }
+
+  reportHtml+='<div style="margin-top:30px;padding-top:15px;border-top:2px solid #e2e8f0;font-size:11px;color:#999;text-align:center;">'
+    +'Generated by Carex Engineering Services Office System — '+new Date().toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})
+    +'</div></body></html>';
+
+  // Open in new window for printing
+  var win=window.open('','_blank');
+  if(win){
+    win.document.write(reportHtml);
+    win.document.close();
+    setTimeout(function(){win.print();},500);
+  }
+  showToast('Completion report generated! Check the new tab.');
+}
+
 
 // ══ INIT ══
 function openEditDatesModal(pid){
@@ -3279,6 +3551,17 @@ setInterval(updateHeaderDate,60000);
 </div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editDatesModal')">Cancel</button><button class="btn btn-primary" onclick="saveEditDates()">Save</button></div>
+</div>
+</div>
+
+<div class="modal-overlay" id="editProjectModal">
+<div class="modal" style="max-width:680px;">
+<div class="modal-header"><h2>Edit Project</h2><button class="modal-close" onclick="closeModal('editProjectModal')">X Close</button></div>
+<div class="modal-body" id="editProjectBody"></div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeModal('editProjectModal')">Cancel</button>
+<button id="editProjectSaveBtn" class="btn btn-primary" data-pid="" onclick="saveEditProject()">Save Changes</button>
+</div>
 </div>
 </div>
 
