@@ -1361,7 +1361,6 @@ function openProjectDetail(id){
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.location||'--')+'</div></div>'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Start Date</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.startDate)+'</div></div>'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Target End</div><div style="font-size:0.84rem;font-weight:700;">'+fmtDate(p.endDate)+'</div></div>'
-    +'<div style="grid-column:1/-1;margin-top:0.3rem;"><button class="btn btn-secondary btn-xs" data-pid="'+p.id+'" onclick="openEditDatesModal(this.dataset.pid)">&#9998; Edit Dates / Time</button></div>'
     +'</div>'
     +'<div style="margin-bottom:1.1rem;">'
     +'<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">'
@@ -1372,6 +1371,7 @@ function openProjectDetail(id){
     +'</div>'
     +workerSection
     +renderProjectDriveLinks(p)
+    +(buildMissingCertWarnings(p)||'')
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Workflow Steps</div>'
     +stepsHtml
     +'<div style="margin-top:1.1rem;">'
@@ -2692,50 +2692,78 @@ function addDailyProgress(pid){
 }
 
 
-function completeProject(id){
-  var p=projects.find(function(x){return x.id===id;});if(!p)return;
+function getMissingCerts(p){
   var allTypes=p.types&&p.types.length>1?p.types:[p.type];
   var missing=[];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
 
-  // Check required steps per type
+  // Required steps per type with friendly names
+  var required={
+    ducting:[
+      {baseId:'ducttest',name:'Duct Leakage Test (Light/Smoke) Certificate'},
+      {baseId:'airbalancing',name:'Air Balancing Certificate'},
+      {baseId:'asbuilt',name:'As-Built Plan'}
+    ],
+    sprinkler:[
+      {baseId:'hydrotesting',name:'Hydrostatic Pressure Test Certificate'},
+      {baseId:'asbuilt',name:'As-Built Plan'}
+    ],
+    airbalancing:[
+      {baseId:'handover',name:'Air Balancing Certificate / Signed Handover'}
+    ],
+    fcuinstall:[
+      {baseId:'testing',name:'Testing & Commissioning Certificate'},
+      {baseId:'asbuilt',name:'As-Built Plan'}
+    ],
+    fcudismantling:[
+      {baseId:'inspection',name:'Consultant Inspection / Turnover Report'}
+    ]
+  };
+
   allTypes.forEach(function(t){
-    var typeSteps=(p.steps||[]).filter(function(s){return s.id.startsWith(t+'_')||(!s.id.includes('_')&&p.types&&p.types.length===1);});
-
-    if(t==='ducting'){
-      // ducttest must have a driveLink OR be marked not needed
-      var ducttest=typeSteps.find(function(s){return s.id.endsWith('_ducttest')||s.id==='ducttest';});
-      if(ducttest&&!ducttest.driveLink&&!ducttest.notNeeded&&ducttest.status!=='completed'){
-        missing.push('Ducting: Duct Leakage Test (Light/Smoke) must be completed with a certificate/file attached, or marked as Not Needed');
+    var reqs=required[t]||[];
+    reqs.forEach(function(req){
+      var step=(p.steps||[]).find(function(s){
+        var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;
+        return baseId===req.baseId;
+      });
+      if(step&&!step.driveLink&&!step.notNeeded){
+        missing.push({type:t,typeLabel:labels[t]||t,stepId:step.id,name:req.name});
       }
-      var asbuilt=typeSteps.find(function(s){return s.id.endsWith('_asbuilt')||s.id==='asbuilt';});
-      if(asbuilt&&!asbuilt.driveLink&&!asbuilt.notNeeded){
-        missing.push('Ducting: As-Built Plan must have a file attached, or marked as Not Needed');
-      }
-      var airbal=typeSteps.find(function(s){return s.id.endsWith('_airbalancing')||s.id==='airbalancing';});
-      if(airbal&&!airbal.driveLink&&!airbal.notNeeded&&airbal.status!=='completed'){
-        missing.push('Ducting: Air Balancing must be completed with a certificate/file attached, or marked as Not Needed');
-      }
-    }
-    if(t==='sprinkler'){
-      var hydro=typeSteps.find(function(s){return s.id.endsWith('_hydrotesting')||s.id==='hydrotesting';});
-      if(hydro&&!hydro.driveLink&&!hydro.notNeeded&&hydro.status!=='completed'){
-        missing.push('Sprinkler: Hydrostatic Pressure Testing must be completed with a certificate/file attached, or marked as Not Needed');
-      }
-      var asbuilt2=typeSteps.find(function(s){return s.id.endsWith('_asbuilt')||s.id==='asbuilt';});
-      if(asbuilt2&&!asbuilt2.driveLink&&!asbuilt2.notNeeded){
-        missing.push('Sprinkler: As-Built Plan must have a file attached, or marked as Not Needed');
-      }
-    }
-    if(t==='airbalancing'){
-      var handover=typeSteps.find(function(s){return s.id.endsWith('_handover')||s.id==='handover';});
-      if(handover&&!handover.driveLink&&!handover.notNeeded&&handover.status!=='completed'){
-        missing.push('Air Balancing: Final Handover must be completed with a signed certificate/file, or marked as Not Needed');
-      }
-    }
+    });
   });
+  return missing;
+}
+
+function buildMissingCertWarnings(p){
+  var missing=getMissingCerts(p);
+  if(!missing.length)return'';
+  var items=missing.map(function(m){
+    return '<div style="display:flex;align-items:flex-start;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid rgba(220,38,38,0.1);">'
+      +'<span style="font-size:0.75rem;flex-shrink:0;">&#9888;</span>'
+      +'<div style="flex:1;">'
+      +'<span style="font-size:0.72rem;font-weight:700;color:#dc2626;">'+esc(m.typeLabel)+': </span>'
+      +'<span style="font-size:0.72rem;color:#7f1d1d;">'+esc(m.name)+' is not attached.</span>'
+      +'<span style="font-size:0.68rem;color:#9ca3af;margin-left:0.3rem;">Use the "Drive Link" button on that step to attach the file.</span>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+  return'<div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;">'
+    +'<div style="font-size:0.68rem;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">&#128276; Missing Certificates — Required Before Completion</div>'
+    +items
+    +'</div>';
+}
+
+function completeProject(id){
+  var p=projects.find(function(x){return x.id===id;});if(!p)return;
+  var missing=getMissingCerts(p);
 
   if(missing.length>0){
-    var msg='Cannot complete project. The following are required:\n\n'+missing.join('\n\n')+'\n\nYou can attach a Drive link to each step, or click "Not Needed" on the step to skip the requirement.';
+    var msg='Cannot complete project. The following certificates/files are required:\n\n';
+    missing.forEach(function(m){
+      msg+='• '+m.typeLabel+': '+m.name+'\n';
+    });
+    msg+='\nTo attach a file: open the step → click "Drive Link" → paste your Google Drive link.\nOr click "Not Needed" on the step if it does not apply.';
     alert(msg);
     return;
   }
@@ -2776,6 +2804,7 @@ function completeProject(id){
   renderDashboard();
   renderAllProjects();
 }
+
 
 
 function reopenProject(id){
@@ -3086,30 +3115,6 @@ function openEditProjectModal(id){
     return html;
   }
 
-  // Build service reports section per type
-  var srSection='';
-  allTypes.forEach(function(t){
-    var c=typeColors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
-    var typeReports=(p.serviceReports&&p.serviceReports[t])||[];
-    var reportItems=typeReports.map(function(r,i){
-      return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;background:#fff;margin-bottom:0.28rem;">'
-        +'<span style="font-size:0.75rem;">&#128203;</span>'
-        +'<span style="flex:1;font-size:0.75rem;font-weight:700;color:var(--text);">'+esc(r.name)+'</span>'
-        +'<a href="'+esc(r.url)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;">Open</a>'
-        +'<button data-pid="'+id+'" data-type="'+t+'" data-idx="'+i+'" onclick="removeProjectSR(this.dataset.pid,this.dataset.type,parseInt(this.dataset.idx))" style="background:#fee2e2;color:var(--danger);border:1.5px solid #fecaca;border-radius:5px;padding:0.12rem 0.38rem;font-size:0.65rem;font-weight:700;cursor:pointer;font-family:inherit;">x</button>'
-        +'</div>';
-    }).join('');
-    srSection+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.6rem 0.8rem;background:'+c.bg+'15;margin-bottom:0.5rem;">'
-      +'<div style="font-size:0.63rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">'+esc(labels[t]||t)+' — Service Reports & Certificates</div>'
-      +reportItems
-      +'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:0.3rem;">'
-      +'<input id="ep_srLink_'+t+'" placeholder="Paste Google Drive link..." style="flex:1;min-width:150px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="url"/>'
-      +'<input id="ep_srName_'+t+'" placeholder="Label (e.g. Air Balancing Report)" style="width:160px;padding:0.38rem 0.6rem;border:1.5px solid '+c.border+';border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;" type="text"/>'
-      +'<button data-pid="'+id+'" data-type="'+t+'" onclick="addProjectSR(this.dataset.pid,this.dataset.type)" class="btn btn-secondary btn-sm">+ Add</button>'
-      +'</div>'
-      +'</div>';
-  });
-
   var html='<div class="form-grid">'
     +'<div class="fg"><label>Client / Store Name</label><input id="ep_client" value="'+esc(p.client||'')+'" type="text"/></div>'
     +'<div class="fg"><label>Location</label><input id="ep_location" value="'+esc(p.location||'')+'" type="text"/></div>'
@@ -3122,10 +3127,6 @@ function openEditProjectModal(id){
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Assigned Workers (per type)</div>'
     +'<div id="ep_workerSection">'+buildWorkerSection()+'</div>'
     +'</div>'
-    +'<div style="margin-top:1rem;">'
-    +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Service Reports & Certificates (per type)</div>'
-    +srSection
-    +'</div>';
 
   document.getElementById('editProjectBody').innerHTML=html;
   document.getElementById('editProjectSaveBtn').setAttribute('data-pid',id);
@@ -3180,30 +3181,9 @@ function saveEditProject(){
   showToast('Project updated!');
 }
 
-function addProjectSR(pid,type){
-  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  var urlEl=document.getElementById('ep_srLink_'+type);
-  var nameEl=document.getElementById('ep_srName_'+type);
-  if(!urlEl)return;
-  var url=urlEl.value.trim();
-  if(!url){alert('Please paste a Google Drive link.');return;}
-  var name=nameEl?nameEl.value.trim()||'Report':'Report';
-  if(!p.serviceReports)p.serviceReports={};
-  if(!p.serviceReports[type])p.serviceReports[type]=[];
-  p.serviceReports[type].push({url:url,name:name});
-  save('cesv2_projects',projects);
-  urlEl.value='';if(nameEl)nameEl.value='';
-  openEditProjectModal(pid);
-  showToast('Report added!');
-}
 
-function removeProjectSR(pid,type,idx){
-  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  if(!p.serviceReports||!p.serviceReports[type])return;
-  p.serviceReports[type].splice(idx,1);
-  save('cesv2_projects',projects);
-  openEditProjectModal(pid);
-}
+
+
 
 function toggleStepNotNeeded(pid,sid){
   var p=projects.find(function(x){return x.id===pid;});if(!p)return;
@@ -3317,25 +3297,8 @@ function generateCompletionReport(id){
 
 
 // ══ INIT ══
-function openEditDatesModal(pid){
-  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  document.getElementById('ed_pid').value=pid;
-  document.getElementById('ed_startDate').value=p.startDate||'';
-  document.getElementById('ed_startTime').value=p.startTime||'';
-  document.getElementById('ed_endDate').value=p.endDate||'';
-  openModal('editDatesModal');
-}
-function saveEditDates(){
-  var pid=document.getElementById('ed_pid').value;
-  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  p.startDate=document.getElementById('ed_startDate').value;
-  p.startTime=document.getElementById('ed_startTime').value;
-  p.endDate=document.getElementById('ed_endDate').value;
-  save('cesv2_projects',projects);
-  closeModal('editDatesModal');
-  openProjectDetail(pid);
-  showToast('Dates updated!');
-}
+
+
 
 updateHeaderDate();
 // Restore last visited page
@@ -3618,20 +3581,7 @@ setInterval(updateHeaderDate,60000);
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newGrilleModal')">Cancel</button><button class="btn btn-primary" onclick="saveGrille()">Save Order</button></div>
 </div>
 </div>
-<div class="modal-overlay" id="editDatesModal">
-<div class="modal" style="max-width:420px;">
-<div class="modal-header"><h2>Edit Project Dates</h2><button class="modal-close" onclick="closeModal('editDatesModal')">X Close</button></div>
-<div class="modal-body">
-<input type="hidden" id="ed_pid"/>
-<div class="form-grid">
-<div class="fg"><label>Scheduled Date</label><input id="ed_startDate" type="date"/></div>
-<div class="fg"><label>Scheduled Time</label><input id="ed_startTime" type="time"/></div>
-<div class="fg full"><label>Target End Date</label><input id="ed_endDate" type="date"/></div>
-</div>
-</div>
-<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editDatesModal')">Cancel</button><button class="btn btn-primary" onclick="saveEditDates()">Save</button></div>
-</div>
-</div>
+
 
 <div class="modal-overlay" id="editProjectModal">
 <div class="modal" style="max-width:680px;">
