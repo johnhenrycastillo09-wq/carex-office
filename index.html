@@ -252,7 +252,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
 <div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
-      <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
+<div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
 <div class="stats-grid">
 <div class="stat-card" onclick="showPage('projects',document.querySelector('[onclick*=projects]'))"><div class="stat-card-top"><div class="stat-icon" style="background:#e8f1fb;">📋</div><span class="stat-sub up" id="statActiveP">0 Active</span></div><div class="stat-value" id="statTotalP">0</div><div class="stat-label">Total Projects</div></div>
 <div class="stat-card" onclick="showPage('workers',document.querySelector('[onclick*=workers]'))"><div class="stat-card-top"><div class="stat-icon" style="background:#f0fdf4;">👷</div><span class="stat-sub up" id="statFreeW">0 Free</span></div><div class="stat-value" id="statTotalW">0</div><div class="stat-label">Total Workers</div></div>
@@ -278,14 +278,24 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="page" id="page-calendar">
 <div class="page-header"><div><div class="page-title">Calendar</div><div class="page-subtitle">Worker schedules and project timelines</div></div><div class="page-actions"><button class="btn btn-secondary btn-sm" onclick="prevMonth()">Prev</button><span id="calMonthLabel" style="font-size:0.88rem;font-weight:800;color:var(--text);padding:0 0.5rem;"></span><button class="btn btn-secondary btn-sm" onclick="nextMonth()">Next</button></div></div>
 <div class="card"><div class="calendar-grid" id="calendarGrid"></div></div>
-<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.75rem;">
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#dbeafe;display:inline-block;"></span>Ducting</span>
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#dcfce7;display:inline-block;"></span>Sprinkler</span>
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#fef9c3;display:inline-block;"></span>Air Balancing</span>
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#f3e8ff;display:inline-block;"></span>FCU</span>
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#fff3ee;display:inline-block;"></span>PMS</span>
-<span style="font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:0.3rem;"><span style="width:10px;height:10px;border-radius:3px;background:#f1f5f9;display:inline-block;"></span>Job/Ticket</span>
+<div style="margin-top:0.85rem;">
+<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+<span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Type:</span>
+<span class="cal-legend-btn" data-filter="all" onclick="setCalFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+<span class="cal-legend-btn" data-filter="ducting" onclick="setCalFilter('ducting',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bfdbfe;cursor:pointer;background:#dbeafe;color:#1d4ed8;">Ducting</span>
+<span class="cal-legend-btn" data-filter="sprinkler" onclick="setCalFilter('sprinkler',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">Sprinkler</span>
+<span class="cal-legend-btn" data-filter="airbalancing" onclick="setCalFilter('airbalancing',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #fde68a;cursor:pointer;background:#fef9c3;color:#92400e;">Air Balancing</span>
+<span class="cal-legend-btn" data-filter="fcu" onclick="setCalFilter('fcu',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e9d5ff;cursor:pointer;background:#f3e8ff;color:#7e22ce;">FCU</span>
+<span class="cal-legend-btn" data-filter="pms" onclick="setCalFilter('pms',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid rgba(255,107,53,0.3);cursor:pointer;background:#fff3ee;color:var(--orange);">PMS</span>
+<span class="cal-legend-btn" data-filter="job" onclick="setCalFilter('job',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:#f1f5f9;color:var(--gray700);">Jobs</span>
 </div>
+<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+<span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Client:</span>
+<span class="cal-client-btn" data-client="all" onclick="setCalClientFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+<div id="calClientFilters" style="display:flex;gap:0.35rem;flex-wrap:wrap;"></div>
+</div>
+</div>
+<div id="calTooltip" style="display:none;position:fixed;background:#1a2332;color:#fff;border-radius:10px;padding:0.75rem 1rem;font-size:0.78rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.3);max-width:280px;pointer-events:none;line-height:1.6;"></div>
 </div>
 <!-- WORKERS -->
 <div class="page" id="page-workers">
@@ -353,65 +363,64 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="tab-bar"><button class="tab-btn active" onclick="filterOrders('all',this)">All</button><button class="tab-btn" onclick="filterOrders('pending',this)">Pending</button><button class="tab-btn" onclick="filterOrders('approved',this)">Approved</button><button class="tab-btn" onclick="filterOrders('completed',this)">Completed</button></div>
 <div class="project-list" id="ordersList"></div>
 </div>
-
-    <!-- CLIENTS PAGE -->
-    <div class="page" id="page-clients">
-      <div class="page-header"><div><div class="page-title">Clients / Store Database</div><div class="page-subtitle">Centralized client and store records</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openAddClientModal()">+ Add Client</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterClients('all',this)">All</button><button class="tab-btn" onclick="filterClients('active',this)">Active</button><button class="tab-btn" onclick="filterClients('inactive',this)">Inactive</button></div>
-      <div id="clientsList"></div>
-    </div>
-    <!-- BILLING PAGE -->
-    <div class="page" id="page-billing">
-      <div class="page-header"><div><div class="page-title">Billing and Quotations</div><div class="page-subtitle">Create quotes, invoices and track payments</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewBillingModal()">+ New Quote</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterBilling('all',this)">All</button><button class="tab-btn" onclick="filterBilling('draft',this)">Draft</button><button class="tab-btn" onclick="filterBilling('sent',this)">Sent</button><button class="tab-btn" onclick="filterBilling('approved',this)">Approved</button><button class="tab-btn" onclick="filterBilling('invoiced',this)">Invoiced</button><button class="tab-btn" onclick="filterBilling('paid',this)">Paid</button></div>
-      <div class="project-list" id="billingList"></div>
-    </div>
-    <!-- SERVICE REPORTS PAGE -->
-    <div class="page" id="page-servicereports">
-      <div class="page-header"><div><div class="page-title">Service Reports</div><div class="page-subtitle">Generate and track service reports for completed jobs</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewServiceReportModal()">+ New Report</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterServiceReports('all',this)">All</button><button class="tab-btn" onclick="filterServiceReports('draft',this)">Draft</button><button class="tab-btn" onclick="filterServiceReports('sent',this)">Sent</button><button class="tab-btn" onclick="filterServiceReports('signed',this)">Signed</button></div>
-      <div class="project-list" id="serviceReportsList"></div>
-    </div>
-    <!-- PTW PAGE -->
-    <div class="page" id="page-ptw">
-      <div class="page-header"><div><div class="page-title">Permit to Work (PTW)</div><div class="page-subtitle">Track permits, validity dates and expiry alerts</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewPtwModal()">+ New PTW</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterPtw('all',this)">All</button><button class="tab-btn" onclick="filterPtw('pending',this)">Pending</button><button class="tab-btn" onclick="filterPtw('active',this)">Active</button><button class="tab-btn" onclick="filterPtw('expiring',this)">Expiring Soon</button><button class="tab-btn" onclick="filterPtw('expired',this)">Expired</button></div>
-      <div class="project-list" id="ptwList"></div>
-    </div>
-    <!-- DELIVERY PAGE -->
-    <div class="page" id="page-delivery">
-      <div class="page-header"><div><div class="page-title">Site Delivery</div><div class="page-subtitle">Track materials and equipment delivered to each project site</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewDeliveryModal()">+ New Delivery</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterDelivery('all',this)">All</button><button class="tab-btn" onclick="filterDelivery('pending',this)">Pending</button><button class="tab-btn" onclick="filterDelivery('partial',this)">Partial</button><button class="tab-btn" onclick="filterDelivery('complete',this)">Complete</button></div>
-      <div class="project-list" id="deliveryList"></div>
-    </div>
-    <!-- EQUIPMENT PAGE -->
-    <div class="page" id="page-equipment">
-      <div class="page-header"><div><div class="page-title">Equipment Tracking</div><div class="page-subtitle">Track all equipment - where it is, its condition, and deployment history</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewEquipmentModal()">+ Add Equipment</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterEquipment('all',this)">All</button><button class="tab-btn" onclick="filterEquipment('deployed',this)">Deployed</button><button class="tab-btn" onclick="filterEquipment('returned',this)">Returned</button></div>
-      <div class="project-list" id="equipmentList"></div>
-    </div>
-    <!-- GRILLES PAGE -->
-    <div class="page" id="page-grilles">
-      <div class="page-header"><div><div class="page-title">Grilles Management</div><div class="page-subtitle">Track grille orders for projects and standalone client orders</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewGrilleModal()">+ New Grille Order</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterGrilles('all',this)">All Orders</button><button class="tab-btn" onclick="filterGrilles('project',this)">For Projects</button><button class="tab-btn" onclick="filterGrilles('client',this)">Client Orders</button><button class="tab-btn" onclick="filterGrilles('pending',this)">Pending</button><button class="tab-btn" onclick="filterGrilles('delivered',this)">Delivered</button><button class="tab-btn" onclick="filterGrilles('installed',this)">Installed</button></div>
-      <div class="project-list" id="grillesList"></div>
-    </div>
-    <!-- TOOLBOX TALK PAGE -->
-    <div class="page" id="page-toolboxtalk">
-      <div class="page-header"><div><div class="page-title">Toolbox Talk Records</div><div class="page-subtitle">Log toolbox talks per project with attendees</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewToolboxModal()">+ New Toolbox Talk</button></div></div>
-      <div class="project-list" id="toolboxList"></div>
-    </div>
-    <!-- DTR PAGE -->
-    <div class="page" id="page-dtr">
-      <div class="page-header"><div><div class="page-title">Daily Time Record (DTR)</div><div class="page-subtitle">Track worker attendance and hours per project</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewDtrModal()">+ Log Attendance</button></div></div>
-      <div class="tab-bar"><button class="tab-btn active" onclick="filterDtr('all',this)">All</button><button class="tab-btn" onclick="filterDtr('today',this)">Today</button><button class="tab-btn" onclick="filterDtr('week',this)">This Week</button><button class="tab-btn" onclick="filterDtr('month',this)">This Month</button></div>
-      <div id="dtrContent"></div>
-    </div>
-    <!-- REPORTS PAGE -->
-    <div class="page" id="page-reports">
-      <div class="page-header"><div><div class="page-title">Reports and Analytics</div><div class="page-subtitle">Overview of business performance and summaries</div></div><div class="page-actions"><button class="btn btn-secondary btn-sm" onclick="window.print()">Print Report</button></div></div>
-      <div id="reportsContent"></div>
-    </div>
+<!-- CLIENTS PAGE -->
+<div class="page" id="page-clients">
+<div class="page-header"><div><div class="page-title">Clients / Store Database</div><div class="page-subtitle">Centralized client and store records</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openAddClientModal()">+ Add Client</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterClients('all',this)">All</button><button class="tab-btn" onclick="filterClients('active',this)">Active</button><button class="tab-btn" onclick="filterClients('inactive',this)">Inactive</button></div>
+<div id="clientsList"></div>
+</div>
+<!-- BILLING PAGE -->
+<div class="page" id="page-billing">
+<div class="page-header"><div><div class="page-title">Billing and Quotations</div><div class="page-subtitle">Create quotes, invoices and track payments</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewBillingModal()">+ New Quote</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterBilling('all',this)">All</button><button class="tab-btn" onclick="filterBilling('draft',this)">Draft</button><button class="tab-btn" onclick="filterBilling('sent',this)">Sent</button><button class="tab-btn" onclick="filterBilling('approved',this)">Approved</button><button class="tab-btn" onclick="filterBilling('invoiced',this)">Invoiced</button><button class="tab-btn" onclick="filterBilling('paid',this)">Paid</button></div>
+<div class="project-list" id="billingList"></div>
+</div>
+<!-- SERVICE REPORTS PAGE -->
+<div class="page" id="page-servicereports">
+<div class="page-header"><div><div class="page-title">Service Reports</div><div class="page-subtitle">Generate and track service reports for completed jobs</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewServiceReportModal()">+ New Report</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterServiceReports('all',this)">All</button><button class="tab-btn" onclick="filterServiceReports('draft',this)">Draft</button><button class="tab-btn" onclick="filterServiceReports('sent',this)">Sent</button><button class="tab-btn" onclick="filterServiceReports('signed',this)">Signed</button></div>
+<div class="project-list" id="serviceReportsList"></div>
+</div>
+<!-- PTW PAGE -->
+<div class="page" id="page-ptw">
+<div class="page-header"><div><div class="page-title">Permit to Work (PTW)</div><div class="page-subtitle">Track permits, validity dates and expiry alerts</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewPtwModal()">+ New PTW</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterPtw('all',this)">All</button><button class="tab-btn" onclick="filterPtw('pending',this)">Pending</button><button class="tab-btn" onclick="filterPtw('active',this)">Active</button><button class="tab-btn" onclick="filterPtw('expiring',this)">Expiring Soon</button><button class="tab-btn" onclick="filterPtw('expired',this)">Expired</button></div>
+<div class="project-list" id="ptwList"></div>
+</div>
+<!-- DELIVERY PAGE -->
+<div class="page" id="page-delivery">
+<div class="page-header"><div><div class="page-title">Site Delivery</div><div class="page-subtitle">Track materials and equipment delivered to each project site</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewDeliveryModal()">+ New Delivery</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterDelivery('all',this)">All</button><button class="tab-btn" onclick="filterDelivery('pending',this)">Pending</button><button class="tab-btn" onclick="filterDelivery('partial',this)">Partial</button><button class="tab-btn" onclick="filterDelivery('complete',this)">Complete</button></div>
+<div class="project-list" id="deliveryList"></div>
+</div>
+<!-- EQUIPMENT PAGE -->
+<div class="page" id="page-equipment">
+<div class="page-header"><div><div class="page-title">Equipment Tracking</div><div class="page-subtitle">Track all equipment - where it is, its condition, and deployment history</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewEquipmentModal()">+ Add Equipment</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterEquipment('all',this)">All</button><button class="tab-btn" onclick="filterEquipment('deployed',this)">Deployed</button><button class="tab-btn" onclick="filterEquipment('returned',this)">Returned</button></div>
+<div class="project-list" id="equipmentList"></div>
+</div>
+<!-- GRILLES PAGE -->
+<div class="page" id="page-grilles">
+<div class="page-header"><div><div class="page-title">Grilles Management</div><div class="page-subtitle">Track grille orders for projects and standalone client orders</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewGrilleModal()">+ New Grille Order</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterGrilles('all',this)">All Orders</button><button class="tab-btn" onclick="filterGrilles('project',this)">For Projects</button><button class="tab-btn" onclick="filterGrilles('client',this)">Client Orders</button><button class="tab-btn" onclick="filterGrilles('pending',this)">Pending</button><button class="tab-btn" onclick="filterGrilles('delivered',this)">Delivered</button><button class="tab-btn" onclick="filterGrilles('installed',this)">Installed</button></div>
+<div class="project-list" id="grillesList"></div>
+</div>
+<!-- TOOLBOX TALK PAGE -->
+<div class="page" id="page-toolboxtalk">
+<div class="page-header"><div><div class="page-title">Toolbox Talk Records</div><div class="page-subtitle">Log toolbox talks per project with attendees</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewToolboxModal()">+ New Toolbox Talk</button></div></div>
+<div class="project-list" id="toolboxList"></div>
+</div>
+<!-- DTR PAGE -->
+<div class="page" id="page-dtr">
+<div class="page-header"><div><div class="page-title">Daily Time Record (DTR)</div><div class="page-subtitle">Track worker attendance and hours per project</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewDtrModal()">+ Log Attendance</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterDtr('all',this)">All</button><button class="tab-btn" onclick="filterDtr('today',this)">Today</button><button class="tab-btn" onclick="filterDtr('week',this)">This Week</button><button class="tab-btn" onclick="filterDtr('month',this)">This Month</button></div>
+<div id="dtrContent"></div>
+</div>
+<!-- REPORTS PAGE -->
+<div class="page" id="page-reports">
+<div class="page-header"><div><div class="page-title">Reports and Analytics</div><div class="page-subtitle">Overview of business performance and summaries</div></div><div class="page-actions"><button class="btn btn-secondary btn-sm" onclick="window.print()">Print Report</button></div></div>
+<div id="reportsContent"></div>
+</div>
 </main>
 </div>
 <!-- MODALS -->
@@ -758,20 +767,131 @@ function renderCalendar(){
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const prevDays=new Date(calYear,calMonth,0).getDate();
   const today=new Date().toISOString().split('T')[0];
+  const cf=window.calTypeFilter||'all';
+  const cc=window.calClientFilter||'all';
+
   for(let i=firstDay-1;i>=0;i--)html+=`<div class="cal-day other-month"><div class="cal-day-num">${prevDays-i}</div></div>`;
+
   for(let d=1;d<=daysInMonth;d++){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dp=projects.filter(p=>p.startDate===ds);
-    const dj=jobs.filter(j=>j.schedDate===ds);
-    const dpms=stores.filter(s=>s.nextCleaning===ds);
-    let ev=dp.map(p=>`<div class="cal-event ${p.type==='ducting'?'ducting':p.type==='sprinkler'?'sprinkler':p.type==='airbalancing'?'airbal':'fcu'}">${esc(p.name.slice(0,12))}</div>`).join('');
-    ev+=dj.map(j=>`<div class="cal-event job">${esc(j.scope.slice(0,12))}</div>`).join('');
-    ev+=dpms.map(s=>`<div class="cal-event pms">PMS: ${esc(s.name.slice(0,10))}</div>`).join('');
-    html+=`<div class="cal-day ${ds===today?'today':''}"><div class="cal-day-num">${d}</div>${ev}</div>`;
+    let dp=projects.filter(p=>p.startDate===ds);
+    let dj=jobs.filter(j=>j.schedDate===ds);
+    let dpms=stores.filter(s=>s.nextCleaning===ds);
+
+    // Apply type filter
+    if(cf!=='all'){
+      if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(cf)){
+        dp=dp.filter(p=>p.type===cf);
+        dj=[];dpms=[];
+      } else if(cf==='pms'){dp=[];dj=[];}
+      else if(cf==='job'){dp=[];dpms=[];}
+    }
+
+    // Apply client filter
+    if(cc!=='all'){
+      dp=dp.filter(p=>(p.client||'').toLowerCase().includes(cc.toLowerCase()));
+      dj=dj.filter(j=>(j.merchant||'').toLowerCase().includes(cc.toLowerCase()));
+      dpms=dpms.filter(s=>s.name.toLowerCase().includes(cc.toLowerCase()));
+    }
+
+    let ev=dp.map(p=>{
+      const workers=(p.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
+      const time=p.startTime?p.startTime:'';
+      const tooltip=JSON.stringify({title:p.name,client:p.client||'',location:p.location||'',workers:workers,time:time,type:p.type,progress:Math.round(((p.steps||[]).filter(s=>s.status==='completed').length)/Math.max((p.steps||[]).length,1)*100)+'%'});
+      return`<div class="cal-event ${p.type==='ducting'?'ducting':p.type==='sprinkler'?'sprinkler':p.type==='airbalancing'?'airbal':'fcu'}" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">${esc(p.name.slice(0,14))}</div>`;
+    }).join('');
+
+    ev+=dj.map(j=>{
+      const workers=(j.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
+      const tooltip=JSON.stringify({title:j.scope||'Job',client:j.merchant||'',location:j.location||'',workers:workers,time:j.schedTime||'',type:'job',priority:j.priority||'medium'});
+      return`<div class="cal-event job" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">${esc((j.scope||'Job').slice(0,14))}</div>`;
+    }).join('');
+
+    ev+=dpms.map(s=>{
+      const tooltip=JSON.stringify({title:'PMS: '+s.name,client:s.name,location:s.location||'',workers:'',time:'',type:'pms',fcuCount:s.fcuCount||0,safetyOfficer:s.safetyOfficer==='yes'?'Required':'Not required'});
+      return`<div class="cal-event pms" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">PMS: ${esc(s.name.slice(0,10))}</div>`;
+    }).join('');
+
+    html+=`<div class="cal-day ${ds===today?'today':''}">${ev?'<div class="cal-day-num">'+d+'</div>'+ev:'<div class="cal-day-num">'+d+'</div>'}</div>`;
   }
+
   const tc=Math.ceil((firstDay+daysInMonth)/7)*7;
   for(let d=1;d<=tc-(firstDay+daysInMonth);d++)html+=`<div class="cal-day other-month"><div class="cal-day-num">${d}</div></div>`;
   grid.innerHTML=html;
+
+  // Update client filter buttons
+  updateCalClientFilters();
+}
+
+function showCalTooltip(event,data){
+  const t=document.getElementById('calTooltip');
+  if(!t)return;
+  const typeColors={ducting:'#1d4ed8',sprinkler:'#15803d',airbalancing:'#92400e',fcuinstall:'#7e22ce',fcudismantling:'#7e22ce',pms:'var(--orange)',job:'var(--gray700)'};
+  const typeLabels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling',pms:'PMS Cleaning',job:'Job/Ticket'};
+  let html=`<div style="font-weight:800;font-size:0.85rem;margin-bottom:0.5rem;color:#fff;">${esc(data.title)}</div>`;
+  if(data.client)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);margin-bottom:0.25rem;">&#127968; ${esc(data.client)}</div>`;
+  if(data.location)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);margin-bottom:0.25rem;">&#128205; ${esc(data.location)}</div>`;
+  if(data.time)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);margin-bottom:0.25rem;">&#128336; ${esc(data.time)}</div>`;
+  if(data.workers)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);margin-bottom:0.25rem;">&#128119; ${esc(data.workers)}</div>`;
+  if(data.progress)html+=`<div style="font-size:0.72rem;color:#6ee7b7;margin-bottom:0.25rem;">&#9989; Progress: ${esc(data.progress)}</div>`;
+  if(data.fcuCount)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);margin-bottom:0.25rem;">&#10052; FCU Units: ${data.fcuCount}</div>`;
+  if(data.safetyOfficer)html+=`<div style="font-size:0.72rem;color:rgba(255,255,255,0.7);">&#9888; Safety Officer: ${esc(data.safetyOfficer)}</div>`;
+  const typeLabel=typeLabels[data.type]||data.type||'';
+  if(typeLabel)html=`<div style="font-size:0.62rem;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">${typeLabel}</div>`+html;
+  t.innerHTML=html;
+  t.style.display='block';
+  const x=Math.min(event.clientX+12, window.innerWidth-300);
+  const y=Math.min(event.clientY+12, window.innerHeight-200);
+  t.style.left=x+'px';
+  t.style.top=y+'px';
+}
+
+function hideCalTooltip(){
+  const t=document.getElementById('calTooltip');
+  if(t)t.style.display='none';
+}
+
+function setCalFilter(filter,el){
+  window.calTypeFilter=filter;
+  document.querySelectorAll('.cal-legend-btn').forEach(function(b){
+    b.style.background=b.dataset.filter===filter?'var(--primary)':'';
+    b.style.color=b.dataset.filter===filter?'#fff':'';
+    b.style.borderColor=b.dataset.filter===filter?'var(--primary)':'';
+    if(b.dataset.filter!==filter){
+      const colors={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcu:'#f3e8ff',pms:'#fff3ee',job:'#f1f5f9',all:'var(--gray100)'};
+      const textColors={ducting:'#1d4ed8',sprinkler:'#15803d',airbalancing:'#92400e',fcu:'#7e22ce',pms:'var(--orange)',job:'var(--gray700)',all:'var(--gray600)'};
+      b.style.background=colors[b.dataset.filter]||'var(--gray100)';
+      b.style.color=textColors[b.dataset.filter]||'var(--gray600)';
+      b.style.borderColor='';
+    }
+  });
+  renderCalendar();
+}
+
+function setCalClientFilter(client,el){
+  window.calClientFilter=client;
+  document.querySelectorAll('.cal-client-btn').forEach(function(b){
+    const isActive=b.dataset.client===client;
+    b.style.background=isActive?'var(--primary)':'var(--gray100)';
+    b.style.color=isActive?'#fff':'var(--gray600)';
+    b.style.borderColor=isActive?'var(--primary)':'var(--gray300)';
+  });
+  renderCalendar();
+}
+
+function updateCalClientFilters(){
+  const el=document.getElementById('calClientFilters');
+  if(!el)return;
+  // Get unique clients from projects, jobs, and stores
+  const clientSet=new Set();
+  (projects||[]).forEach(function(p){if(p.client)clientSet.add(p.client);});
+  (jobs||[]).forEach(function(j){if(j.merchant)clientSet.add(j.merchant);});
+  (stores||[]).forEach(function(s){if(s.name)clientSet.add(s.name);});
+  const cc=window.calClientFilter||'all';
+  el.innerHTML=Array.from(clientSet).slice(0,8).map(function(c){
+    const isActive=cc===c;
+    return`<span class="cal-client-btn" data-client="${esc(c)}" onclick="setCalClientFilter('${esc(c)}',this)" style="font-size:0.72rem;font-weight:700;padding:0.25rem 0.65rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:${isActive?'var(--primary)':'var(--gray100)'};color:${isActive?'#fff':'var(--gray600)'};">${esc(c)}</span>`;
+  }).join('');
 }
 function prevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function nextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
@@ -2626,32 +2746,32 @@ setInterval(updateHeaderDate,60000);
 <div class="fg"><label>Status</label><select id="del_status"><option value="pending">Pending</option><option value="partial">Partial</option><option value="complete">Complete</option></select></div>
 <div class="form-divider full"><span>Materials List</span></div>
 <div class="fg full">
-          <label>Materials List (search from stocks or type new)</label>
-          <div id="del_itemsList" style="margin-bottom:0.5rem;"></div>
-          <div style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.75rem;">
-            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:0.4rem;align-items:end;">
-              <div>
-                <label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Item (search stocks)</label>
-                <input type="text" id="del_itemName" placeholder="Type to search stocks..." oninput="searchDeliveryStock()" autocomplete="off" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;">
-                <div id="del_stockSuggestions" style="position:relative;"></div>
-              </div>
-              <div>
-                <label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Size</label>
-                <input type="text" id="del_itemSize" placeholder="e.g. 0.5mm" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;">
-              </div>
-              <div>
-                <label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Qty to Get</label>
-                <input type="number" id="del_itemOrdered" placeholder="0" min="1" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;">
-              </div>
-              <div>
-                <label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Unit</label>
-                <input type="text" id="del_itemUnit" placeholder="pcs" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;">
-              </div>
-              <button class="btn btn-primary btn-sm" onclick="addDeliveryItem()" style="align-self:flex-end;">+ Add</button>
-            </div>
-            <input type="hidden" id="del_itemStockId">
-          </div>
-        </div>
+<label>Materials List (search from stocks or type new)</label>
+<div id="del_itemsList" style="margin-bottom:0.5rem;"></div>
+<div style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.75rem;">
+<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:0.4rem;align-items:end;">
+<div>
+<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Item (search stocks)</label>
+<input autocomplete="off" id="del_itemName" oninput="searchDeliveryStock()" placeholder="Type to search stocks..." style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+<div id="del_stockSuggestions" style="position:relative;"></div>
+</div>
+<div>
+<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Size</label>
+<input id="del_itemSize" placeholder="e.g. 0.5mm" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+</div>
+<div>
+<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Qty to Get</label>
+<input id="del_itemOrdered" min="1" placeholder="0" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="number"/>
+</div>
+<div>
+<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Unit</label>
+<input id="del_itemUnit" placeholder="pcs" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+</div>
+<button class="btn btn-primary btn-sm" onclick="addDeliveryItem()" style="align-self:flex-end;">+ Add</button>
+</div>
+<input id="del_itemStockId" type="hidden"/>
+</div>
+</div>
 </div>
 <div class="fg full"><label>Delivery Receipt / DO (Google Drive Link)</label><input id="del_driveLink" placeholder="https://drive.google.com/..." type="url"/></div>
 <div class="fg full"><label>Notes</label><textarea id="del_notes" placeholder="Additional notes..." style="min-height:55px;"></textarea></div>
@@ -2659,27 +2779,27 @@ setInterval(updateHeaderDate,60000);
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newDeliveryModal')">Cancel</button><button class="btn btn-primary" onclick="saveDelivery()">Save Delivery</button></div>
 </div>
-</div>
+
 <!-- EQUIPMENT MODAL -->
 <div class="modal-overlay" id="newEquipmentModal">
 <div class="modal" style="max-width:520px;">
 <div class="modal-header"><h2 id="equipmentModalTitle">Add Equipment Tracking</h2><button class="modal-close" onclick="closeModal('newEquipmentModal')">X Close</button></div>
 <div class="modal-body">
 <div class="form-grid">
-        <div class="fg full"><label>Equipment / Tool Name *</label><input type="text" id="eq_name" placeholder="e.g. Threading Machine, Drill, Scaffolding, Ladder"></div>
-        <div class="fg"><label>Type / Category</label><select id="eq_type"><option value="">Select Type</option><option value="power_tool">Power Tool</option><option value="hand_tool">Hand Tool</option><option value="measuring">Measuring Instrument</option><option value="lifting">Lifting Equipment</option><option value="scaffolding">Scaffolding / Ladder</option><option value="pipe_fitting">Pipe Fitting Tool</option><option value="welding">Welding Equipment</option><option value="safety">Safety Equipment</option><option value="vehicle">Vehicle / Transport</option><option value="other">Other</option></select></div>
-        <div class="fg"><label>Brand / Manufacturer</label><input type="text" id="eq_brand" placeholder="e.g. Makita, Bosch, DeWalt, Local"></div>
-        <div class="fg"><label>Serial Number</label><input type="text" id="eq_serial" placeholder="e.g. SN-2024-001, MKT-12345"></div>
-        <div class="fg full"><label>Description / Specifications</label><input type="text" id="eq_description" placeholder="e.g. 6ft aluminum ladder, 1/2 inch threading machine, 20ft scaffolding pipe"></div>
-        <div class="fg"><label>Related Project</label><select id="eq_project"><option value="">None / In Shop</option></select></div>
-        <div class="fg"><label>Assigned To (Worker)</label><select id="eq_worker"><option value="">None</option></select></div>
-        <div class="fg"><label>Date Deployed</label><input type="date" id="eq_deployDate"></div>
-        <div class="fg"><label>Expected Return Date</label><input type="date" id="eq_returnDate"></div>
-        <div class="fg"><label>Actual Return Date</label><input type="date" id="eq_actualReturn"></div>
-        <div class="fg"><label>Status</label><select id="eq_status"><option value="available">Available / In Shop</option><option value="deployed">Currently Deployed</option><option value="returned">Returned</option><option value="for_repair">For Repair</option><option value="for_replacement">For Replacement</option></select></div>
-        <div class="fg"><label>Condition</label><select id="eq_condition"><option value="working">Working / Good</option><option value="not_working">Not Working</option><option value="defective">Defective</option><option value="for_repair">Needs Repair</option><option value="for_replacement">For Replacement</option><option value="damaged">Damaged</option><option value="lost">Lost</option></select></div>
-        <div class="fg full"><label>Condition Notes</label><textarea id="eq_conditionNotes" placeholder="e.g. Motor burned out, blade worn out, needs replacement..." style="min-height:55px;"></textarea></div>
-        <div class="fg full"><label>Notes</label><textarea id="eq_notes" placeholder="Additional notes..." style="min-height:55px;"></textarea></div>
+<div class="fg full"><label>Equipment / Tool Name *</label><input id="eq_name" placeholder="e.g. Threading Machine, Drill, Scaffolding, Ladder" type="text"/></div>
+<div class="fg"><label>Type / Category</label><select id="eq_type"><option value="">Select Type</option><option value="power_tool">Power Tool</option><option value="hand_tool">Hand Tool</option><option value="measuring">Measuring Instrument</option><option value="lifting">Lifting Equipment</option><option value="scaffolding">Scaffolding / Ladder</option><option value="pipe_fitting">Pipe Fitting Tool</option><option value="welding">Welding Equipment</option><option value="safety">Safety Equipment</option><option value="vehicle">Vehicle / Transport</option><option value="other">Other</option></select></div>
+<div class="fg"><label>Brand / Manufacturer</label><input id="eq_brand" placeholder="e.g. Makita, Bosch, DeWalt, Local" type="text"/></div>
+<div class="fg"><label>Serial Number</label><input id="eq_serial" placeholder="e.g. SN-2024-001, MKT-12345" type="text"/></div>
+<div class="fg full"><label>Description / Specifications</label><input id="eq_description" placeholder="e.g. 6ft aluminum ladder, 1/2 inch threading machine, 20ft scaffolding pipe" type="text"/></div>
+<div class="fg"><label>Related Project</label><select id="eq_project"><option value="">None / In Shop</option></select></div>
+<div class="fg"><label>Assigned To (Worker)</label><select id="eq_worker"><option value="">None</option></select></div>
+<div class="fg"><label>Date Deployed</label><input id="eq_deployDate" type="date"/></div>
+<div class="fg"><label>Expected Return Date</label><input id="eq_returnDate" type="date"/></div>
+<div class="fg"><label>Actual Return Date</label><input id="eq_actualReturn" type="date"/></div>
+<div class="fg"><label>Status</label><select id="eq_status"><option value="available">Available / In Shop</option><option value="deployed">Currently Deployed</option><option value="returned">Returned</option><option value="for_repair">For Repair</option><option value="for_replacement">For Replacement</option></select></div>
+<div class="fg"><label>Condition</label><select id="eq_condition"><option value="working">Working / Good</option><option value="not_working">Not Working</option><option value="defective">Defective</option><option value="for_repair">Needs Repair</option><option value="for_replacement">For Replacement</option><option value="damaged">Damaged</option><option value="lost">Lost</option></select></div>
+<div class="fg full"><label>Condition Notes</label><textarea id="eq_conditionNotes" placeholder="e.g. Motor burned out, blade worn out, needs replacement..." style="min-height:55px;"></textarea></div>
+<div class="fg full"><label>Notes</label><textarea id="eq_notes" placeholder="Additional notes..." style="min-height:55px;"></textarea></div>
 </div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newEquipmentModal')">Cancel</button><button class="btn btn-primary" onclick="saveEquipment()">Save</button></div>
