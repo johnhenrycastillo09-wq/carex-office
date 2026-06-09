@@ -662,6 +662,8 @@ const WF={
 };
 
 function showPage(pageId,navEl){
+  // Save current page to localStorage
+  try{localStorage.setItem('ces_lastPage',pageId);}catch(e){}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const page=document.getElementById('page-'+pageId);
@@ -797,19 +799,47 @@ function renderCalendar(){
     let ev=dp.map(p=>{
       const workers=(p.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
       const time=p.startTime?p.startTime:'';
-      const tooltip=JSON.stringify({title:p.name,client:p.client||'',location:p.location||'',workers:workers,time:time,type:p.type,progress:Math.round(((p.steps||[]).filter(s=>s.status==='completed').length)/Math.max((p.steps||[]).length,1)*100)+'%'});
-      return`<div class="cal-event ${p.type==='ducting'?'ducting':p.type==='sprinkler'?'sprinkler':p.type==='airbalancing'?'airbal':'fcu'}" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">${esc(p.name.slice(0,14))}</div>`;
+      var pct=Math.round(((p.steps||[]).filter(function(s){return s.status==='completed';}).length)/Math.max((p.steps||[]).length,1)*100);
+      var typeLabel={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'}[p.type]||p.type;
+      var calClass=p.type==='ducting'?'ducting':p.type==='sprinkler'?'sprinkler':p.type==='airbalancing'?'airbal':'fcu';
+      return'<div class="cal-event '+calClass+'" '
+        +'data-title="'+esc(p.name)+'" '
+        +'data-client="'+esc(p.client||'')+'" '
+        +'data-location="'+esc(p.location||'')+'" '
+        +'data-workers="'+esc(workers)+'" '
+        +'data-time="'+esc(time)+'" '
+        +'data-type="'+esc(typeLabel)+'" '
+        +'data-progress="'+pct+'%" '
+        +'onmouseenter="showCalTooltipEl(event,this)" onmouseleave="hideCalTooltip()">'
+        +esc(p.name.slice(0,14))+'</div>';
     }).join('');
 
     ev+=dj.map(j=>{
       const workers=(j.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
-      const tooltip=JSON.stringify({title:j.scope||'Job',client:j.merchant||'',location:j.location||'',workers:workers,time:j.schedTime||'',type:'job',priority:j.priority||'medium'});
-      return`<div class="cal-event job" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">${esc((j.scope||'Job').slice(0,14))}</div>`;
+      return'<div class="cal-event job" '
+        +'data-title="'+esc(j.scope||'Job')+'" '
+        +'data-client="'+esc(j.merchant||'')+'" '
+        +'data-location="'+esc(j.location||'')+'" '
+        +'data-workers="'+esc(workers)+'" '
+        +'data-time="'+esc(j.schedTime||'')+'" '
+        +'data-type="Job/Ticket" '
+        +'data-priority="'+esc(j.priority||'medium')+'" '
+        +'onmouseenter="showCalTooltipEl(event,this)" onmouseleave="hideCalTooltip()">'
+        +esc((j.scope||'Job').slice(0,14))+'</div>';
     }).join('');
 
     ev+=dpms.map(s=>{
-      const tooltip=JSON.stringify({title:'PMS: '+s.name,client:s.name,location:s.location||'',workers:'',time:'',type:'pms',fcuCount:s.fcuCount||0,safetyOfficer:s.safetyOfficer==='yes'?'Required':'Not required'});
-      return`<div class="cal-event pms" onmouseenter="showCalTooltip(event,${tooltip})" onmouseleave="hideCalTooltip()">PMS: ${esc(s.name.slice(0,10))}</div>`;
+      return'<div class="cal-event pms" '
+        +'data-title="PMS: '+esc(s.name)+'" '
+        +'data-client="'+esc(s.name)+'" '
+        +'data-location="'+esc(s.location||'')+'" '
+        +'data-workers="" '
+        +'data-time="" '
+        +'data-type="PMS Cleaning" '
+        +'data-fcu="'+esc(String(s.fcuCount||0))+' units" '
+        +'data-safety="'+esc(s.safetyOfficer==='yes'?'Safety Officer Required':'No safety officer needed')+'" '
+        +'onmouseenter="showCalTooltipEl(event,this)" onmouseleave="hideCalTooltip()">'
+        +'PMS: '+esc(s.name.slice(0,10))+'</div>';
     }).join('');
 
     html+=`<div class="cal-day ${ds===today?'today':''}">${ev?'<div class="cal-day-num">'+d+'</div>'+ev:'<div class="cal-day-num">'+d+'</div>'}</div>`;
@@ -821,6 +851,39 @@ function renderCalendar(){
 
   // Update client filter buttons
   updateCalClientFilters();
+}
+
+
+function showCalTooltipEl(event,el){
+  var t=document.getElementById('calTooltip');
+  if(!t)return;
+  var title=el.dataset.title||'';
+  var client=el.dataset.client||'';
+  var location=el.dataset.location||'';
+  var workers=el.dataset.workers||'';
+  var time=el.dataset.time||'';
+  var type=el.dataset.type||'';
+  var progress=el.dataset.progress||'';
+  var fcu=el.dataset.fcu||'';
+  var safety=el.dataset.safety||'';
+  var priority=el.dataset.priority||'';
+  var html='';
+  if(type)html+='<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;">'+type+'</div>';
+  html+='<div style="font-weight:800;font-size:0.85rem;margin-bottom:0.5rem;color:#fff;">'+title+'</div>';
+  if(client)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#127968; '+client+'</div>';
+  if(location)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#128205; '+location+'</div>';
+  if(time)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#128336; '+time+'</div>';
+  if(workers)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#128119; '+workers+'</div>';
+  if(progress)html+='<div style="font-size:0.72rem;color:#6ee7b7;margin-bottom:0.22rem;">&#9989; Progress: '+progress+'</div>';
+  if(fcu)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#10052; FCU: '+fcu+'</div>';
+  if(safety)html+='<div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-bottom:0.22rem;">&#9888; '+safety+'</div>';
+  if(priority)html+='<div style="font-size:0.72rem;color:#fbbf24;margin-bottom:0.22rem;">&#9733; Priority: '+priority+'</div>';
+  t.innerHTML=html;
+  t.style.display='block';
+  var x=Math.min(event.clientX+15,window.innerWidth-295);
+  var y=Math.min(event.clientY+15,window.innerHeight-220);
+  t.style.left=x+'px';
+  t.style.top=y+'px';
 }
 
 function showCalTooltip(event,data){
@@ -2618,6 +2681,24 @@ function openEditProjectModal(id){
 
 // ══ INIT ══
 updateHeaderDate();
+// Restore last visited page
+(function(){
+  try{
+    var lastPage=localStorage.getItem('ces_lastPage');
+    if(lastPage&&lastPage!=='dashboard'){
+      var navEl=null;
+      var allNavItems=document.querySelectorAll('.nav-item');
+      for(var i=0;i<allNavItems.length;i++){
+        var oc=allNavItems[i].getAttribute('onclick')||'';
+        if(oc.indexOf(lastPage)!==-1){
+          navEl=allNavItems[i];
+          break;
+        }
+      }
+      if(navEl){showPage(lastPage,navEl);}
+    }
+  }catch(e){}
+})();
 if(typeof updatePtwBadge==='function')updatePtwBadge();
 // Pre-initialize all module data
 if(typeof clients==='undefined')window.clients=JSON.parse(localStorage.getItem('cesv2_clients')||'[]');
