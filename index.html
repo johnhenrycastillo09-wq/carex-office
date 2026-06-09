@@ -814,10 +814,14 @@ function renderCalendar(){
       const workers=(p.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
       const time=p.startTime?p.startTime:'';
       var pct=Math.round(((p.steps||[]).filter(function(s){return s.status==='completed';}).length)/Math.max((p.steps||[]).length,1)*100);
-      var typeLabel={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'}[p.type]||p.type;
-      var calClass=p.type==='ducting'?'ducting':p.type==='sprinkler'?'sprinkler':p.type==='airbalancing'?'airbal':'fcu';
-      var multiIndicator=(p.types&&p.types.length>1)?'['+p.types.length+'] ':'';
-      return'<div class="cal-event '+calClass+'" '
+      var allTypes=p.types&&p.types.length>1?p.types:[p.type];
+      var typeLabels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+      var typeLabel=allTypes.map(function(t){return typeLabels[t]||t;}).join(' + ');
+      var calClassMap={ducting:'ducting',sprinkler:'sprinkler',airbalancing:'airbal',fcuinstall:'fcu',fcudismantling:'fcu'};
+      var typeBgMap={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcuinstall:'#f3e8ff',fcudismantling:'#f1f5f9'};
+      var typeClrMap={ducting:'#1d4ed8',sprinkler:'#15803d',airbalancing:'#92400e',fcuinstall:'#7e22ce',fcudismantling:'#374151'};
+      var typeAbbrMap={ducting:'DUC',sprinkler:'SPR',airbalancing:'AIR',fcuinstall:'FCU',fcudismantling:'DIS'};
+      var baseAttrs='data-pid="'+p.id+'" '
         +'data-title="'+esc(p.name)+'" '
         +'data-client="'+esc(p.client||'')+'" '
         +'data-location="'+esc(p.location||'')+'" '
@@ -826,9 +830,16 @@ function renderCalendar(){
         +'data-type="'+esc(typeLabel)+'" '
         +'data-progress="'+pct+'%" '
         +'style="cursor:pointer;" '
-        +'onclick="openProjectDetail(\'' +p.id+ '\')" '
-        +'onmouseenter="showCalTooltipEl(event,this)" onmouseleave="hideCalTooltip()">'
-        +multiIndicator+esc(p.name.slice(0,14))+'</div>';
+        +'onclick="openProjectDetail(this.dataset.pid)" '
+        +'onmouseenter="showCalTooltipEl(event,this)" onmouseleave="hideCalTooltip()"';
+      if(allTypes.length>1){
+        var strips=allTypes.map(function(t){
+          return '<span style="background:'+(typeBgMap[t]||'#e8f1fb')+';color:'+(typeClrMap[t]||'#1d4ed8')+';font-size:0.48rem;font-weight:800;padding:0 3px;border-radius:2px;margin-right:1px;">'+(typeAbbrMap[t]||t.slice(0,3).toUpperCase())+'</span>';
+        }).join('');
+        return'<div class="cal-event '+(calClassMap[allTypes[0]]||'fcu')+'" '+baseAttrs+'>'+strips+' '+esc(p.name.slice(0,10))+'</div>';
+      } else {
+        return'<div class="cal-event '+(calClassMap[p.type]||'fcu')+'" '+baseAttrs+'>'+esc(p.name.slice(0,14))+'</div>';
+      }
     }).join('');
 
     ev+=dj.map(j=>{
@@ -3039,6 +3050,42 @@ function openEditProjectModal(id){
   var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
   var typeColors={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'}};
 
+  // Init editWorkersByType from project data
+  window.editWorkersByType={};
+  allTypes.forEach(function(t){
+    window.editWorkersByType[t]=(p.assigneesByType&&p.assigneesByType[t])?JSON.parse(JSON.stringify(p.assigneesByType[t])):(p.assignees?JSON.parse(JSON.stringify(p.assignees)):[]);
+  });
+
+  // Build workers section per type
+  function buildWorkerSection(){
+    var html='';
+    allTypes.forEach(function(t){
+      var c=typeColors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+      var assigned=window.editWorkersByType[t]||[];
+      var assignedIds=assigned.map(function(a){return a.id;});
+      var chips=assigned.map(function(a){
+        return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:'+c.bg+';color:'+c.color+';border:1.5px solid '+c.border+';border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
+          +'<span style="width:16px;height:16px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.48rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
+          +esc(a.name)
+          +'<button data-pid="'+id+'" data-wtype="'+t+'" data-wid="'+a.id+'" onclick="editRemoveWorker(this.dataset.pid,this.dataset.wtype,this.dataset.wid)" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.35);font-size:0.75rem;padding:0;line-height:1;">x</button>'
+          +'</span>';
+      }).join('');
+      var availableWorkers=workers.filter(function(w){return assignedIds.indexOf(w.id)===-1;});
+      var opts=availableWorkers.map(function(w){
+        return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
+      }).join('');
+      html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.65rem 0.85rem;background:'+c.bg+'20;margin-bottom:0.5rem;">'
+        +'<div style="font-size:0.65rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.45rem;">'+esc(labels[t]||t)+'</div>'
+        +'<div id="ep_chips_'+t+'" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;min-height:18px;">'+chips+'</div>'
+        +'<select data-pid="'+id+'" data-wtype="'+t+'" onchange="editAddWorker(this.dataset.pid,this.dataset.wtype,this)" style="font-size:0.78rem;padding:0.3rem 0.55rem;border:1.5px solid '+c.border+';border-radius:7px;font-family:inherit;outline:none;background:#fff;color:var(--text);">'
+        +'<option value="">+ Assign worker to '+esc(labels[t]||t)+'</option>'
+        +opts
+        +'</select>'
+        +'</div>';
+    });
+    return html;
+  }
+
   // Build service reports section per type
   var srSection='';
   allTypes.forEach(function(t){
@@ -3072,6 +3119,10 @@ function openEditProjectModal(id){
     +'<div class="fg full"><label>Notes</label><textarea id="ep_notes" style="min-height:60px;">'+esc(p.notes||'')+'</textarea></div>'
     +'</div>'
     +'<div style="margin-top:1rem;">'
+    +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Assigned Workers (per type)</div>'
+    +'<div id="ep_workerSection">'+buildWorkerSection()+'</div>'
+    +'</div>'
+    +'<div style="margin-top:1rem;">'
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Service Reports & Certificates (per type)</div>'
     +srSection
     +'</div>';
@@ -3080,6 +3131,25 @@ function openEditProjectModal(id){
   document.getElementById('editProjectSaveBtn').setAttribute('data-pid',id);
   openModal('editProjectModal');
 }
+
+function editAddWorker(pid,type,sel){
+  var id=sel.value;if(!id)return;
+  var worker=workers.find(function(w){return w.id===id;});if(!worker)return;
+  if(!window.editWorkersByType[type])window.editWorkersByType[type]=[];
+  if(window.editWorkersByType[type].find(function(a){return a.id===id;})){sel.value='';return;}
+  window.editWorkersByType[type].push({id:worker.id,name:worker.name});
+  sel.value='';
+  // Refresh worker section
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  openEditProjectModal(pid);
+}
+
+function editRemoveWorker(pid,type,wid){
+  if(!window.editWorkersByType||!window.editWorkersByType[type])return;
+  window.editWorkersByType[type]=window.editWorkersByType[type].filter(function(a){return a.id!==wid;});
+  openEditProjectModal(pid);
+}
+
 
 function saveEditProject(){
   var id=document.getElementById('editProjectSaveBtn').getAttribute('data-pid');
@@ -3090,7 +3160,16 @@ function saveEditProject(){
   p.startTime=document.getElementById('ep_startTime').value;
   p.endDate=document.getElementById('ep_endDate').value;
   p.notes=document.getElementById('ep_notes').value.trim();
-  // Update name from client+location
+  // Save workers by type from editWorkersByType
+  if(window.editWorkersByType){
+    p.assigneesByType=JSON.parse(JSON.stringify(window.editWorkersByType));
+    // Merge all into flat assignees list
+    var seen={};var all=[];
+    Object.values(window.editWorkersByType).forEach(function(arr){
+      arr.forEach(function(a){if(!seen[a.id]){seen[a.id]=true;all.push(a);}});
+    });
+    p.assignees=all;
+  }
   if(p.client||p.location){
     p.name=(p.client||'')+(p.location?(p.client?' - ':'')+p.location:'');
   }
