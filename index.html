@@ -1612,6 +1612,7 @@ function openProjectDetail(id){
     +renderProjectDriveLinks(p)
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Workflow Steps</div>'
     +stepsHtml
+    +(allTypes.every(function(t){return t==='airbalancing';})?'':
     +'<div style="margin-top:1.1rem;">'
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Daily Progress Log</div>'
     +dpHtml
@@ -1623,6 +1624,7 @@ function openProjectDetail(id){
     +'<button class="btn btn-primary btn-xs" onclick="addDailyProgress(\''+p.id+'\')">Add</button>'
     +'</div></div>'
     +statusHtml
+    )
     +renderProjectDeliveries(p.id);
 
   openModal('projectDetailModal');
@@ -1687,8 +1689,8 @@ function buildAirBalResultHtml(p, steps){
 
     // Pass/Fail buttons
     +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">'
-    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,\'pass\')">✅ Mark Pass</button>'
-    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,\'fail\')">❌ Mark Fail</button>'
+    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res=\"pass\" onclick=\"updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)\">✅ Mark Pass</button>'
+    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res=\"fail\" onclick=\"updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)\">❌ Mark Fail</button>'
     +'</div>'
 
     // Certificate / Drive Link
@@ -1721,8 +1723,8 @@ function buildAirBalResultHtml(p, steps){
     // Action buttons
     +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
     +(isCompleted
-      ?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStep(this.dataset.pid,this.dataset.sid,\'pending\')">↩ Reopen</button>'
-      :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStep(this.dataset.pid,this.dataset.sid,\'completed\')">✓ Mark Complete</button>'
+      ?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st=\"pending\" onclick=\"updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)\">↩ Reopen</button>'
+      :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st=\"completed\" onclick=\"updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)\">✓ Mark Complete</button>'
     )
     +'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" onclick="openEditProjectModal(this.dataset.pid)">📅 Reschedule</button>'
     +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" onclick="deleteProject(this.dataset.pid)">🗑 Delete</button>'
