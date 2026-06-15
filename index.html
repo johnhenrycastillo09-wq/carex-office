@@ -253,6 +253,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="page active" id="page-dashboard">
 <div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
 <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
+<div id="scheduleNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1d4ed8;font-weight:600;"></div>
 <div class="stats-grid">
 <div class="stat-card" onclick="showPage('projects',document.querySelector('[onclick*=projects]'))"><div class="stat-card-top"><div class="stat-icon" style="background:#e8f1fb;">📋</div><span class="stat-sub up" id="statActiveP">0 Active</span></div><div class="stat-value" id="statTotalP">0</div><div class="stat-label">Total Projects</div></div>
 <div class="stat-card" onclick="showPage('workers',document.querySelector('[onclick*=workers]'))"><div class="stat-card-top"><div class="stat-icon" style="background:#f0fdf4;">👷</div><span class="stat-sub up" id="statFreeW">0 Free</span></div><div class="stat-value" id="statTotalW">0</div><div class="stat-label">Total Workers</div></div>
@@ -756,6 +757,7 @@ function renderDashboard(){
   if(typeof updatePtwBadge==='function')updatePtwBadge();
   // Delivery due tomorrow notifications
   checkDeliveryReminders();
+  checkScheduleReminders();
 
   const dap=document.getElementById('dashActiveProjects');
   dap.innerHTML=active.length?'<div class="project-list">'+active.slice(0,5).map(p=>projectItemHtml(p)).join('')+'</div>':'<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No active projects</div></div>';
@@ -2873,6 +2875,59 @@ function renderProjectDeliveries(pid){
   return html;
 }
 
+
+function checkScheduleReminders(){
+  var notifEl=document.getElementById('scheduleNotif');
+  if(!notifEl)return;
+  var tomorrow=new Date();
+  tomorrow.setDate(tomorrow.getDate()+1);
+  var tomorrowStr=tomorrow.toISOString().split('T')[0];
+  var reminders=[];
+
+  // Check projects (per-type schedules)
+  projects.forEach(function(p){
+    if(p.status==='completed')return;
+    var allTypes=p.types&&p.types.length>0?p.types:[p.type];
+    if(p.schedulesByType&&Object.keys(p.schedulesByType).length>0){
+      allTypes.forEach(function(t){
+        var sched=p.schedulesByType[t];
+        if(sched&&sched.startDate===tomorrowStr){
+          var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+          reminders.push('📋 <strong>'+esc(p.name)+'</strong> — '+(labels[t]||t)+(sched.startTime?' at '+fmtTime(sched.startTime):''));
+        }
+      });
+    } else if(p.startDate===tomorrowStr){
+      reminders.push('📋 <strong>'+esc(p.name)+'</strong>'+(p.startTime?' at '+fmtTime(p.startTime):''));
+    }
+  });
+
+  // Check jobs/tickets
+  if(typeof jobs!=='undefined'){
+    jobs.forEach(function(j){
+      if(j.status==='resolved'||j.status==='closed')return;
+      if(j.schedDate===tomorrowStr){
+        reminders.push('🎫 <strong>'+esc(j.scope||'Job')+'</strong> — '+esc(j.merchant||'')+(j.schedTime?' at '+fmtTime(j.schedTime):''));
+      }
+    });
+  }
+
+  // Check PMS stores
+  if(typeof stores!=='undefined'){
+    stores.forEach(function(s){
+      if(s.nextCleaning===tomorrowStr){
+        reminders.push('🔧 <strong>PMS: '+esc(s.name)+'</strong>'+(s.schedTime?' at '+fmtTime(s.schedTime):''));
+      }
+    });
+  }
+
+  if(reminders.length>0){
+    notifEl.style.display='block';
+    notifEl.innerHTML='🔔 <strong>'+reminders.length+' schedule(s) tomorrow ('+fmtDate(tomorrowStr)+'):</strong><br>'
+      +reminders.map(function(r){return'&nbsp;&nbsp;• '+r;}).join('<br>');
+  } else {
+    notifEl.style.display='none';
+  }
+}
 
 function checkDeliveryReminders(){
   if(typeof deliveries==='undefined')return;
