@@ -1601,13 +1601,7 @@ function openProjectDetail(id){
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.84rem;font-weight:700;">'+esc(p.location||'--')+'</div></div>'
     +(buildDetailSchedulesHtml(p))
     +'</div>'
-    +'<div style="margin-bottom:1.1rem;">'
-    +'<div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">'
-    +'<span style="font-size:0.7rem;font-weight:800;color:var(--gray600);">Overall Progress</span>'
-    +'<span style="font-size:0.7rem;font-weight:800;color:var(--primary);">'+pct+'% ('+cs+'/'+ts+' steps)</span>'
-    +'</div>'
-    +'<div class="progress-wrap" style="height:9px;"><div class="progress-fill" style="width:'+pct+'%"></div></div>'
-    +'</div>'
+    +(allTypes.every(function(t){return t==='airbalancing';})?'':'<div style="margin-bottom:1.1rem;"><div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;"><span style="font-size:0.7rem;font-weight:800;color:var(--gray600);">Overall Progress</span><span style="font-size:0.7rem;font-weight:800;color:var(--primary);">'+pct+'% ('+cs+'/'+ts+' steps)</span></div><div class="progress-wrap" style="height:9px;"><div class="progress-fill" style="width:'+pct+'%"></div></div></div>')
     +workerSection
     +renderProjectDriveLinks(p)
     +'<div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.7rem;">Workflow Steps</div>'
@@ -1689,8 +1683,8 @@ function buildAirBalResultHtml(p, steps){
 
     // Pass/Fail buttons
     +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">'
-    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res=\"pass\" onclick=\"updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)\">✅ Mark Pass</button>'
-    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res=\"fail\" onclick=\"updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)\">❌ Mark Fail</button>'
+    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res="pass" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">✅ Mark Pass</button>'
+    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res="fail" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">❌ Mark Fail</button>'
     +'</div>'
 
     // Certificate / Drive Link
@@ -1722,9 +1716,8 @@ function buildAirBalResultHtml(p, steps){
 
     // Action buttons
     +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
-    +(isCompleted
-      ?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st=\"pending\" onclick=\"updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)\">↩ Reopen</button>'
-      :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st=\"completed\" onclick=\"updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)\">✓ Mark Complete</button>'
+    +(isCompleted?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="pending" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">↩ Reopen</button>'
+    :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="completed" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">✓ Mark Complete</button>'
     )
     +'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" onclick="openEditProjectModal(this.dataset.pid)">📅 Reschedule</button>'
     +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" onclick="deleteProject(this.dataset.pid)">🗑 Delete</button>'
@@ -3003,7 +2996,7 @@ function updateStep(pid,sid,status){
 
 function updateStepResult(pid,sid,result){
   var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  var s=p.steps.find(function(x){return x.id===sid;});if(!s)return;
+  var s=p.steps.find(function(x){return x.id===sid||(sid&&x.id.endsWith('_'+sid));});if(!s)return;
   s.testResult=result;
   s.status=result==='pass'?'completed':'failed';
   s.completedDate=new Date().toISOString().split('T')[0];
@@ -3031,14 +3024,15 @@ function updateDuctTest(pid,result){
 }
 
 function addStepNote(pid,sid){
-  var note=prompt('Add a note for this step:');
-  if(note===null)return;
   var p=projects.find(function(x){return x.id===pid;});if(!p)return;
-  var s=p.steps.find(function(x){return x.id===sid;});if(!s)return;
-  s.notes=note;
+  var s=(p.steps||[]).find(function(x){return x.id===sid;});if(!s)return;
+  var current=s.notes||'';
+  var note=prompt('Step Note (edit or add):\n\nCurrent note: '+(current||'(none)'), current);
+  if(note===null)return;
+  s.notes=note.trim();
   save('cesv2_projects',projects);
   openProjectDetail(pid);
-  showToast('Note saved!');
+  showToast(note.trim()?'Note saved!':'Note cleared.');
 }
 
 function addStepDriveLink(pid,sid){
