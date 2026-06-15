@@ -2882,27 +2882,45 @@ function fixProjectData(){
 }
 
 function showProjectDebug(){
-  var labels={ducting:'Ducting',sprinkler:'Sprinkler',airbalancing:'Air Balancing',fcuinstall:'FCU Install',fcudismantling:'FCU Dismantling'};
-  var typeColors={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcuinstall:'#f3e8ff',fcudismantling:'#f1f5f9'};
-  var html='<div style="font-size:0.75rem;color:var(--gray500);margin-bottom:0.75rem;">Click a type badge to change the primary type. Click Save to apply.</div>';
-  html+='<div id="debugProjectList">';
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+  var html='<div style="font-size:0.75rem;color:#dc2626;font-weight:700;margin-bottom:0.75rem;padding:0.5rem;background:#fef2f2;border-radius:6px;">&#9888; Use the dropdown to set the correct PRIMARY TAB for each project. This directly fixes the tab display.</div>';
   projects.forEach(function(p,idx){
-    var allT=p.types&&p.types.length>0?p.types:[p.type];
-    html+='<div style="padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;margin-bottom:0.5rem;background:var(--gray50);">'
-      +'<div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-bottom:0.4rem;">'+esc(p.name)+'</div>'
-      +'<div style="font-size:0.65rem;color:var(--gray500);margin-bottom:0.35rem;">Primary type: <strong style="color:var(--primary);">'+esc(labels[p.type]||p.type)+'</strong></div>'
-      +'<div style="display:flex;gap:0.3rem;flex-wrap:wrap;">';
-    ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){
-      var isSelected=allT.indexOf(t)!==-1;
-      var isPrimary=p.type===t;
-      html+='<button data-pidx="'+idx+'" data-type="'+t+'" onclick="toggleDebugType(this)" style="font-size:0.68rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:12px;cursor:pointer;border:1.5px solid '+(isSelected?'#1d4ed8':'var(--gray300)')+';background:'+(isPrimary?'#1d4ed8':(isSelected?'#dbeafe':'#fff'))+';color:'+(isPrimary?'#fff':(isSelected?'#1d4ed8':'var(--gray500)'))+';font-family:inherit;">'+labels[t]+'</button>';
-    });
-    html+='</div></div>';
+    var allT=(p.types&&p.types.length>0)?p.types:[p.type];
+    var opts=['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].map(function(t){
+      return '<option value="'+t+'"'+(p.type===t?' selected':'')+'>'+labels[t]+'</option>';
+    }).join('');
+    html+='<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;margin-bottom:0.4rem;background:#fff;">'
+      +'<div style="flex:1;font-size:0.8rem;font-weight:700;color:var(--text);">'+esc(p.name)+'</div>'
+      +'<div style="font-size:0.65rem;color:var(--gray400);">Types: '+allT.join(', ')+'</div>'
+      +'<select data-pidx="'+idx+'" onchange="setProjectPrimaryType(this)" style="font-size:0.75rem;padding:0.28rem 0.5rem;border:1.5px solid var(--primary);border-radius:6px;font-family:inherit;outline:none;color:var(--primary);font-weight:700;">'
+      +opts+'</select>'
+      +'</div>';
   });
-  html+='</div>';
   document.getElementById('debugBody').innerHTML=html;
   openModal('debugModal');
 }
+
+function setProjectPrimaryType(sel){
+  var idx=parseInt(sel.dataset.pidx);
+  var type=sel.value;
+  var p=projects[idx];
+  if(!p)return;
+  p.type=type;
+  // Ensure types array includes this type as first
+  if(!p.types||p.types.length===0)p.types=[type];
+  if(p.types.indexOf(type)===-1)p.types.unshift(type);
+  else{
+    p.types=p.types.filter(function(t){return t!==type;});
+    p.types.unshift(type);
+  }
+  save('cesv2_projects',projects);
+  showToast('Primary type set to: '+type);
+  // Refresh tabs immediately
+  renderAllProjects();
+  ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){renderTypeProjects(t);});
+  showProjectDebug();
+}
+
 
 function toggleDebugType(btn){
   var pidx=parseInt(btn.dataset.pidx);
