@@ -370,6 +370,27 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="tab-bar"><button class="tab-btn active" onclick="filterOrders('all',this)">All</button><button class="tab-btn" onclick="filterOrders('pending',this)">Pending</button><button class="tab-btn" onclick="filterOrders('approved',this)">Approved</button><button class="tab-btn" onclick="filterOrders('completed',this)">Completed</button></div>
 <div class="project-list" id="ordersList"></div>
 </div>
+<!-- FIELD TICKETS PAGE -->
+<div class="page" id="page-fieldtickets">
+<div class="page-header">
+<div><div class="page-title">Field Tickets</div><div class="page-subtitle">Client-submitted tickets from Firebase — live sync</div></div>
+<div class="page-actions" style="display:flex;gap:0.5rem;align-items:center;">
+<span id="ftLastUpdated" style="font-size:0.7rem;color:var(--gray400);"></span>
+<select id="ftFilterStatus" onchange="renderFieldTicketList()" style="padding:0.38rem 0.75rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;font-family:inherit;outline:none;background:#fff;color:var(--text);">
+<option value="all">All Status</option>
+<option value="open">Open</option>
+<option value="in-progress">In Progress</option>
+<option value="resolved">Resolved</option>
+<option value="closed">Closed</option>
+</select>
+<button class="btn btn-secondary btn-sm" onclick="loadFieldTickets()">&#8635; Refresh</button>
+</div>
+</div>
+<div style="padding:0.75rem 0 0.5rem;">
+<input id="ftSearch" oninput="renderFieldTicketList()" placeholder="Search by ticket #, location, merchant..." style="width:100%;max-width:400px;padding:0.42rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+</div>
+<div id="ftList"></div>
+</div>
 <!-- CLIENTS PAGE -->
 <div class="page" id="page-clients">
 <div class="page-header"><div><div class="page-title">Clients / Store Database</div><div class="page-subtitle">Centralized client and store records</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openAddClientModal()">+ Add Client</button></div></div>
