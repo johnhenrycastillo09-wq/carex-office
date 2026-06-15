@@ -305,8 +305,24 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <!-- ALL PROJECTS -->
 <div class="page" id="page-projects">
-<div class="page-header"><div><div class="page-title">All Projects</div><div class="page-subtitle">Overview of all active and completed projects</div></div><div class="page-actions"><button class="btn btn-secondary btn-xs" onclick="fixProjectData()" title="Fix project type data if tabs show wrong projects" style="margin-right:0.4rem;">&#128295; Fix Data</button><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div></div>
-<div class="tab-bar"><button class="tab-btn active" onclick="filterProjects('all',this)">All</button><button class="tab-btn" onclick="filterProjects('active',this)">Active</button><button class="tab-btn" onclick="filterProjects('completed',this)">Completed</button></div>
+<div class="page-header"><div><div class="page-title">All Projects</div><div class="page-subtitle">Overview of all active and completed projects</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div></div>
+<div style="margin-bottom:0.75rem;">
+  <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+    <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Type:</span>
+    <span class="proj-type-btn active" data-type="all" onclick="setProjTypeFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+    <span class="proj-type-btn" data-type="ducting" onclick="setProjTypeFilter('ducting',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bfdbfe;cursor:pointer;background:#dbeafe;color:#1d4ed8;">🏗 Ducting</span>
+    <span class="proj-type-btn" data-type="sprinkler" onclick="setProjTypeFilter('sprinkler',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">🚿 Sprinkler</span>
+    <span class="proj-type-btn" data-type="airbalancing" onclick="setProjTypeFilter('airbalancing',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #fde68a;cursor:pointer;background:#fef9c3;color:#92400e;">🌬 Air Balancing</span>
+    <span class="proj-type-btn" data-type="fcuinstall" onclick="setProjTypeFilter('fcuinstall',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e9d5ff;cursor:pointer;background:#f3e8ff;color:#7e22ce;">❄ FCU Install</span>
+    <span class="proj-type-btn" data-type="fcudismantling" onclick="setProjTypeFilter('fcudismantling',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#374151;">🔧 FCU Dismantling</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+    <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Status:</span>
+    <span class="proj-status-btn active" data-status="all" onclick="setProjStatusFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+    <span class="proj-status-btn" data-status="active" onclick="setProjStatusFilter('active',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">Active</span>
+    <span class="proj-status-btn" data-status="completed" onclick="setProjStatusFilter('completed',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#374151;">Completed</span>
+  </div>
+</div>
 <div class="project-list" id="allProjectsList"></div>
 </div>
 <div class="page" id="page-ducting"><div class="page-header"><div><div class="page-title">Ducting Works</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewProjectModal('ducting')">+ New Project</button></div></div><div id="ductingList"><div class="empty-state"><div class="empty-icon">🏗</div><div class="empty-title">No ducting projects yet</div><button class="btn btn-primary btn-sm" onclick="openNewProjectModal('ducting')" style="margin-top:0.5rem">+ Create Project</button></div></div></div>
@@ -698,7 +714,7 @@ function showPage(pageId,navEl){
   if(pageId==='toolboxtalk'){if(typeof populateToolboxSelects==='function')populateToolboxSelects();if(typeof renderToolbox==='function')renderToolbox();}
   if(pageId==='dtr'){if(typeof populateDtrSelects==='function')populateDtrSelects();if(typeof renderDtr==='function')renderDtr();}
   if(pageId==='reports'){if(typeof renderReports==='function')renderReports();}
-  if(pageId==='projects')renderAllProjects();
+  if(pageId==='projects'){renderAllProjects();}
   if(pageId==='pms'){renderPmsTable();updatePmsStats();}
   if(pageId==='stocks')renderStocks();
   if(pageId==='orders')renderOrders();
@@ -964,6 +980,7 @@ function hideCalTooltip(){
 
 function setCalFilter(filter,el){
   window.calTypeFilter=filter;
+  try{localStorage.setItem('ces_calFilter',filter);}catch(e){}
   document.querySelectorAll('.cal-legend-btn').forEach(function(b){
     b.style.background=b.dataset.filter===filter?'var(--primary)':'';
     b.style.color=b.dataset.filter===filter?'#fff':'';
@@ -981,6 +998,7 @@ function setCalFilter(filter,el){
 
 function setCalClientFilter(client,el){
   window.calClientFilter=client;
+  try{localStorage.setItem('ces_calClient',client);}catch(e){}
   document.querySelectorAll('.cal-client-btn').forEach(function(b){
     const isActive=b.dataset.client===client;
     b.style.background=isActive?'var(--primary)':'var(--gray100)';
@@ -1036,7 +1054,57 @@ function projectItemHtml(p){
   var typeBadges=allTypes.map(function(t){return'<span style="font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:8px;background:'+(typeColors[t]||'#e8f1fb')+';font-weight:700;margin-right:2px;">'+(typeIcons[t]||'📋')+'</span>';}).join('');
   return`<div class="project-item" onclick="openProjectDetail('${p.id}')" ondblclick="openEditProjectModal('${p.id}')" title="Click to view | Double-click to edit" style="cursor:pointer;"><div class="project-type-badge" style="background:${bg};">${type.icon}</div><div class="project-info"><div class="project-name">${esc(p.name)} ${allTypes.length>1?typeBadges:''}</div><div class="project-meta">${esc(p.client||'')}${p.location?' - '+esc(p.location):''} - ${fmtDate(p.startDate)||'No start date'}</div><div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:0.63rem;color:var(--gray500);margin-top:0.18rem;">${cs}/${ts} steps - ${pct}% complete</div></div><span class="badge badge-${p.status==='completed'?'done':p.status==='active'?'progress':'pending'}">${p.status||'pending'}</span></div>`;
 }
-function renderAllProjects(filter='all'){const el=document.getElementById('allProjectsList');let list=filter==='active'?projects.filter(p=>p.status!=='completed'):filter==='completed'?projects.filter(p=>p.status==='completed'):projects;if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No projects found</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal()">+ Create Project</button></div>';return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
+function renderAllProjects(filter){
+  var el=document.getElementById('allProjectsList');if(!el)return;
+  var typeFilter=window.projTypeFilter||'all';
+  var statusFilter=window.projStatusFilter||'all';
+  var list=projects.slice();
+  // Apply type filter - check both p.type AND p.types array
+  if(typeFilter!=='all'){
+    list=list.filter(function(p){
+      return p.type===typeFilter||(p.types&&p.types.indexOf(typeFilter)!==-1);
+    });
+  }
+  // Apply status filter
+  if(statusFilter==='active')list=list.filter(function(p){return p.status!=='completed';});
+  else if(statusFilter==='completed')list=list.filter(function(p){return p.status==='completed';});
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No projects found</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal()">+ Create Project</button></div>';return;}
+  el.innerHTML=list.map(function(p){return projectItemHtml(p);}).join('');
+}
+function setProjTypeFilter(type,el){
+  window.projTypeFilter=type;
+  try{localStorage.setItem('ces_projTypeFilter',type);}catch(e){}
+  document.querySelectorAll('.proj-type-btn').forEach(function(b){
+    var isActive=b.dataset.type===type;
+    b.classList.toggle('active',isActive);
+    if(isActive){b.style.background='var(--primary)';b.style.color='#fff';b.style.borderColor='var(--primary)';}
+    else{b.style.background='';b.style.color='';b.style.borderColor='';}
+  });
+  // Restore original colors for non-active
+  document.querySelectorAll('.proj-type-btn:not(.active)').forEach(function(b){
+    var t=b.dataset.type;
+    var styles={ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'},all:{bg:'#f1f5f9',color:'var(--gray700)',border:'var(--gray300)'}};
+    var s=styles[t]||styles.all;
+    b.style.background=s.bg;b.style.color=s.color;b.style.borderColor=s.border;
+  });
+  renderAllProjects();
+}
+function setProjStatusFilter(status,el){
+  window.projStatusFilter=status;
+  try{localStorage.setItem('ces_projStatusFilter',status);}catch(e){}
+  document.querySelectorAll('.proj-status-btn').forEach(function(b){
+    var isActive=b.dataset.status===status;
+    b.classList.toggle('active',isActive);
+    if(isActive){b.style.background='var(--primary)';b.style.color='#fff';b.style.borderColor='var(--primary)';}
+    else{b.style.background='';b.style.color='';b.style.borderColor='';}
+  });
+  document.querySelectorAll('.proj-status-btn:not(.active)').forEach(function(b){
+    var s=b.dataset.status;
+    if(s==='active'){b.style.background='#dcfce7';b.style.color='#15803d';b.style.borderColor='#bbf7d0';}
+    else{b.style.background='#f1f5f9';b.style.color='#374151';b.style.borderColor='#e2e8f0';}
+  });
+  renderAllProjects();
+}
 function filterProjects(f,el){document.querySelectorAll('#page-projects .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderAllProjects(f);}
 function renderTypeProjects(type){const el=document.getElementById(type+'List');if(!el)return;const list=projects.filter(p=>p.type===type);if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${PT[type]?.icon||'P'}</div><div class="empty-title">No ${PT[type]?.label||type} projects yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal('${type}')">+ Create Project</button></div>`;return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
 
@@ -3507,23 +3575,7 @@ function generateCompletionReport(id){
 
 updateHeaderDate();
 // Restore last visited page
-(function(){
-  try{
-    var lastPage=localStorage.getItem('ces_lastPage');
-    if(lastPage&&lastPage!=='dashboard'){
-      var navEl=null;
-      var allNavItems=document.querySelectorAll('.nav-item');
-      for(var i=0;i<allNavItems.length;i++){
-        var oc=allNavItems[i].getAttribute('onclick')||'';
-        if(oc.indexOf(lastPage)!==-1){
-          navEl=allNavItems[i];
-          break;
-        }
-      }
-      if(navEl){showPage(lastPage,navEl);}
-    }
-  }catch(e){}
-})();
+// page restore moved below
 if(typeof updatePtwBadge==='function')updatePtwBadge();
 // Pre-initialize all module data
 if(typeof clients==='undefined')window.clients=JSON.parse(localStorage.getItem('cesv2_clients')||'[]');
@@ -3556,7 +3608,35 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
 renderDashboard();
+// Restore last visited page AFTER data is loaded
+(function(){
+  try{
+    var lastPage=localStorage.getItem('ces_lastPage');
+    if(lastPage&&lastPage!=='dashboard'){
+      var navEl=null;
+      var allNavItems=document.querySelectorAll('.nav-item');
+      for(var i=0;i<allNavItems.length;i++){
+        var oc=allNavItems[i].getAttribute('onclick')||'';
+        if(oc.indexOf("'"+lastPage+"'")!==-1||oc.indexOf('"'+lastPage+'"')!==-1){
+          navEl=allNavItems[i];
+          break;
+        }
+      }
+      if(navEl){showPage(lastPage,navEl);}
+    }
+    // Restore calendar filters
+    var lastCalFilter=localStorage.getItem('ces_calFilter');
+    if(lastCalFilter){window.calTypeFilter=lastCalFilter;}
+    var lastCalClient=localStorage.getItem('ces_calClient');
+    if(lastCalClient){window.calClientFilter=lastCalClient;}
+    var lastProjType=localStorage.getItem('ces_projTypeFilter');
+    if(lastProjType){window.projTypeFilter=lastProjType;}
+    var lastProjStatus=localStorage.getItem('ces_projStatusFilter');
+    if(lastProjStatus){window.projStatusFilter=lastProjStatus;}
+  }catch(e){}
+})();
 setInterval(updateHeaderDate,60000);
+
 </script>
 <!-- CLIENT MODAL -->
 <div class="modal-overlay" id="addClientModal">
