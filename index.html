@@ -305,7 +305,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <!-- ALL PROJECTS -->
 <div class="page" id="page-projects">
-<div class="page-header"><div><div class="page-title">All Projects</div><div class="page-subtitle">Overview of all active and completed projects</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div></div>
+<div class="page-header"><div><div class="page-title">All Projects</div><div class="page-subtitle">Overview of all active and completed projects</div></div><div class="page-actions"><button class="btn btn-secondary btn-xs" onclick="fixProjectData()" title="Fix project type data if tabs show wrong projects" style="margin-right:0.4rem;">&#128295; Fix Data</button><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div></div>
 <div class="tab-bar"><button class="tab-btn active" onclick="filterProjects('all',this)">All</button><button class="tab-btn" onclick="filterProjects('active',this)">Active</button><button class="tab-btn" onclick="filterProjects('completed',this)">Completed</button></div>
 <div class="project-list" id="allProjectsList"></div>
 </div>
@@ -2861,6 +2861,25 @@ function buildMissingCertWarnings(p){
     +'</div>';
 }
 
+function fixProjectData(){
+  var validTypes=['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'];
+  var fixed=0;
+  projects.forEach(function(p){
+    var before=p.type;
+    if(p.types&&p.types.length>0){
+      var validOnly=p.types.filter(function(t){return validTypes.indexOf(t)!==-1;});
+      p.types=validOnly.length>0?validOnly:[p.type];
+      p.type=p.types[0];
+    } else {
+      p.types=[p.type];
+    }
+    if(p.type!==before)fixed++;
+  });
+  save('cesv2_projects',projects);
+  renderDashboard();renderAllProjects();
+  ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){renderTypeProjects(t);});
+  showToast('Project data fixed! '+projects.length+' projects updated.');
+}
 function completeProject(id){
   var p=projects.find(function(x){return x.id===id;});if(!p)return;
   var missing=getMissingCerts(p);
@@ -3451,22 +3470,23 @@ if(typeof dtrs==='undefined')window.dtrs=JSON.parse(localStorage.getItem('cesv2_
 if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('cesv2_grilles')||'[]');
 // Data migration: fix projects with incorrect type assignments
 (function migrateProjects(){
+  var validTypes=['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'];
   var changed=false;
   projects.forEach(function(p){
-    // If project has types array, ensure p.type matches the first selected type
+    // Ensure types array only contains valid types
     if(p.types&&p.types.length>0){
-      if(p.type!==p.types[0]){
-        p.type=p.types[0];
-        changed=true;
-      }
-    }
-    // If project has no types array, create it from p.type
-    if(!p.types||p.types.length===0){
-      p.types=[p.type];
+      var validOnly=p.types.filter(function(t){return validTypes.indexOf(t)!==-1;});
+      if(validOnly.length!==p.types.length){p.types=validOnly;changed=true;}
+      // Ensure p.type matches first type in array
+      if(p.types.length>0&&p.type!==p.types[0]){p.type=p.types[0];changed=true;}
+    } else {
+      // No types array - create from p.type
+      if(validTypes.indexOf(p.type)!==-1){p.types=[p.type];}
+      else{p.types=['ducting'];p.type='ducting';}
       changed=true;
     }
   });
-  if(changed){save('cesv2_projects',projects);console.log('Projects migrated: type alignment fixed');}
+  if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
 renderDashboard();
 setInterval(updateHeaderDate,60000);
