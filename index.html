@@ -649,14 +649,7 @@ const WF={
     {id:'inspection',title:'Consultant Inspection and Turnover',desc:'Coordinate with QA/QC and consultants for final inspection, address punch list, prepare for turnover'},
   ],
   airbalancing:[
-    {id:'prework',title:'Pre-Work',desc:'Secure PTW, toolbox talk, obtain and review all relevant design documents including HVAC plans specifications and equipment submittals, inspect installation, verify system readiness and controls are functional'},
-    {id:'initial',title:'Initial Measurements',desc:'Use Balometer to measure airflow at each supply terminal device including diffusers and grilles, record baseline data and compare with design values'},
-    {id:'adjusting',title:'Adjusting Airflow',desc:'Adjust dampers in supply ductwork starting from main supply ducts then branch ducts, adjust fan speed if necessary to achieve required total system airflow'},
-    {id:'balancing',title:'Balancing Airflow',desc:'Proportion airflow according to design specifications, fine-tune dampers and fan speeds, adjust for airflow deficiencies to achieve closest possible values to design'},
-    {id:'verification',title:'Verification and Documentation',desc:'Re-measure airflow at each supply terminal using Balometer, document final measurements and adjustments, record schematic layout and field device settings preliminary and final'},
-    {id:'performance',title:'System Performance Check',desc:'Verify supply side HVAC operates correctly under various load conditions, ensure automatic control systems function as intended'},
-    {id:'handover',title:'Final Adjustments and Handover',desc:'Make final adjustments to optimize performance, mall or building maintenance witness air balancing and sign certificate or service report upon completion'},
-    {id:'inspection',title:'Consultant Inspection and Turnover',desc:'Coordinate with QA/QC and consultants for final inspection, address punch list, prepare for turnover'},
+    {id:'result',title:'Air Balancing Result',desc:'Record the air balancing result. Attach the signed certificate or service report. Mall or building maintenance must witness and sign upon completion.'},
   ],
   fcuinstall:[
     {id:'prework',title:'Pre-Work',desc:'Secure PTW, toolbox talk, review approved shop drawings, verify site conditions, inspect tools and equipment'},
@@ -1552,7 +1545,7 @@ function openProjectDetail(id){
           +'<span style="width:15px;height:15px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.45rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
           +esc(a.name)+'</span>';
       }).join('');
-      var sh=buildStepsHtml(p,typeSteps);
+      var sh=(t==='airbalancing')?buildAirBalResultHtml(p,typeSteps):buildStepsHtml(p,typeSteps);
       stepsHtml+='<div id="detpanel_'+id+'_'+t+'" class="det-tab-panel" style="display:'+(ti===0?'block':'none')+';border:1.5px solid '+c.border+';border-radius:0 8px 8px 8px;padding:0.85rem;background:'+c.light+';">'
         +'<div style="margin-bottom:0.65rem;">'
         +'<div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Workers for '+esc(labels[t]||t)+'</div>'
@@ -1562,7 +1555,11 @@ function openProjectDetail(id){
         +'</div>';
     });
   } else {
-    stepsHtml='<div class="workflow-steps">'+buildStepsHtml(p,p.steps||[])+'</div>';
+    if(p.type==='airbalancing'||(p.types&&p.types.length===1&&p.types[0]==='airbalancing')){
+      stepsHtml=buildAirBalResultHtml(p);
+    } else {
+      stepsHtml='<div class="workflow-steps">'+buildStepsHtml(p,p.steps||[])+'</div>';
+    }
   }
 
   var dpHtml='';
@@ -1658,6 +1655,89 @@ function switchDetailTab(btn){
   if(panel)panel.style.display='block';
 }
 
+
+function buildAirBalResultHtml(p, steps){
+  // Get the result step
+  var resultStep=(p.steps||[]).find(function(s){
+    var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;
+    return baseId==='result';
+  });
+  if(!resultStep){
+    // Create a virtual result step if not found
+    resultStep={id:'airbalancing_result',title:'Air Balancing Result',status:'pending',testResult:'',driveLink:'',notes:'',completedDate:''};
+  }
+  var pid=p.id;
+  var sid=resultStep.id;
+  var isPassed=resultStep.testResult==='pass';
+  var isFailed=resultStep.testResult==='fail';
+  var isCompleted=resultStep.status==='completed';
+
+  var html='<div style="background:#fefce8;border:2px solid #fde68a;border-radius:12px;padding:1.1rem 1.2rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">🌬 Air Balancing Result</div>'
+
+    // Result status badge
+    +'<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">'
+    +'<div style="font-size:0.75rem;font-weight:700;color:var(--gray600);">Result:</div>'
+    +(isPassed?'<span style="background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:800;">✅ PASSED</span>':'')
+    +(isFailed?'<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fecaca;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:800;">❌ FAILED</span>':'')
+    +(!isPassed&&!isFailed?'<span style="background:#f1f5f9;color:var(--gray500);border:1.5px solid var(--gray300);border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:700;">Pending</span>':'')
+    +'</div>'
+
+    // Pass/Fail buttons
+    +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">'
+    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,\'pass\')">✅ Mark Pass</button>'
+    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,\'fail\')">❌ Mark Fail</button>'
+    +'</div>'
+
+    // Certificate / Drive Link
+    +'<div style="margin-bottom:1rem;">'
+    +'<div style="font-size:0.7rem;font-weight:800;color:var(--gray600);margin-bottom:0.4rem;">📎 Certificate / Service Report</div>'
+    +(resultStep.driveLink
+      ?'<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.7rem;background:#fff;border:1.5px solid #fde68a;border-radius:8px;">'
+        +'<span style="font-size:0.75rem;flex:1;font-weight:700;">'+esc(resultStep.driveLink.slice(0,50))+'...</span>'
+        +'<a href="'+esc(resultStep.driveLink)+'" target="_blank" class="btn btn-secondary btn-xs">Open</a>'
+        +'<button class="btn btn-danger btn-xs" data-pid="'+pid+'" data-sid="'+sid+'" onclick="clearStepDriveLink(this.dataset.pid,this.dataset.sid)">Remove</button>'
+        +'</div>'
+      :'<div style="font-size:0.75rem;color:var(--gray400);margin-bottom:0.4rem;">No certificate attached yet.</div>'
+    )
+    +'<button class="btn btn-secondary btn-xs" style="margin-top:0.4rem;" data-pid="'+pid+'" data-sid="'+sid+'" onclick="addStepDriveLink(this.dataset.pid,this.dataset.sid)">+ Attach Certificate</button>'
+    +'</div>'
+
+    // Notes
+    +(resultStep.notes
+      ?'<div style="font-size:0.72rem;color:var(--gray600);padding:0.4rem 0.6rem;background:#fff;border-radius:7px;border:1.5px solid #fde68a;margin-bottom:0.75rem;">Note: '+esc(resultStep.notes)+'</div>'
+      :''
+    )
+    +'<button class="btn btn-secondary btn-xs" style="margin-bottom:1rem;" data-pid="'+pid+'" data-sid="'+sid+'" onclick="addStepNote(this.dataset.pid,this.dataset.sid)">+ Add Note</button>'
+
+    // Completion date
+    +(resultStep.completedDate?'<div style="font-size:0.68rem;color:var(--success);margin-bottom:0.75rem;">Completed: '+fmtDate(resultStep.completedDate)+'</div>':'')
+
+    // Divider
+    +'<div style="border-top:1.5px solid #fde68a;margin:0.75rem 0;"></div>'
+
+    // Action buttons
+    +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
+    +(isCompleted
+      ?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStep(this.dataset.pid,this.dataset.sid,\'pending\')">↩ Reopen</button>'
+      :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" onclick="updateStep(this.dataset.pid,this.dataset.sid,\'completed\')">✓ Mark Complete</button>'
+    )
+    +'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" onclick="openEditProjectModal(this.dataset.pid)">📅 Reschedule</button>'
+    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" onclick="deleteProject(this.dataset.pid)">🗑 Delete</button>'
+    +'</div>'
+    +'</div>';
+
+  return html;
+}
+
+function clearStepDriveLink(pid,sid){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var s=(p.steps||[]).find(function(x){return x.id===sid;});if(!s)return;
+  s.driveLink='';
+  save('cesv2_projects',projects);
+  openProjectDetail(pid);
+  showToast('Certificate removed.');
+}
 
 function buildStepsHtml(p,steps){
   var sh='';
@@ -2950,7 +3030,7 @@ function getMissingCerts(p){
       {baseId:'asbuilt',name:'As-Built Plan'}
     ],
     airbalancing:[
-      {baseId:'handover',name:'Air Balancing Certificate / Signed Handover'}
+      {baseId:'result',name:'Air Balancing Certificate / Signed Result'}
     ],
     fcuinstall:[
       {baseId:'testing',name:'Testing & Commissioning Certificate'},
