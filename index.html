@@ -1167,7 +1167,7 @@ function setProjStatusFilter(status,el){
   renderAllProjects();
 }
 function filterProjects(f,el){document.querySelectorAll('#page-projects .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderAllProjects(f);}
-function renderTypeProjects(type){const el=document.getElementById(type+'List');if(!el)return;const list=projects.filter(p=>p.type===type);if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${PT[type]?.icon||'P'}</div><div class="empty-title">No ${PT[type]?.label||type} projects yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal('${type}')">+ Create Project</button></div>`;return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
+function renderTypeProjects(type){const el=document.getElementById(type+'List');if(!el)return;const list=projects.filter(p=>p.type===type||(p.types&&p.types.indexOf(type)!==-1));if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">${PT[type]?.icon||'P'}</div><div class="empty-title">No ${PT[type]?.label||type} projects yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewProjectModal('${type}')">+ Create Project</button></div>`;return;}el.innerHTML=list.map(p=>projectItemHtml(p)).join('');}
 
 function openNewProjectModal(type){
   projectWorkerAssignees=[];
@@ -1192,6 +1192,58 @@ function openNewProjectModal(type){
 
 var projectWorkersByType={};
 
+function getConflictedWorkers(date, time, location, excludeProjectId){
+  // Returns set of worker IDs that are busy on this date+time at a DIFFERENT location
+  var conflicted={};
+  if(!date)return conflicted;
+
+  // Check projects
+  projects.forEach(function(p){
+    if(p.id===excludeProjectId)return;
+    if(p.status==='completed')return;
+    var allTypes=p.types&&p.types.length>0?p.types:[p.type];
+    var schedules=[];
+    if(p.schedulesByType&&Object.keys(p.schedulesByType).length>0){
+      allTypes.forEach(function(t){
+        var s=p.schedulesByType[t];
+        if(s&&s.startDate)schedules.push({date:s.startDate,time:s.startTime||'',location:p.location||''});
+      });
+    } else if(p.startDate){
+      schedules.push({date:p.startDate,time:p.startTime||'',location:p.location||''});
+    }
+    schedules.forEach(function(sched){
+      if(sched.date!==date)return;
+      // Check time overlap (if both have times, check if same hour)
+      if(time&&sched.time&&time!==sched.time)return;
+      // Check if different location
+      var schedLoc=(sched.location||'').toLowerCase().trim();
+      var newLoc=(location||'').toLowerCase().trim();
+      if(schedLoc&&newLoc&&schedLoc===newLoc)return; // same location = OK
+      // Mark all assignees as conflicted
+      (p.assignees||[]).forEach(function(a){
+        conflicted[a.id]={name:a.name,project:p.name,location:sched.location,date:sched.date,time:sched.time};
+      });
+    });
+  });
+
+  // Check jobs
+  if(typeof jobs!=='undefined'){
+    jobs.forEach(function(j){
+      if(j.status==='resolved'||j.status==='closed')return;
+      if(j.schedDate!==date)return;
+      if(time&&j.schedTime&&time!==j.schedTime)return;
+      var jobLoc=(j.location||'').toLowerCase().trim();
+      var newLoc=(location||'').toLowerCase().trim();
+      if(jobLoc&&newLoc&&jobLoc===newLoc)return;
+      (j.assignees||[]).forEach(function(a){
+        conflicted[a.id]={name:a.name,project:j.scope||'Job',location:j.location,date:j.schedDate,time:j.schedTime};
+      });
+    });
+  }
+
+  return conflicted;
+}
+
 function renderWorkersByType(){
   var types=getSelectedTypes();
   var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
@@ -1201,11 +1253,24 @@ function renderWorkersByType(){
   Object.keys(projectWorkersByType).forEach(function(t){if(types.indexOf(t)===-1)delete projectWorkersByType[t];});
   types.forEach(function(t){if(!projectWorkersByType[t])projectWorkersByType[t]=[];});
   if(types.length===0){container.innerHTML='<div style="font-size:0.75rem;color:var(--gray400);padding:0.4rem;">Select project type(s) above to assign workers.</div>';return;}
+
+  // Get current location and per-type schedules for conflict check
+  var newLocation=(document.getElementById('np_location')?document.getElementById('np_location').value.trim():'');
+
   var html='';
   types.forEach(function(t){
     var c=colors[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
     var assigned=projectWorkersByType[t]||[];
     var assignedIds=assigned.map(function(a){return a.id;});
+
+    // Get date/time for this type from stored data
+    var sched=projectSchedulesByType[t]||{};
+    var typeDate=sched.startDate||'';
+    var typeTime=sched.startTime||'';
+
+    // Get conflicted workers for this type's schedule
+    var conflicted=getConflictedWorkers(typeDate,typeTime,newLocation,null);
+
     var chips=assigned.map(function(a){
       return '<span style="display:inline-flex;align-items:center;gap:0.3rem;background:'+c.bg+';color:'+c.color+';border:1.5px solid '+c.border+';border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
         +'<span style="width:16px;height:16px;border-radius:50%;background:'+c.color+';color:#fff;font-size:0.48rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
@@ -1213,11 +1278,31 @@ function renderWorkersByType(){
         +'<button data-wtype="'+t+'" data-wid="'+a.id+'" onclick="removeWorkerFromType(this.dataset.wtype,this.dataset.wid)" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.35);font-size:0.75rem;padding:0;line-height:1;">x</button>'
         +'</span>';
     }).join('');
-    // Only show workers NOT already assigned to this type
-    var availableWorkers=workers.filter(function(w){return assignedIds.indexOf(w.id)===-1;});
+
+    // Build worker options - exclude already assigned AND conflicted workers
+    var availableWorkers=workers.filter(function(w){
+      return assignedIds.indexOf(w.id)===-1&&!conflicted[w.id];
+    });
+    var conflictedWorkers=workers.filter(function(w){
+      return assignedIds.indexOf(w.id)===-1&&conflicted[w.id];
+    });
+
     var opts=availableWorkers.map(function(w){
       return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
     }).join('');
+
+    // Show conflict warning if any workers are hidden
+    var conflictNote='';
+    if(conflictedWorkers.length>0&&typeDate){
+      conflictNote='<div style="font-size:0.65rem;color:#dc2626;margin-top:0.3rem;padding:0.3rem 0.5rem;background:#fef2f2;border-radius:6px;border:1px solid #fecaca;">'
+        +'⚠️ '+conflictedWorkers.length+' worker(s) unavailable (scheduled elsewhere on '+fmtDate(typeDate)+(typeTime?' at '+fmtTime(typeTime):'')+'):<br>'
+        +conflictedWorkers.map(function(w){
+          var info=conflicted[w.id];
+          return '&nbsp;&nbsp;• '+esc(w.name)+' → '+esc(info.project)+(info.location?' at '+esc(info.location):'');
+        }).join('<br>')
+        +'</div>';
+    }
+
     html+='<div style="border:1.5px solid '+c.border+';border-radius:10px;padding:0.65rem 0.85rem;background:'+c.bg+'20;">'
       +'<div style="font-size:0.65rem;font-weight:800;color:'+c.color+';text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.45rem;">'+esc(labels[t]||t)+'</div>'
       +'<div id="np_chips_'+t+'" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.4rem;min-height:18px;">'+chips+'</div>'
@@ -1225,12 +1310,13 @@ function renderWorkersByType(){
       +'<option value="">+ Assign worker to '+esc(labels[t]||t)+'</option>'
       +opts
       +'</select>'
+      +conflictNote
       +'</div>';
   });
   container.innerHTML=html;
   renderShopDrawingsByType();
-  renderSchedulesByType();
 }
+
 
 
 
@@ -3431,6 +3517,8 @@ function autoCreateProjectRecords(p){
   var today=new Date().toISOString().split('T')[0];
   var pid=p.id;
   var pname=p.name;
+  var isAirBalOnly=p.types&&p.types.length===1&&p.types[0]==='airbalancing';
+  if(isAirBalOnly){showToast('Air Balancing project created!');return;}
 
   // 1. Auto-create PTW
   if(typeof ptws!=='undefined'){
