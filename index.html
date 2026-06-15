@@ -2880,6 +2880,55 @@ function fixProjectData(){
   ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){renderTypeProjects(t);});
   showToast('Project data fixed! '+projects.length+' projects updated.');
 }
+
+function showProjectDebug(){
+  var labels={ducting:'Ducting',sprinkler:'Sprinkler',airbalancing:'Air Balancing',fcuinstall:'FCU Install',fcudismantling:'FCU Dismantling'};
+  var typeColors={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcuinstall:'#f3e8ff',fcudismantling:'#f1f5f9'};
+  var html='<div style="font-size:0.75rem;color:var(--gray500);margin-bottom:0.75rem;">Click a type badge to change the primary type. Click Save to apply.</div>';
+  html+='<div id="debugProjectList">';
+  projects.forEach(function(p,idx){
+    var allT=p.types&&p.types.length>0?p.types:[p.type];
+    html+='<div style="padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;margin-bottom:0.5rem;background:var(--gray50);">'
+      +'<div style="font-size:0.82rem;font-weight:800;color:var(--text);margin-bottom:0.4rem;">'+esc(p.name)+'</div>'
+      +'<div style="font-size:0.65rem;color:var(--gray500);margin-bottom:0.35rem;">Primary type: <strong style="color:var(--primary);">'+esc(labels[p.type]||p.type)+'</strong></div>'
+      +'<div style="display:flex;gap:0.3rem;flex-wrap:wrap;">';
+    ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){
+      var isSelected=allT.indexOf(t)!==-1;
+      var isPrimary=p.type===t;
+      html+='<button data-pidx="'+idx+'" data-type="'+t+'" onclick="toggleDebugType(this)" style="font-size:0.68rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:12px;cursor:pointer;border:1.5px solid '+(isSelected?'#1d4ed8':'var(--gray300)')+';background:'+(isPrimary?'#1d4ed8':(isSelected?'#dbeafe':'#fff'))+';color:'+(isPrimary?'#fff':(isSelected?'#1d4ed8':'var(--gray500)'))+';font-family:inherit;">'+labels[t]+'</button>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('debugBody').innerHTML=html;
+  openModal('debugModal');
+}
+
+function toggleDebugType(btn){
+  var pidx=parseInt(btn.dataset.pidx);
+  var type=btn.dataset.type;
+  var p=projects[pidx];
+  if(!p)return;
+  if(!p.types||p.types.length===0)p.types=[p.type];
+  var idx=p.types.indexOf(type);
+  if(idx===-1){
+    p.types.push(type);
+  } else if(p.types.length>1){
+    p.types.splice(idx,1);
+  }
+  // First in list = primary
+  p.type=p.types[0];
+  showProjectDebug();
+}
+
+function saveDebugFix(){
+  save('cesv2_projects',projects);
+  closeModal('debugModal');
+  renderDashboard();renderAllProjects();
+  ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){renderTypeProjects(t);});
+  showToast('Project types saved!');
+}
+
 function completeProject(id){
   var p=projects.find(function(x){return x.id===id;});if(!p)return;
   var missing=getMissingCerts(p);
@@ -3752,5 +3801,16 @@ setInterval(updateHeaderDate,60000);
 </div>
 </div>
 
+<div class="modal-overlay" id="debugModal">
+<div class="modal" style="max-width:560px;">
+<div class="modal-header"><h2>&#128295; Fix Project Types</h2><button class="modal-close" onclick="closeModal('debugModal')">X Close</button></div>
+<div class="modal-body" id="debugBody"></div>
+<div class="modal-footer">
+<div style="font-size:0.72rem;color:var(--gray500);flex:1;">Click type badges to toggle. First selected = primary tab.</div>
+<button class="btn btn-secondary" onclick="closeModal('debugModal')">Cancel</button>
+<button class="btn btn-primary" onclick="saveDebugFix()">Save Changes</button>
+</div>
+</div>
+</div>
 </body>
 </html>
