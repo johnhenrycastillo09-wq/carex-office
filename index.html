@@ -281,13 +281,14 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div style="margin-top:0.85rem;">
 <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
 <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Type:</span>
-<span class="cal-legend-btn" data-filter="all" onclick="setCalFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
-<span class="cal-legend-btn" data-filter="ducting" onclick="setCalFilter('ducting',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bfdbfe;cursor:pointer;background:#dbeafe;color:#1d4ed8;">Ducting</span>
-<span class="cal-legend-btn" data-filter="sprinkler" onclick="setCalFilter('sprinkler',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">Sprinkler</span>
-<span class="cal-legend-btn" data-filter="airbalancing" onclick="setCalFilter('airbalancing',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #fde68a;cursor:pointer;background:#fef9c3;color:#92400e;">Air Balancing</span>
-<span class="cal-legend-btn" data-filter="fcu" onclick="setCalFilter('fcu',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e9d5ff;cursor:pointer;background:#f3e8ff;color:#7e22ce;">FCU</span>
-<span class="cal-legend-btn" data-filter="pms" onclick="setCalFilter('pms',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid rgba(255,107,53,0.3);cursor:pointer;background:#fff3ee;color:var(--orange);">PMS</span>
-<span class="cal-legend-btn" data-filter="job" onclick="setCalFilter('job',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:#f1f5f9;color:var(--gray700);">Jobs</span>
+<span class="cal-legend-btn cal-active" data-filter="all" onclick="toggleCalFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+<span class="cal-legend-btn" data-filter="ducting" onclick="toggleCalFilter('ducting',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bfdbfe;cursor:pointer;background:#dbeafe;color:#1d4ed8;">🏗 Ducting</span>
+<span class="cal-legend-btn" data-filter="sprinkler" onclick="toggleCalFilter('sprinkler',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">🚿 Sprinkler</span>
+<span class="cal-legend-btn" data-filter="airbalancing" onclick="toggleCalFilter('airbalancing',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #fde68a;cursor:pointer;background:#fef9c3;color:#92400e;">🌬 Air Balancing</span>
+<span class="cal-legend-btn" data-filter="fcuinstall" onclick="toggleCalFilter('fcuinstall',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e9d5ff;cursor:pointer;background:#f3e8ff;color:#7e22ce;">❄ FCU Install</span>
+<span class="cal-legend-btn" data-filter="fcudismantling" onclick="toggleCalFilter('fcudismantling',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#374151;">🔧 FCU Dismantling</span>
+<span class="cal-legend-btn" data-filter="pms" onclick="toggleCalFilter('pms',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid rgba(255,107,53,0.3);cursor:pointer;background:#fff3ee;color:var(--orange);">PMS</span>
+<span class="cal-legend-btn" data-filter="job" onclick="toggleCalFilter('job',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:#f1f5f9;color:var(--gray700);">Jobs</span>
 </div>
 <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
 <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Client:</span>
@@ -801,7 +802,7 @@ function renderCalendar(){
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const prevDays=new Date(calYear,calMonth,0).getDate();
   const today=new Date().toISOString().split('T')[0];
-  const cf=window.calTypeFilter||'all';
+  const cf=window.calTypeFilter||'all'; // legacy
   const cc=window.calClientFilter||'all';
 
   for(let i=firstDay-1;i>=0;i--)html+=`<div class="cal-day other-month"><div class="cal-day-num">${prevDays-i}</div></div>`;
@@ -826,13 +827,20 @@ function renderCalendar(){
     let dj=jobs.filter(j=>j.schedDate===ds);
     let dpms=stores.filter(s=>s.nextCleaning===ds);
 
-    // Apply type filter
-    if(cf!=='all'){
-      if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(cf)){
-        dp=dp.filter(p=>p.type===cf||(p._calType===cf));
-        dj=[];dpms=[];
-      } else if(cf==='pms'){dp=[];dj=[];}
-      else if(cf==='job'){dp=[];dpms=[];}
+    // Apply multi-select type filter
+    var calFilters=window.calTypeFilters||[];
+    if(calFilters.length>0&&calFilters.indexOf('all')===-1){
+      var hasProject=calFilters.some(function(f){return['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].indexOf(f)!==-1;});
+      var hasPms=calFilters.indexOf('pms')!==-1;
+      var hasJob=calFilters.indexOf('job')!==-1;
+      if(hasProject){
+        dp=dp.filter(function(p){
+          var t=p._calType||p.type;
+          return calFilters.indexOf(t)!==-1;
+        });
+      } else {dp=[];}
+      if(!hasPms)dpms=[];
+      if(!hasJob)dj=[];
     }
 
     // Apply client filter
@@ -978,23 +986,92 @@ function hideCalTooltip(){
   if(t)t.style.display='none';
 }
 
-function setCalFilter(filter,el){
-  window.calTypeFilter=filter;
-  try{localStorage.setItem('ces_calFilter',filter);}catch(e){}
-  document.querySelectorAll('.cal-legend-btn').forEach(function(b){
-    b.style.background=b.dataset.filter===filter?'var(--primary)':'';
-    b.style.color=b.dataset.filter===filter?'#fff':'';
-    b.style.borderColor=b.dataset.filter===filter?'var(--primary)':'';
-    if(b.dataset.filter!==filter){
-      const colors={ducting:'#dbeafe',sprinkler:'#dcfce7',airbalancing:'#fef9c3',fcu:'#f3e8ff',pms:'#fff3ee',job:'#f1f5f9',all:'var(--gray100)'};
-      const textColors={ducting:'#1d4ed8',sprinkler:'#15803d',airbalancing:'#92400e',fcu:'#7e22ce',pms:'var(--orange)',job:'var(--gray700)',all:'var(--gray600)'};
-      b.style.background=colors[b.dataset.filter]||'var(--gray100)';
-      b.style.color=textColors[b.dataset.filter]||'var(--gray600)';
-      b.style.borderColor='';
+var calTypeFilters=[];
+
+function toggleCalFilter(filter,el){
+  var styles={
+    ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},
+    sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},
+    airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},
+    fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},
+    fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'},
+    pms:{bg:'#fff3ee',color:'var(--orange)',border:'rgba(255,107,53,0.3)'},
+    job:{bg:'#f1f5f9',color:'var(--gray700)',border:'var(--gray300)'},
+    all:{bg:'var(--primary)',color:'#fff',border:'var(--primary)'}
+  };
+
+  if(filter==='all'){
+    // All = clear all selections
+    calTypeFilters=[];
+    document.querySelectorAll('.cal-legend-btn').forEach(function(b){
+      var t=b.dataset.filter;
+      var s=styles[t]||styles.all;
+      if(t==='all'){b.style.background='var(--primary)';b.style.color='#fff';b.style.borderColor='var(--primary)';b.style.opacity='1';}
+      else{b.style.background=s.bg;b.style.color=s.color;b.style.borderColor=s.border;b.style.opacity='0.5';}
+    });
+    el.style.opacity='1';
+  } else {
+    // Toggle this filter
+    var idx=calTypeFilters.indexOf(filter);
+    if(idx===-1){calTypeFilters.push(filter);}
+    else{calTypeFilters.splice(idx,1);}
+
+    // Update All button appearance
+    var allBtn=document.querySelector('.cal-legend-btn[data-filter="all"]');
+    if(allBtn){
+      if(calTypeFilters.length===0){
+        allBtn.style.background='var(--primary)';allBtn.style.color='#fff';allBtn.style.opacity='1';
+      } else {
+        allBtn.style.background='#f1f5f9';allBtn.style.color='var(--gray500)';allBtn.style.opacity='0.5';
+      }
     }
-  });
+
+    // Update clicked button
+    var s=styles[filter]||styles.all;
+    var isActive=calTypeFilters.indexOf(filter)!==-1;
+    if(isActive){
+      el.style.background=s.bg;el.style.color=s.color;el.style.borderColor=s.border;el.style.opacity='1';
+      el.style.boxShadow='0 0 0 2px '+s.border+', 0 0 0 3px #fff';
+    } else {
+      el.style.background=s.bg;el.style.color=s.color;el.style.borderColor=s.border;el.style.opacity='0.45';
+      el.style.boxShadow='none';
+    }
+  }
+
+  window.calTypeFilter=calTypeFilters.length===1?calTypeFilters[0]:'all';
+  try{localStorage.setItem('ces_calFilters',JSON.stringify(calTypeFilters));}catch(e){}
   renderCalendar();
+  updateCalLegendUI();
 }
+
+function updateCalLegendUI(){
+  var styles={
+    ducting:{bg:'#dbeafe',color:'#1d4ed8',border:'#bfdbfe'},
+    sprinkler:{bg:'#dcfce7',color:'#15803d',border:'#bbf7d0'},
+    airbalancing:{bg:'#fef9c3',color:'#92400e',border:'#fde68a'},
+    fcuinstall:{bg:'#f3e8ff',color:'#7e22ce',border:'#e9d5ff'},
+    fcudismantling:{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'},
+    pms:{bg:'#fff3ee',color:'var(--orange)',border:'rgba(255,107,53,0.3)'},
+    job:{bg:'#f1f5f9',color:'var(--gray700)',border:'var(--gray300)'}
+  };
+  document.querySelectorAll('.cal-legend-btn').forEach(function(b){
+    var t=b.dataset.filter;
+    if(t==='all')return;
+    var s=styles[t]||{bg:'#f1f5f9',color:'#374151',border:'#e2e8f0'};
+    var isActive=calTypeFilters.length===0||calTypeFilters.indexOf(t)!==-1;
+    b.style.background=s.bg;b.style.color=s.color;b.style.borderColor=s.border;
+    b.style.opacity=isActive?'1':'0.45';
+    b.style.boxShadow=(calTypeFilters.indexOf(t)!==-1)?'0 0 0 2px '+s.border+', 0 0 0 3px #fff':'none';
+  });
+  var allBtn=document.querySelector('.cal-legend-btn[data-filter="all"]');
+  if(allBtn){
+    if(calTypeFilters.length===0){allBtn.style.background='var(--primary)';allBtn.style.color='#fff';allBtn.style.opacity='1';}
+    else{allBtn.style.background='#f1f5f9';allBtn.style.color='var(--gray500)';allBtn.style.opacity='0.5';}
+  }
+}
+
+function setCalFilter(filter,el){toggleCalFilter(filter,el);}
+
 
 function setCalClientFilter(client,el){
   window.calClientFilter=client;
@@ -3625,6 +3702,8 @@ renderDashboard();
       if(navEl){showPage(lastPage,navEl);}
     }
     // Restore calendar filters
+    var lastCalFilters=localStorage.getItem('ces_calFilters');
+    if(lastCalFilters){try{window.calTypeFilters=JSON.parse(lastCalFilters);}catch(e){}}
     var lastCalFilter=localStorage.getItem('ces_calFilter');
     if(lastCalFilter){window.calTypeFilter=lastCalFilter;}
     var lastCalClient=localStorage.getItem('ces_calClient');
