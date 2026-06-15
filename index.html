@@ -307,23 +307,12 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <!-- ALL PROJECTS -->
 <div class="page" id="page-projects">
 <div class="page-header"><div><div class="page-title">All Projects</div><div class="page-subtitle">Overview of all active and completed projects</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div></div>
-<div style="margin-bottom:0.75rem;">
-  <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-    <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Type:</span>
-    <span class="proj-type-btn active" data-type="all" onclick="setProjTypeFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
-    <span class="proj-type-btn" data-type="ducting" onclick="setProjTypeFilter('ducting',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bfdbfe;cursor:pointer;background:#dbeafe;color:#1d4ed8;">🏗 Ducting</span>
-    <span class="proj-type-btn" data-type="sprinkler" onclick="setProjTypeFilter('sprinkler',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">🚿 Sprinkler</span>
-    <span class="proj-type-btn" data-type="airbalancing" onclick="setProjTypeFilter('airbalancing',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #fde68a;cursor:pointer;background:#fef9c3;color:#92400e;">🌬 Air Balancing</span>
-    <span class="proj-type-btn" data-type="fcuinstall" onclick="setProjTypeFilter('fcuinstall',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e9d5ff;cursor:pointer;background:#f3e8ff;color:#7e22ce;">❄ FCU Install</span>
-    <span class="proj-type-btn" data-type="fcudismantling" onclick="setProjTypeFilter('fcudismantling',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#374151;">🔧 FCU Dismantling</span>
-  </div>
   <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem;">
     <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Status:</span>
     <span class="proj-status-btn active" data-status="all" onclick="setProjStatusFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
     <span class="proj-status-btn" data-status="active" onclick="setProjStatusFilter('active',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #bbf7d0;cursor:pointer;background:#dcfce7;color:#15803d;">Active</span>
     <span class="proj-status-btn" data-status="completed" onclick="setProjStatusFilter('completed',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid #e2e8f0;cursor:pointer;background:#f1f5f9;color:#374151;">Completed</span>
   </div>
-</div>
 <div class="project-list" id="allProjectsList"></div>
 </div>
 <div class="page" id="page-ducting"><div class="page-header"><div><div class="page-title">Ducting Works</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewProjectModal('ducting')">+ New Project</button></div></div><div id="ductingList"><div class="empty-state"><div class="empty-icon">🏗</div><div class="empty-title">No ducting projects yet</div><button class="btn btn-primary btn-sm" onclick="openNewProjectModal('ducting')" style="margin-top:0.5rem">+ Create Project</button></div></div></div>
