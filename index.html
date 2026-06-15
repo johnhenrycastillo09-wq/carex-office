@@ -1655,69 +1655,54 @@ function switchDetailTab(btn){
 
 
 function buildAirBalResultHtml(p, steps){
-  // Get the result step
+  var pid=p.id;
   var resultStep=(p.steps||[]).find(function(s){
     var baseId=s.id.indexOf('_')!==-1?s.id.split('_').slice(1).join('_'):s.id;
     return baseId==='result';
   });
   if(!resultStep){
-    // Create a virtual result step if not found
-    resultStep={id:'airbalancing_result',title:'Air Balancing Result',status:'pending',testResult:'',driveLink:'',notes:'',completedDate:''};
+    resultStep={id:'airbalancing_result',title:'Air Balancing Result',status:'pending',driveLink:'',notes:'',completedDate:''};
   }
-  var pid=p.id;
   var sid=resultStep.id;
-  var isPassed=resultStep.testResult==='pass';
-  var isFailed=resultStep.testResult==='fail';
   var isCompleted=resultStep.status==='completed';
+  var log=p.airBalLog||[];
+
+  var logHtml='';
+  log.forEach(function(entry){
+    logHtml+='<div style="padding:0.55rem 0.7rem;border:1.5px solid #fde68a;border-radius:8px;background:#fff;margin-bottom:0.4rem;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">'
+      +'<span style="font-size:0.7rem;font-weight:800;color:#92400e;">'+fmtDate(entry.date)+'</span>'
+      +'</div>'
+      +'<div style="font-size:0.78rem;color:var(--text);white-space:pre-wrap;">'+esc(entry.text)+'</div>'
+      +(entry.link?'<a href="'+esc(entry.link)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.2rem;margin-top:0.25rem;">📎 View Certificate/File</a>':'')
+      +'</div>';
+  });
 
   var html='<div style="background:#fefce8;border:2px solid #fde68a;border-radius:12px;padding:1.1rem 1.2rem;">'
-    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">🌬 Air Balancing Result</div>'
+    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">🌬 Air Balancing Result Log</div>'
 
-    // Result status badge
-    +'<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">'
-    +'<div style="font-size:0.75rem;font-weight:700;color:var(--gray600);">Result:</div>'
-    +(isPassed?'<span style="background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:800;">✅ PASSED</span>':'')
-    +(isFailed?'<span style="background:#fee2e2;color:#dc2626;border:1.5px solid #fecaca;border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:800;">❌ FAILED</span>':'')
-    +(!isPassed&&!isFailed?'<span style="background:#f1f5f9;color:var(--gray500);border:1.5px solid var(--gray300);border-radius:20px;padding:0.25rem 0.75rem;font-size:0.78rem;font-weight:700;">Pending</span>':'')
+    // Log entries
+    +(log.length>0?logHtml:'<div style="font-size:0.75rem;color:var(--gray400);margin-bottom:0.75rem;">No entries yet. Add your first result below.</div>')
+
+    // Add new entry form
+    +'<div style="border-top:1.5px solid #fde68a;padding-top:0.75rem;margin-top:0.5rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Add Entry</div>'
+    +'<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.4rem;">'
+    +'<input type="date" id="ab_date_'+pid+'" value="'+new Date().toISOString().split('T')[0]+'" style="padding:0.35rem 0.55rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;"/>'
     +'</div>'
-
-    // Pass/Fail buttons
-    +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">'
-    +'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res="pass" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">✅ Mark Pass</button>'
-    +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-res="fail" onclick="updateStepResult(this.dataset.pid,this.dataset.sid,this.dataset.res)">❌ Mark Fail</button>'
+    +'<textarea id="ab_text_'+pid+'" placeholder="Describe the air balancing result, readings, adjustments made..." style="width:100%;min-height:70px;padding:0.4rem 0.6rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:0.4rem;"></textarea>'
+    +'<input type="url" id="ab_link_'+pid+'" placeholder="Certificate/Report Drive link (optional)" style="width:100%;padding:0.35rem 0.55rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.76rem;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:0.5rem;"/>'
+    +'<button class="btn btn-primary btn-sm" data-pid="'+pid+'" onclick="addAirBalProgress(this.dataset.pid)">+ Add Entry</button>'
     +'</div>'
-
-    // Certificate / Drive Link
-    +'<div style="margin-bottom:1rem;">'
-    +'<div style="font-size:0.7rem;font-weight:800;color:var(--gray600);margin-bottom:0.4rem;">📎 Certificate / Service Report</div>'
-    +(resultStep.driveLink
-      ?'<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.7rem;background:#fff;border:1.5px solid #fde68a;border-radius:8px;">'
-        +'<span style="font-size:0.75rem;flex:1;font-weight:700;">'+esc(resultStep.driveLink.slice(0,50))+'...</span>'
-        +'<a href="'+esc(resultStep.driveLink)+'" target="_blank" class="btn btn-secondary btn-xs">Open</a>'
-        +'<button class="btn btn-danger btn-xs" data-pid="'+pid+'" data-sid="'+sid+'" onclick="clearStepDriveLink(this.dataset.pid,this.dataset.sid)">Remove</button>'
-        +'</div>'
-      :'<div style="font-size:0.75rem;color:var(--gray400);margin-bottom:0.4rem;">No certificate attached yet.</div>'
-    )
-    +'<button class="btn btn-secondary btn-xs" style="margin-top:0.4rem;" data-pid="'+pid+'" data-sid="'+sid+'" onclick="addStepDriveLink(this.dataset.pid,this.dataset.sid)">+ Attach Certificate</button>'
-    +'</div>'
-
-    // Notes
-    +(resultStep.notes
-      ?'<div style="font-size:0.72rem;color:var(--gray600);padding:0.4rem 0.6rem;background:#fff;border-radius:7px;border:1.5px solid #fde68a;margin-bottom:0.75rem;">Note: '+esc(resultStep.notes)+'</div>'
-      :''
-    )
-    +'<button class="btn btn-secondary btn-xs" style="margin-bottom:1rem;" data-pid="'+pid+'" data-sid="'+sid+'" onclick="addStepNote(this.dataset.pid,this.dataset.sid)">+ Add Note</button>'
-
-    // Completion date
-    +(resultStep.completedDate?'<div style="font-size:0.68rem;color:var(--success);margin-bottom:0.75rem;">Completed: '+fmtDate(resultStep.completedDate)+'</div>':'')
 
     // Divider
     +'<div style="border-top:1.5px solid #fde68a;margin:0.75rem 0;"></div>'
 
     // Action buttons
     +'<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
-    +(isCompleted?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="pending" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">↩ Reopen</button>'
-    :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="completed" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">✓ Mark Complete</button>'
+    +(isCompleted
+      ?'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="pending" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">↩ Reopen</button>'
+      :'<button class="btn btn-success btn-sm" data-pid="'+pid+'" data-sid="'+sid+'" data-st="completed" onclick="updateStep(this.dataset.pid,this.dataset.sid,this.dataset.st)">✓ Mark Complete</button>'
     )
     +'<button class="btn btn-secondary btn-sm" data-pid="'+pid+'" onclick="openEditProjectModal(this.dataset.pid)">📅 Reschedule</button>'
     +'<button class="btn btn-danger btn-sm" data-pid="'+pid+'" onclick="deleteProject(this.dataset.pid)">🗑 Delete</button>'
@@ -1725,6 +1710,21 @@ function buildAirBalResultHtml(p, steps){
     +'</div>';
 
   return html;
+}
+
+
+function addAirBalProgress(pid){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var dateEl=document.getElementById('ab_date_'+pid);
+  var textEl=document.getElementById('ab_text_'+pid);
+  var linkEl=document.getElementById('ab_link_'+pid);
+  if(!textEl||!textEl.value.trim()){alert('Please enter result details.');return;}
+  if(!p.airBalLog)p.airBalLog=[];
+  p.airBalLog.push({id:uid(),date:dateEl?dateEl.value:new Date().toISOString().split('T')[0],text:textEl.value.trim(),link:linkEl?linkEl.value.trim():'',createdAt:new Date().toISOString()});
+  save('cesv2_projects',projects);
+  textEl.value='';if(linkEl)linkEl.value='';
+  openProjectDetail(pid);
+  showToast('Entry added!');
 }
 
 function clearStepDriveLink(pid,sid){
@@ -3026,14 +3026,24 @@ function updateDuctTest(pid,result){
 function addStepNote(pid,sid){
   var p=projects.find(function(x){return x.id===pid;});if(!p)return;
   var s=(p.steps||[]).find(function(x){return x.id===sid;});if(!s)return;
-  var current=s.notes||'';
-  var note=prompt('Step Note (edit or add):\n\nCurrent note: '+(current||'(none)'), current);
-  if(note===null)return;
-  s.notes=note.trim();
-  save('cesv2_projects',projects);
-  openProjectDetail(pid);
-  showToast(note.trim()?'Note saved!':'Note cleared.');
+  document.getElementById('noteModalPid').value=pid;
+  document.getElementById('noteModalSid').value=sid;
+  document.getElementById('noteModalText').value=s.notes||'';
+  document.getElementById('noteModalStepTitle').textContent=s.title||'Step';
+  openModal('stepNoteModal');
 }
+function saveStepNote(){
+  var pid=document.getElementById('noteModalPid').value;
+  var sid=document.getElementById('noteModalSid').value;
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var s=(p.steps||[]).find(function(x){return x.id===sid;});if(!s)return;
+  s.notes=document.getElementById('noteModalText').value.trim();
+  save('cesv2_projects',projects);
+  closeModal('stepNoteModal');
+  openProjectDetail(pid);
+  showToast('Note saved!');
+}
+
 
 function addStepDriveLink(pid,sid){
   var link=prompt('Paste Google Drive link for this step:');
@@ -4106,6 +4116,21 @@ setInterval(updateHeaderDate,60000);
 <div style="font-size:0.72rem;color:var(--gray500);flex:1;">Click type badges to toggle. First selected = primary tab.</div>
 <button class="btn btn-secondary" onclick="closeModal('debugModal')">Cancel</button>
 <button class="btn btn-primary" onclick="saveDebugFix()">Save Changes</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="stepNoteModal">
+<div class="modal" style="max-width:480px;">
+<div class="modal-header"><h2>📝 Step Note</h2><button class="modal-close" onclick="closeModal('stepNoteModal')">X Close</button></div>
+<div class="modal-body">
+<div style="font-size:0.75rem;font-weight:700;color:var(--gray600);margin-bottom:0.5rem;" id="noteModalStepTitle"></div>
+<input type="hidden" id="noteModalPid"/>
+<input type="hidden" id="noteModalSid"/>
+<textarea id="noteModalText" placeholder="Enter your note here..." style="width:100%;min-height:120px;padding:0.5rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeModal('stepNoteModal')">Cancel</button>
+<button class="btn btn-primary" onclick="saveStepNote()">Save Note</button>
 </div>
 </div>
 </div>
