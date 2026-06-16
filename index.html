@@ -293,7 +293,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
 <span style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-right:0.25rem;">Filter Client:</span>
-<span class="cal-client-btn" data-client="all" onclick="setCalClientFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
+<span class="cal-client-btn" data-client="all" onclick="toggleCalClientFilter('all',this)" style="font-size:0.7rem;font-weight:700;padding:0.22rem 0.6rem;border-radius:20px;border:1.5px solid var(--primary);cursor:pointer;background:var(--primary);color:#fff;">All</span>
 <div id="calClientFilters" style="display:flex;gap:0.35rem;flex-wrap:wrap;"></div>
 </div>
 </div>
@@ -879,11 +879,43 @@ function renderCalendar(){
       if(!hasJob)dj=[];
     }
 
-    // Apply client filter
-    if(cc!=='all'){
-      dp=dp.filter(p=>(p.client||'').toLowerCase().includes(cc.toLowerCase()));
-      dj=dj.filter(j=>(j.merchant||'').toLowerCase().includes(cc.toLowerCase()));
-      dpms=dpms.filter(s=>s.name.toLowerCase().includes(cc.toLowerCase()));
+    // Apply multi-select client filter
+    var calClientFilters=window.calClientFilters||[];
+    if(calClientFilters.length>0){
+      dp=dp.filter(function(p){
+        var pClient=(p.client||'').toLowerCase();
+        return calClientFilters.some(function(cf){
+          // Check if project client matches the filter client name OR any of its branches
+          var filterClient=clients.find(function(c){return c.name===cf;});
+          if(filterClient){
+            var allNames=[(filterClient.name||'').toLowerCase()].concat((filterClient.branches||[]).map(function(b){return b.toLowerCase();}));
+            return allNames.some(function(n){return pClient.includes(n)||n.includes(pClient);});
+          }
+          return pClient.includes(cf.toLowerCase());
+        });
+      });
+      dj=dj.filter(function(j){
+        var jMerchant=(j.merchant||'').toLowerCase();
+        return calClientFilters.some(function(cf){
+          var filterClient=clients.find(function(c){return c.name===cf;});
+          if(filterClient){
+            var allNames=[(filterClient.name||'').toLowerCase()].concat((filterClient.branches||[]).map(function(b){return b.toLowerCase();}));
+            return allNames.some(function(n){return jMerchant.includes(n)||n.includes(jMerchant);});
+          }
+          return jMerchant.includes(cf.toLowerCase());
+        });
+      });
+      dpms=dpms.filter(function(s){
+        var sName=(s.name||'').toLowerCase();
+        return calClientFilters.some(function(cf){
+          var filterClient=clients.find(function(c){return c.name===cf;});
+          if(filterClient){
+            var allNames=[(filterClient.name||'').toLowerCase()].concat((filterClient.branches||[]).map(function(b){return b.toLowerCase();}));
+            return allNames.some(function(n){return sName.includes(n)||n.includes(sName);});
+          }
+          return sName.includes(cf.toLowerCase());
+        });
+      });
     }
 
     let ev=dp.map(p=>{
@@ -1109,32 +1141,70 @@ function updateCalLegendUI(){
 function setCalFilter(filter,el){toggleCalFilter(filter,el);}
 
 
-function setCalClientFilter(client,el){
-  window.calClientFilter=client;
-  try{localStorage.setItem('ces_calClient',client);}catch(e){}
-  document.querySelectorAll('.cal-client-btn').forEach(function(b){
-    const isActive=b.dataset.client===client;
-    b.style.background=isActive?'var(--primary)':'var(--gray100)';
-    b.style.color=isActive?'#fff':'var(--gray600)';
-    b.style.borderColor=isActive?'var(--primary)':'var(--gray300)';
-  });
+var calClientFilters=[];
+
+function toggleCalClientFilter(client,el){
+  if(client==='all'){
+    calClientFilters=[];
+    document.querySelectorAll('.cal-client-btn').forEach(function(b){
+      if(b.dataset.client==='all'){b.style.background='var(--primary)';b.style.color='#fff';b.style.borderColor='var(--primary)';b.style.opacity='1';}
+      else{b.style.background='var(--gray100)';b.style.color='var(--gray600)';b.style.borderColor='var(--gray300)';b.style.opacity='0.5';}
+    });
+    el.style.opacity='1';
+  } else {
+    var idx=calClientFilters.indexOf(client);
+    if(idx===-1){calClientFilters.push(client);}
+    else{calClientFilters.splice(idx,1);}
+    // Update All button
+    var allBtn=document.querySelector('.cal-client-btn[data-client="all"]');
+    if(allBtn){
+      if(calClientFilters.length===0){allBtn.style.background='var(--primary)';allBtn.style.color='#fff';allBtn.style.opacity='1';}
+      else{allBtn.style.background='var(--gray100)';allBtn.style.color='var(--gray600)';allBtn.style.opacity='0.5';}
+    }
+    // Update clicked button
+    var isActive=calClientFilters.indexOf(client)!==-1;
+    el.style.background=isActive?'var(--primary)':'var(--gray100)';
+    el.style.color=isActive?'#fff':'var(--gray600)';
+    el.style.borderColor=isActive?'var(--primary)':'var(--gray300)';
+    el.style.opacity='1';
+    // Dim unselected
+    document.querySelectorAll('.cal-client-btn').forEach(function(b){
+      if(b.dataset.client==='all')return;
+      var active=calClientFilters.indexOf(b.dataset.client)!==-1;
+      b.style.opacity=(calClientFilters.length===0||active)?'1':'0.45';
+    });
+  }
+  window.calClientFilter=calClientFilters.length===1?calClientFilters[0]:'all';
+  try{localStorage.setItem('ces_calClientFilters',JSON.stringify(calClientFilters));}catch(e){}
   renderCalendar();
 }
 
+function setCalClientFilter(client,el){toggleCalClientFilter(client,el);}
+
+
 function updateCalClientFilters(){
-  const el=document.getElementById('calClientFilters');
+  var el=document.getElementById('calClientFilters');
   if(!el)return;
-  // Get unique clients from projects, jobs, and stores
-  const clientSet=new Set();
-  (projects||[]).forEach(function(p){if(p.client)clientSet.add(p.client);});
-  (jobs||[]).forEach(function(j){if(j.merchant)clientSet.add(j.merchant);});
-  (stores||[]).forEach(function(s){if(s.name)clientSet.add(s.name);});
-  const cc=window.calClientFilter||'all';
-  el.innerHTML=Array.from(clientSet).slice(0,8).map(function(c){
-    const isActive=cc===c;
-    return`<span class="cal-client-btn" data-client="${esc(c)}" onclick="setCalClientFilter('${esc(c)}',this)" style="font-size:0.72rem;font-weight:700;padding:0.25rem 0.65rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:${isActive?'var(--primary)':'var(--gray100)'};color:${isActive?'#fff':'var(--gray600)'};">${esc(c)}</span>`;
+  // Use clients from the Clients tab (company names)
+  var clientNames=[];
+  if(typeof clients!=='undefined'&&clients.length>0){
+    clients.forEach(function(c){if(c.name&&c.status!=='inactive')clientNames.push(c.name);});
+  }
+  // Also add any project clients not in the clients list
+  var extraClients=new Set();
+  (projects||[]).forEach(function(p){
+    if(p.client&&!clientNames.includes(p.client))extraClients.add(p.client);
+  });
+  (jobs||[]).forEach(function(j){
+    if(j.merchant&&!clientNames.includes(j.merchant))extraClients.add(j.merchant);
+  });
+  var allClientNames=clientNames.concat(Array.from(extraClients));
+  el.innerHTML=allClientNames.map(function(c){
+    var isActive=calClientFilters.indexOf(c)!==-1;
+    return'<span class="cal-client-btn" data-client="'+esc(c)+'" onclick="toggleCalClientFilter(\''+esc(c)+'\',this)" style="font-size:0.72rem;font-weight:700;padding:0.25rem 0.65rem;border-radius:20px;border:1.5px solid var(--gray300);cursor:pointer;background:'+(isActive?'var(--primary)':'var(--gray100)')+';color:'+(isActive?'#fff':'var(--gray600)')+';opacity:'+(calClientFilters.length===0||isActive?'1':'0.45')+';">'+esc(c)+'</span>';
   }).join('');
 }
+
 function prevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function nextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
 
@@ -4224,6 +4294,8 @@ renderDashboard();
     if(lastCalFilters){try{window.calTypeFilters=JSON.parse(lastCalFilters);}catch(e){}}
     var lastCalFilter=localStorage.getItem('ces_calFilter');
     if(lastCalFilter){window.calTypeFilter=lastCalFilter;}
+    var lastCalClientFilters=localStorage.getItem('ces_calClientFilters');
+    if(lastCalClientFilters){try{window.calClientFilters=JSON.parse(lastCalClientFilters);}catch(e){}}
     var lastCalClient=localStorage.getItem('ces_calClient');
     if(lastCalClient){window.calClientFilter=lastCalClient;}
     var lastProjType=localStorage.getItem('ces_projTypeFilter');
