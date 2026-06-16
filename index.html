@@ -475,7 +475,14 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div id="np_typePreview" style="margin-top:0.4rem;font-size:0.72rem;color:var(--gray500);"></div>
 </div>
-<div class="fg"><label>Client / Store Name</label><input id="np_client" placeholder="Type client or store name..." type="text" oninput="autoFillProjectName();checkClientExists(this.value)" list="clientDatalist" autocomplete="off"/><datalist id="clientDatalist"></datalist><div id="np_clientWarning" style="display:none;font-size:0.72rem;color:#92400e;background:#fef9c3;border:1.5px solid #fde68a;border-radius:7px;padding:0.35rem 0.6rem;margin-top:0.3rem;"></div></div>
+<div class="fg"><label>Client / Store Name</label>
+<select id="np_clientSelect" onchange="onClientSelectChange()" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);margin-bottom:0.35rem;">
+<option value="">-- Select store/branch --</option>
+</select>
+<input id="np_client" placeholder="Or type store/branch name here..." type="text" oninput="autoFillProjectName();checkClientExists(this.value)" autocomplete="off"/>
+<div id="np_clientWarning" style="display:none;font-size:0.72rem;color:#92400e;background:#fef9c3;border:1.5px solid #fde68a;border-radius:7px;padding:0.35rem 0.6rem;margin-top:0.3rem;"></div>
+</div>
+
 <div class="fg"><label>Location</label><input id="np_location" placeholder="e.g. SM North EDSA, QC" type="text" oninput="autoFillProjectName()"/></div>
 <div class="fg full" style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.6rem 0.85rem;">
 <div style="font-size:0.68rem;font-weight:700;color:var(--gray500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Auto-generated Project Name</div>
@@ -1208,7 +1215,7 @@ function renderTypeProjects(type){const el=document.getElementById(type+'List');
 function openNewProjectModal(type){
   projectWorkerAssignees=[];
   projectWorkersByType={};
-  ['np_client','np_location','np_notes','np_driveLink','np_driveLinkName'].forEach(i=>{var el=document.getElementById(i);if(el)el.value='';});
+  ['np_client','np_location','np_notes','np_driveLink','np_driveLinkName'].forEach(i=>{var el=document.getElementById(i);if(el)el.value='';});var npSel=document.getElementById('np_clientSelect');if(npSel)npSel.value='';
   projectDriveLinks=[];
   document.getElementById('np_driveLinksPreview').innerHTML='';
   document.getElementById('np_startDate').value='';
@@ -1420,17 +1427,31 @@ function updateMultiTypeLabel(){
   renderWorkersByType();
 }
 function populateClientDatalist(){
-  var dl=document.getElementById('clientDatalist');
-  if(!dl)return;
-  var options=[];
+  var sel=document.getElementById('np_clientSelect');
+  if(!sel)return;
+  var options=['<option value="">-- Select store/branch --</option>'];
   clients.forEach(function(c){
-    options.push('<option value="'+esc(c.name)+'">');
-    (c.branches||[]).forEach(function(b){
-      options.push('<option value="'+esc(b)+'">');
-    });
+    var branches=c.branches&&c.branches.length>0?c.branches:[];
+    if(branches.length>0){
+      options.push('<optgroup label="'+esc(c.name)+'">');
+      branches.forEach(function(b){
+        options.push('<option value="'+esc(b)+'">'+esc(b)+'</option>');
+      });
+      options.push('</optgroup>');
+    }
   });
-  dl.innerHTML=options.join('');
+  sel.innerHTML=options.join('');
 }
+function onClientSelectChange(){
+  var sel=document.getElementById('np_clientSelect');
+  var inp=document.getElementById('np_client');
+  if(sel&&inp&&sel.value){
+    inp.value=sel.value;
+    autoFillProjectName();
+    checkClientExists(sel.value);
+  }
+}
+
 
 function checkClientExists(val){
   var warning=document.getElementById('np_clientWarning');
@@ -4112,7 +4133,7 @@ setInterval(updateHeaderDate,60000);
 <div class="fg"><label>Email</label><input id="cl_email" placeholder="email@example.com" type="email"/></div>
 <div class="fg"><label>Status</label><select id="cl_status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
 <div class="fg full">
-<label>Sister Companies / Store Branches <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(one per line, e.g. So Fab, CMG, Traffic, Shubiz)</span></label>
+<label>Store Branches <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(one per line, e.g. So Fab, CMG, Traffic, Shubiz, CLN)</span></label>
 <textarea id="cl_branches" placeholder="So Fab&#10;CMG&#10;Traffic&#10;Shubiz&#10;Bella Bianca&#10;CLN" style="min-height:80px;"></textarea>
 </div>
 <div class="fg full"><label>Notes</label><textarea id="cl_notes" placeholder="Additional notes..."></textarea></div>
