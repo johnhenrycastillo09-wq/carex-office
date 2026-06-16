@@ -386,10 +386,17 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <button class="btn btn-secondary btn-sm" onclick="loadFieldTickets()">&#8635; Refresh</button>
 </div>
 </div>
-<div style="padding:0.75rem 0 0.5rem;">
-<input id="ftSearch" oninput="renderFieldTicketList()" placeholder="Search by ticket #, location, merchant..." style="width:100%;max-width:400px;padding:0.42rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+<div class="two-panel">
+<div class="panel-list">
+<div style="padding:0.75rem;border-bottom:1.5px solid var(--gray100);position:sticky;top:0;background:#fff;z-index:1;">
+<input id="ftSearch" oninput="renderFieldTicketList()" placeholder="Search by ticket #, location, merchant..." style="width:100%;padding:0.42rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
 </div>
-<div id="ftList"></div>
+<div id="ftList" style="padding:0.5rem;"></div>
+</div>
+<div class="panel-detail" id="ftDetailPanel">
+<div class="empty-state"><div class="empty-icon">🎫</div><div class="empty-title">Select a ticket</div><div class="empty-desc">Click any ticket from the list to view and edit details</div></div>
+</div>
+</div>
 </div>
 <!-- CLIENTS PAGE -->
 <div class="page" id="page-clients">
