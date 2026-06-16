@@ -476,10 +476,10 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div id="np_typePreview" style="margin-top:0.4rem;font-size:0.72rem;color:var(--gray500);"></div>
 </div>
 <div class="fg"><label>Client / Store Name</label>
-<select id="np_clientSelect" onchange="onClientSelectChange()" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);margin-bottom:0.35rem;">
+<select id="np_clientSelect" onchange="onClientSelectChange()" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);">
 <option value="">-- Select store/branch --</option>
 </select>
-<input id="np_client" placeholder="Or type store/branch name here..." type="text" oninput="autoFillProjectName();checkClientExists(this.value)" autocomplete="off"/>
+<input type="hidden" id="np_client" value=""/>
 <div id="np_clientWarning" style="display:none;font-size:0.72rem;color:#92400e;background:#fef9c3;border:1.5px solid #fde68a;border-radius:7px;padding:0.35rem 0.6rem;margin-top:0.3rem;"></div>
 </div>
 
@@ -1440,15 +1440,18 @@ function populateClientDatalist(){
       options.push('</optgroup>');
     }
   });
+  options.push('<option disabled>──────────────</option>');
+  options.push('<option value="">✏️ Type custom name...</option>');
   sel.innerHTML=options.join('');
 }
 function onClientSelectChange(){
   var sel=document.getElementById('np_clientSelect');
   var inp=document.getElementById('np_client');
-  if(sel&&inp&&sel.value){
+  if(sel&&inp){
     inp.value=sel.value;
     autoFillProjectName();
-    checkClientExists(sel.value);
+    if(sel.value)checkClientExists(sel.value);
+    else{var w=document.getElementById('np_clientWarning');if(w)w.style.display='none';}
   }
 }
 
@@ -1486,7 +1489,7 @@ function addClientFromProject(name){
 }
 
 function autoFillProjectName(){
-  var client=document.getElementById('np_client').value.trim();
+  var clientSel=document.getElementById('np_clientSelect');var client=(clientSel&&clientSel.value?clientSel.value:document.getElementById('np_client').value).trim();
   var location=document.getElementById('np_location').value.trim();
   var types=getSelectedTypes();
   var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
