@@ -355,7 +355,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div class="card">
 <div class="card-header"><div class="card-title">Store List</div><input id="pmsSearch" oninput="renderPmsTable()" placeholder="Search stores..." style="padding:0.32rem 0.65rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;outline:none;font-family:inherit;width:190px;" type="text"/></div>
-<div style="overflow-x:auto;"><table class="pms-table"><thead><tr><th>Store Name</th><th>Location</th><th>FCU Units</th><th>FCU Type</th><th>Last Cleaned</th><th>Next Due</th><th>Y-Strainer</th><th>Safety Officer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pmsTableBody"></tbody></table></div>
+<div style="overflow-x:auto;"><table class="pms-table"><thead><tr><th>Store Name</th><th>Location</th><th>FCU Units</th><th>FCU Type</th><th>Last Cleaned</th><th>Next Due</th><th>Scheduled</th><th>Y-Strainer</th><th>Safety Officer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pmsTableBody"></tbody></table></div>
 </div>
 </div>
 <!-- STOCKS -->
@@ -573,6 +573,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="fg"><label>FCU Configuration</label><select id="s_fcuConfig"><option value="">Select</option><option value="ceiling_cassette">Ceiling Cassette</option><option value="ducted">Ducted Type</option><option value="wall_mounted">Wall Mounted</option><option value="window_type">Window Type (Split)</option></select></div>
 <div class="fg"><label>Safety Officer Required?</label><select id="s_safetyOfficer"><option value="no">No</option><option value="yes">Yes</option></select></div>
 <div class="fg"><label>Last FCU Cleaned</label><input id="s_lastCleaned" type="date"/></div>
+<div class="fg"><label>Scheduled Cleaning Date</label><input id="s_schedDate" type="date"/></div>
 <div class="fg"><label>Scheduled Cleaning Time</label><input id="s_schedTime" type="time"/></div>
 <div class="fg"><label>Last Y-Strainer Cleaned</label><input id="s_lastYstrainer" type="date"/></div>
 <div class="fg full"><label>Notes / Problems</label><textarea id="s_notes" placeholder="Any known issues or special instructions..."></textarea></div>
@@ -837,7 +838,7 @@ function renderCalendar(){
       }
     });
     let dj=jobs.filter(j=>j.schedDate===ds);
-    let dpms=stores.filter(s=>s.nextCleaning===ds);
+    let dpms=stores.filter(s=>s.schedDate===ds||s.nextCleaning===ds);
 
     // Apply multi-select type filter
     var calFilters=window.calTypeFilters||[];
@@ -2060,14 +2061,36 @@ function renderPmsTable(){
     const ps=getPmsStatus(s);const ys=getYstrainerStatus(s);
     const nd=s.lastCleaned?addMonths(s.lastCleaned,3):'--';
     const ny=s.lastYstrainer?addMonths(s.lastYstrainer,12):'--';
-    return`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span></td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
+    return`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td>${s.schedDate?fmtDate(s.schedDate)+(s.schedTime?" at "+fmtTime(s.schedTime):""):"Not set"}</td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span></td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
   }).join('');
   updatePmsStats();
 }
-function openAddStoreModal(){editingStoreId=null;['s_name','s_location','s_notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('s_fcuCount').value='';document.getElementById('s_fcuType').value='';document.getElementById('s_fcuConfig').value='';document.getElementById('s_safetyOfficer').value='no';document.getElementById('s_lastCleaned').value='';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value='';document.getElementById('s_lastYstrainer').value='';document.getElementById('storeModalTitle').textContent='Add Store for PMS';openModal('addStoreModal');}
-function openEditStoreModal(id){const s=stores.find(x=>x.id===id);if(!s)return;editingStoreId=id;document.getElementById('s_name').value=s.name||'';document.getElementById('s_location').value=s.location||'';document.getElementById('s_fcuCount').value=s.fcuCount||'';document.getElementById('s_fcuType').value=s.fcuType||'';document.getElementById('s_fcuConfig').value=s.fcuConfig||'';document.getElementById('s_safetyOfficer').value=s.safetyOfficer||'no';document.getElementById('s_lastCleaned').value=s.lastCleaned||'';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value=s.schedTime||'';document.getElementById('s_lastYstrainer').value=s.lastYstrainer||'';document.getElementById('s_notes').value=s.notes||'';document.getElementById('storeModalTitle').textContent='Edit Store';openModal('addStoreModal');}
-function saveStore(){const name=document.getElementById('s_name').value.trim();if(!name){alert('Please enter a store name.');return;}const data={name,location:document.getElementById('s_location').value.trim(),fcuCount:document.getElementById('s_fcuCount').value,fcuType:document.getElementById('s_fcuType').value,fcuConfig:document.getElementById('s_fcuConfig').value,safetyOfficer:document.getElementById('s_safetyOfficer').value,lastCleaned:document.getElementById('s_lastCleaned').value,schedTime:(document.getElementById('s_schedTime')?document.getElementById('s_schedTime').value:''),lastYstrainer:document.getElementById('s_lastYstrainer').value,notes:document.getElementById('s_notes').value.trim()};if(editingStoreId){Object.assign(stores.find(s=>s.id===editingStoreId),data);showToast('Store updated!');}else{stores.push({id:uid(),...data});showToast('Store added!');}save('cesv2_stores',stores);closeModal('addStoreModal');renderPmsTable();renderDashboard();}
-function markPmsCleaned(id){const s=stores.find(x=>x.id===id);if(!s)return;const today=new Date().toISOString().split('T')[0];s.lastCleaned=today;const link=prompt('Paste Google Drive link for the service report (optional):');if(link){if(!s.serviceReports)s.serviceReports=[];s.serviceReports.push({date:today,link});}save('cesv2_stores',stores);renderPmsTable();renderDashboard();showToast('PMS cleaning recorded!');}
+function openAddStoreModal(){editingStoreId=null;['s_name','s_location','s_notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('s_fcuCount').value='';document.getElementById('s_fcuType').value='';document.getElementById('s_fcuConfig').value='';document.getElementById('s_safetyOfficer').value='no';document.getElementById('s_lastCleaned').value='';if(document.getElementById('s_schedDate'))document.getElementById('s_schedDate').value='';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value='';document.getElementById('s_lastYstrainer').value='';document.getElementById('storeModalTitle').textContent='Add Store for PMS';openModal('addStoreModal');}
+function openEditStoreModal(id){const s=stores.find(x=>x.id===id);if(!s)return;editingStoreId=id;document.getElementById('s_name').value=s.name||'';document.getElementById('s_location').value=s.location||'';document.getElementById('s_fcuCount').value=s.fcuCount||'';document.getElementById('s_fcuType').value=s.fcuType||'';document.getElementById('s_fcuConfig').value=s.fcuConfig||'';document.getElementById('s_safetyOfficer').value=s.safetyOfficer||'no';document.getElementById('s_lastCleaned').value=s.lastCleaned||'';if(document.getElementById('s_schedDate'))document.getElementById('s_schedDate').value=s.schedDate||'';if(document.getElementById('s_schedTime'))document.getElementById('s_schedTime').value=s.schedTime||'';document.getElementById('s_lastYstrainer').value=s.lastYstrainer||'';document.getElementById('s_notes').value=s.notes||'';document.getElementById('storeModalTitle').textContent='Edit Store';openModal('addStoreModal');}
+function saveStore(){const name=document.getElementById('s_name').value.trim();if(!name){alert('Please enter a store name.');return;}const data={name,location:document.getElementById('s_location').value.trim(),fcuCount:document.getElementById('s_fcuCount').value,fcuType:document.getElementById('s_fcuType').value,fcuConfig:document.getElementById('s_fcuConfig').value,safetyOfficer:document.getElementById('s_safetyOfficer').value,lastCleaned:document.getElementById('s_lastCleaned').value,schedDate:(document.getElementById('s_schedDate')?document.getElementById('s_schedDate').value:''),schedTime:(document.getElementById('s_schedTime')?document.getElementById('s_schedTime').value:''),lastYstrainer:document.getElementById('s_lastYstrainer').value,notes:document.getElementById('s_notes').value.trim()};if(editingStoreId){Object.assign(stores.find(s=>s.id===editingStoreId),data);showToast('Store updated!');}else{stores.push({id:uid(),...data});showToast('Store added!');}save('cesv2_stores',stores);closeModal('addStoreModal');renderPmsTable();renderDashboard();}
+function markPmsCleaned(id){
+  var s=stores.find(function(x){return x.id===id;});if(!s)return;
+  document.getElementById('pmsCleanedId').value=id;
+  document.getElementById('pmsCleanedDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pmsCleanedLink').value='';
+  document.getElementById('pmsCleanedStoreName').textContent=s.name;
+  openModal('pmsCleanedModal');
+}
+function savePmsCleaned(){
+  var id=document.getElementById('pmsCleanedId').value;
+  var s=stores.find(function(x){return x.id===id;});if(!s)return;
+  var date=document.getElementById('pmsCleanedDate').value||new Date().toISOString().split('T')[0];
+  var link=document.getElementById('pmsCleanedLink').value.trim();
+  s.lastCleaned=date;
+  s.schedDate='';
+  s.schedTime='';
+  if(link){if(!s.serviceReports)s.serviceReports=[];s.serviceReports.push({date:date,link:link});}
+  save('cesv2_stores',stores);
+  closeModal('pmsCleanedModal');
+  renderPmsTable();
+  renderDashboard();
+  showToast('PMS cleaning recorded! Last cleaned updated to '+fmtDate(date));
+}
 function deleteStore(id){if(!confirm('Delete this store?'))return;stores=stores.filter(s=>s.id!==id);save('cesv2_stores',stores);renderPmsTable();renderDashboard();showToast('Store deleted.');}
 
 // ══ STOCKS ══
@@ -4250,5 +4273,24 @@ setInterval(updateHeaderDate,60000);
 </div>
 </div>
 </div>
+<div class="modal-overlay" id="pmsCleanedModal">
+<div class="modal" style="max-width:420px;">
+<div class="modal-header"><h2>✅ Mark PMS Cleaned</h2><button class="modal-close" onclick="closeModal('pmsCleanedModal')">X Close</button></div>
+<div class="modal-body">
+<input type="hidden" id="pmsCleanedId"/>
+<div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;" id="pmsCleanedStoreName"></div>
+<div class="form-grid">
+<div class="fg full"><label>Completion Date</label><input id="pmsCleanedDate" type="date"/></div>
+<div class="fg full"><label>Service Report Drive Link <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="pmsCleanedLink" placeholder="Paste Google Drive link..." type="url"/></div>
+</div>
+<div style="font-size:0.75rem;color:var(--gray500);margin-top:0.5rem;">✓ Last Cleaned will be updated to the completion date<br>✓ Scheduled date will be cleared</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeModal('pmsCleanedModal')">Cancel</button>
+<button class="btn btn-success" onclick="savePmsCleaned()">✅ Confirm Cleaned</button>
+</div>
+</div>
+</div>
+
 </body>
 </html>
