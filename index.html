@@ -355,6 +355,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div class="card">
 <div class="card-header"><div class="card-title">Store List</div><input id="pmsSearch" oninput="renderPmsTable()" placeholder="Search stores..." style="padding:0.32rem 0.65rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;outline:none;font-family:inherit;width:190px;" type="text"/></div>
+<div id="pmsSameLocNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.75rem;"></div>
 <div style="overflow-x:auto;"><table class="pms-table"><thead><tr><th>Store Name</th><th>Location</th><th>FCU Units</th><th>FCU Type</th><th>Last Cleaned</th><th>Next Due</th><th>Scheduled</th><th>Y-Strainer</th><th>Safety Officer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pmsTableBody"></tbody></table></div>
 </div>
 </div>
@@ -476,12 +477,20 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div id="np_typePreview" style="margin-top:0.4rem;font-size:0.72rem;color:var(--gray500);"></div>
 </div>
 <div class="fg"><label>Client / Store Name</label>
-<select id="np_clientSelect" onchange="onClientSelectChange()" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);">
-<option value="">-- Select store/branch --</option>
-</select>
-<input type="hidden" id="np_client" value=""/>
+<div style="position:relative;">
+  <div style="display:flex;border:1.5px solid var(--gray200);border-radius:8px;overflow:hidden;background:#fff;">
+    <input id="np_client" type="text" placeholder="Type or select store/branch..." autocomplete="off"
+      oninput="autoFillProjectName();checkClientExists(this.value);filterClientDropdown(this.value)"
+      onfocus="filterClientDropdown(this.value)"
+      style="flex:1;padding:0.45rem 0.7rem;border:none;outline:none;font-size:0.83rem;font-family:inherit;background:transparent;color:var(--text);"/>
+    <button type="button" onclick="toggleClientDropdown()" title="Show all stores"
+      style="padding:0 0.7rem;border:none;border-left:1.5px solid var(--gray200);background:#f8fafc;cursor:pointer;color:var(--gray500);font-size:0.9rem;">▼</button>
+  </div>
+  <div id="np_clientDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--primary);border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div>
+</div>
 <div id="np_clientWarning" style="display:none;font-size:0.72rem;color:#92400e;background:#fef9c3;border:1.5px solid #fde68a;border-radius:7px;padding:0.35rem 0.6rem;margin-top:0.3rem;"></div>
 </div>
+
 
 <div class="fg"><label>Location</label><input id="np_location" placeholder="e.g. SM North EDSA, QC" type="text" oninput="autoFillProjectName()"/></div>
 <div class="fg full" style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.6rem 0.85rem;">
@@ -1215,7 +1224,7 @@ function renderTypeProjects(type){const el=document.getElementById(type+'List');
 function openNewProjectModal(type){
   projectWorkerAssignees=[];
   projectWorkersByType={};
-  ['np_client','np_location','np_notes','np_driveLink','np_driveLinkName'].forEach(i=>{var el=document.getElementById(i);if(el)el.value='';});var npSel=document.getElementById('np_clientSelect');if(npSel)npSel.value='';
+  ['np_client','np_location','np_notes','np_driveLink','np_driveLinkName'].forEach(i=>{var el=document.getElementById(i);if(el)el.value='';});var npCb=document.getElementById('np_client');if(npCb)npCb.value='';var npDd=document.getElementById('np_clientDropdown');if(npDd)npDd.style.display='none';
   projectDriveLinks=[];
   document.getElementById('np_driveLinksPreview').innerHTML='';
   document.getElementById('np_startDate').value='';
@@ -1426,34 +1435,75 @@ function updateMultiTypeLabel(){
   autoFillProjectName();
   renderWorkersByType();
 }
+var _clientOptions=[];
+
 function populateClientDatalist(){
-  var sel=document.getElementById('np_clientSelect');
-  if(!sel)return;
-  var options=['<option value="">-- Select store/branch --</option>'];
+  _clientOptions=[];
   clients.forEach(function(c){
     var branches=c.branches&&c.branches.length>0?c.branches:[];
-    if(branches.length>0){
-      options.push('<optgroup label="'+esc(c.name)+'">');
-      branches.forEach(function(b){
-        options.push('<option value="'+esc(b)+'">'+esc(b)+'</option>');
-      });
-      options.push('</optgroup>');
-    }
+    branches.forEach(function(b){
+      _clientOptions.push({label:b,group:c.name});
+    });
   });
-  options.push('<option disabled>──────────────</option>');
-  options.push('<option value="">✏️ Type custom name...</option>');
-  sel.innerHTML=options.join('');
 }
-function onClientSelectChange(){
-  var sel=document.getElementById('np_clientSelect');
-  var inp=document.getElementById('np_client');
-  if(sel&&inp){
-    inp.value=sel.value;
-    autoFillProjectName();
-    if(sel.value)checkClientExists(sel.value);
-    else{var w=document.getElementById('np_clientWarning');if(w)w.style.display='none';}
+
+function filterClientDropdown(query){
+  var dd=document.getElementById('np_clientDropdown');
+  if(!dd)return;
+  var q=(query||'').toLowerCase().trim();
+  var filtered=q?_clientOptions.filter(function(o){return o.label.toLowerCase().includes(q);}):_clientOptions;
+  if(!filtered.length&&!q){dd.style.display='none';return;}
+  if(!filtered.length){
+    dd.innerHTML='<div style="padding:0.5rem 0.8rem;font-size:0.78rem;color:var(--gray400);">No matches found</div>';
+    dd.style.display='block';
+    return;
+  }
+  // Group by client
+  var groups={};
+  var groupOrder=[];
+  filtered.forEach(function(o){
+    if(!groups[o.group]){groups[o.group]=[];groupOrder.push(o.group);}
+    groups[o.group].push(o.label);
+  });
+  var html='';
+  groupOrder.forEach(function(g){
+    html+='<div style="font-size:0.6rem;font-weight:800;color:var(--gray400);text-transform:uppercase;letter-spacing:0.07em;padding:0.4rem 0.8rem 0.15rem;">'+esc(g)+'</div>';
+    groups[g].forEach(function(b){
+      html+='<div onclick="selectClientOption(\''+esc(b)+'\')" style="padding:0.42rem 0.8rem 0.42rem 1.2rem;font-size:0.82rem;cursor:pointer;color:var(--text);transition:background 0.1s;" onmouseover="this.style.background=\'var(--primary-light)\'" onmouseout="this.style.background=\'\'">'+esc(b)+'</div>';
+    });
+  });
+  dd.innerHTML=html;
+  dd.style.display='block';
+}
+
+function toggleClientDropdown(){
+  var dd=document.getElementById('np_clientDropdown');
+  if(!dd)return;
+  if(dd.style.display==='none'||!dd.style.display){
+    filterClientDropdown('');
+  } else {
+    dd.style.display='none';
   }
 }
+
+function selectClientOption(val){
+  var inp=document.getElementById('np_client');
+  var dd=document.getElementById('np_clientDropdown');
+  if(inp)inp.value=val;
+  if(dd)dd.style.display='none';
+  autoFillProjectName();
+  var w=document.getElementById('np_clientWarning');
+  if(w)w.style.display='none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click',function(e){
+  var dd=document.getElementById('np_clientDropdown');
+  if(!dd)return;
+  var container=dd.parentElement;
+  if(container&&!container.contains(e.target)){dd.style.display='none';}
+});
+
 
 
 function checkClientExists(val){
@@ -1489,7 +1539,7 @@ function addClientFromProject(name){
 }
 
 function autoFillProjectName(){
-  var clientSel=document.getElementById('np_clientSelect');var client=(clientSel&&clientSel.value?clientSel.value:document.getElementById('np_client').value).trim();
+  var client=(document.getElementById('np_client')?document.getElementById('np_client').value:'').trim();
   var location=document.getElementById('np_location').value.trim();
   var types=getSelectedTypes();
   var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
@@ -2131,17 +2181,79 @@ function renderPmsTable(){
   const q=(document.getElementById('pmsSearch')?.value||'').toLowerCase();
   let list=stores.filter(s=>!q||s.name.toLowerCase().includes(q)||(s.location||'').toLowerCase().includes(q));
   const tbody=document.getElementById('pmsTableBody');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--gray500);">No stores yet. Click Add Store to get started.</td></tr>';updatePmsStats();return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--gray500);">No stores yet. Click Add Store to get started.</td></tr>';updatePmsStats();return;}
+
+  // Sort by location (A-Z), then by lastCleaned (oldest first)
+  list.sort(function(a,b){
+    var locA=(a.location||'').toLowerCase();
+    var locB=(b.location||'').toLowerCase();
+    if(locA<locB)return -1;
+    if(locA>locB)return 1;
+    // Same location: sort by lastCleaned (oldest first, null = never cleaned = first)
+    if(!a.lastCleaned&&!b.lastCleaned)return 0;
+    if(!a.lastCleaned)return -1;
+    if(!b.lastCleaned)return 1;
+    return a.lastCleaned.localeCompare(b.lastCleaned);
+  });
+
+  // Find same-location groups with unscheduled stores
+  var locationGroups={};
+  list.forEach(function(s){
+    var loc=(s.location||'').toLowerCase().trim();
+    if(!loc)return;
+    if(!locationGroups[loc])locationGroups[loc]=[];
+    locationGroups[loc].push(s);
+  });
+
+  // Build same-location notifications
+  var sameLocNotifs=[];
+  Object.keys(locationGroups).forEach(function(loc){
+    var group=locationGroups[loc];
+    if(group.length<2)return;
+    var unscheduled=group.filter(function(s){return !s.schedDate;});
+    var scheduled=group.filter(function(s){return s.schedDate;});
+    if(unscheduled.length>0){
+      var msg='📍 <strong>'+esc(group[0].location||loc)+'</strong> has '+group.length+' stores — ';
+      if(scheduled.length>0){
+        msg+=unscheduled.map(function(s){return esc(s.name);}).join(', ')+' not yet scheduled. Consider scheduling with '+scheduled.map(function(s){return esc(s.name)+' ('+fmtDate(s.schedDate)+')';}).join(', ')+'.';
+      } else {
+        msg+=unscheduled.map(function(s){return esc(s.name);}).join(', ')+' — none scheduled yet. You may be able to clean all on the same date.';
+      }
+      sameLocNotifs.push(msg);
+    }
+  });
+
+  // Show same-location notification banner
+  var notifEl=document.getElementById('pmsSameLocNotif');
+  if(notifEl){
+    if(sameLocNotifs.length>0){
+      notifEl.style.display='block';
+      notifEl.innerHTML='<div style="font-size:0.68rem;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">💡 Same Location — Consider Scheduling Together</div>'
+        +sameLocNotifs.map(function(n){return'<div style="margin-bottom:0.3rem;font-size:0.75rem;">'+n+'</div>';}).join('');
+    } else {
+      notifEl.style.display='none';
+    }
+  }
+
   const FT={chilled_water:'Chilled Water',split_type:'Split Type',water_cooled:'Water Cooled'};
   const FC={ceiling_cassette:'Ceiling Cassette',ducted:'Ducted',wall_mounted:'Wall Mounted',window_type:'Window Type'};
-  tbody.innerHTML=list.map(s=>{
+
+  var prevLoc='';
+  tbody.innerHTML=list.map(function(s){
     const ps=getPmsStatus(s);const ys=getYstrainerStatus(s);
     const nd=s.lastCleaned?addMonths(s.lastCleaned,3):'--';
     const ny=s.lastYstrainer?addMonths(s.lastYstrainer,12):'--';
-    return`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td>${s.schedDate?fmtDate(s.schedDate)+(s.schedTime?" at "+fmtTime(s.schedTime):""):"Not set"}</td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span>${s.ystrainerNeed==='yes'?'<span style=\"margin-left:4px;font-size:0.6rem;background:#fee2e2;color:#dc2626;padding:0.1rem 0.35rem;border-radius:4px;font-weight:800;\">NEEDS CLEANING</span>':''}</td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
+    var loc=(s.location||'').toLowerCase().trim();
+    var locSeparator='';
+    if(loc&&loc!==prevLoc&&prevLoc!==''){
+      locSeparator='<tr><td colspan="11" style="height:4px;background:var(--gray100);padding:0;"></td></tr>';
+    }
+    prevLoc=loc;
+    return locSeparator+`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td>${s.schedDate?fmtDate(s.schedDate)+(s.schedTime?' at '+fmtTime(s.schedTime):''):'<span style="color:var(--gray400);font-size:0.75rem;">Not set</span>'}</td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span>${s.ystrainerNeed==='yes'?'<span style="margin-left:4px;font-size:0.6rem;background:#fee2e2;color:#dc2626;padding:0.1rem 0.35rem;border-radius:4px;font-weight:800;">NEEDS CLEANING</span>':''}</td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
   }).join('');
   updatePmsStats();
 }
+
 function setYstrainerNeed(val){
   document.getElementById('s_ystrainerNeed').value=val;
   var yesBtn=document.getElementById('s_ystrainer_yes');
