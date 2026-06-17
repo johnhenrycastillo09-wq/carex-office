@@ -4705,6 +4705,7 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
     }
   }catch(e){}
 })();
+renderDashboard(); // Always update dashboard stats and notifications
 
 // Step 4: Load from Firebase in background (updates data silently)
 loadAllFromFirebase();
