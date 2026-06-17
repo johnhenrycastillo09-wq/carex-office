@@ -340,6 +340,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <option value="client">Client</option>
 </select>
 <button class="btn btn-secondary btn-sm" onclick="loadFieldTickets()">&#8635; Refresh</button>
+<button class="btn btn-secondary btn-sm" onclick="uploadAllToFirebase()" style="background:#f97316;color:#fff;border-color:#f97316;">☁️ Sync</button>
 <button class="btn btn-primary btn-sm" onclick="openNewJobModal()">+ New Ticket</button>
 </div>
 </div>
@@ -3074,8 +3075,8 @@ updatePtwBadge();
 
 
 // ══ FIREBASE FIELD TICKETS ══
-const FS_BASE_FT='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
-const API_KEY_FT='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
+const FS_BASE_FT='https://firestore.googleapis.com/v1/projects/carex-ticketing-c74bc/databases/(default)/documents';
+const API_KEY_FT='AIzaSyDaAzhOGkz63pD2jnOZ8AsdpJQs5IcjnoY';
 let fieldTickets=[];
 let currentFtId=null;
 
