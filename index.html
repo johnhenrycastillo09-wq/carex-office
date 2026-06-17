@@ -251,7 +251,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <main class="main-content">
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="uploadAllToFirebase()" id="uploadFbBtn" style="background:linear-gradient(135deg,#f97316,#ea580c);border-color:#ea580c;">☁️ Upload to Cloud</button></div></div>
+<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
 <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
 <div id="scheduleNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1d4ed8;font-weight:600;"></div>
 <div class="stats-grid">
@@ -813,11 +813,9 @@ async function loadAllFromFirebase(){
       var url=FB_BASE+'/'+col+'/main?key='+FB_KEY;
       var r=await fetch(url);
       if(r.status===404){
-        // Collection doesn't exist yet - upload local data
+        // Collection doesn't exist in Firebase yet - auto-upload local data
         var localData=JSON.parse(localStorage.getItem(key)||'[]');
-        if(localData.length>0){
-          await syncToFirebase(key,localData);
-        }
+        await syncToFirebase(key,localData); // Upload even if empty (creates the doc)
         loaded++;
         continue;
       }
@@ -832,10 +830,18 @@ async function loadAllFromFirebase(){
             if(item&&typeof item==='object'){var c=Object.assign({},item);delete c._fbName;return c;}
             return item;
           });
-          localStorage.setItem(key,JSON.stringify(arr));
-          // Update in-memory variables
-          updateInMemory(key,arr);
-          loaded++;
+          // If Firebase has data, use it. If empty but local has data, upload local
+          var localData=JSON.parse(localStorage.getItem(key)||'[]');
+          if(arr.length===0&&localData.length>0){
+            // Firebase empty but local has data - upload local to Firebase
+            await syncToFirebase(key,localData);
+            loaded++;
+          } else {
+            // Use Firebase data (it's the source of truth)
+            localStorage.setItem(key,JSON.stringify(arr));
+            updateInMemory(key,arr);
+            loaded++;
+          }
         }
       }
     }catch(e){
