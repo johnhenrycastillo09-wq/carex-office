@@ -870,18 +870,26 @@ async function loadAllFromFirebase(){
   if(lastPage==='grilles'){if(typeof renderGrilles==='function')renderGrilles();}
   if(lastPage==='calendar')renderCalendar();
   updateCalClientFilters();
-  // Navigate to last page
-  if(lastPage&&lastPage!=='dashboard'){
-    var navEl=null;
-    var allNavItems=document.querySelectorAll('.nav-item');
-    for(var i=0;i<allNavItems.length;i++){
-      var oc=allNavItems[i].getAttribute('onclick')||'';
-      if(oc.indexOf("'"+lastPage+"'")!==-1||oc.indexOf('"'+lastPage+'"')!==-1){navEl=allNavItems[i];break;}
-    }
-    if(navEl){showPage(lastPage,navEl);}
-    else{renderDashboard();}
-  } else {
+  // Update stats on dashboard without navigating away
+  // The page restore is handled by the synchronous restore block below
+  var currentPage=localStorage.getItem('ces_lastPage')||'dashboard';
+  if(currentPage==='dashboard'||!currentPage){
     renderDashboard();
+  }
+  // Re-render current page content (data may have updated from Firebase)
+  var activePage=document.querySelector('.page.active');
+  if(activePage){
+    var pid=activePage.id.replace('page-','');
+    if(pid==='projects')renderAllProjects();
+    if(pid==='workers')renderWorkers();
+    if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(pid))renderTypeProjects(pid);
+    if(pid==='pms'){renderPmsTable();updatePmsStats();}
+    if(pid==='stocks')renderStocks();
+    if(pid==='orders')renderOrders();
+    if(pid==='jobs')renderJobList();
+    if(pid==='clients'){if(typeof renderClients==='function')renderClients();}
+    if(pid==='calendar')renderCalendar();
+    if(pid==='dashboard')renderDashboard();
   }
 }
 
@@ -4520,9 +4528,7 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   });
   if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
-// Show localStorage data immediately (fast)
-renderDashboard();
-// Then load from Firebase (updates with latest data)
+// Load from Firebase and restore last page
 loadAllFromFirebase();
 // Restore last visited page AFTER data is loaded
 (function(){
