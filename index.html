@@ -852,8 +852,7 @@ async function loadAllFromFirebase(){
   setSyncStatus(failed>0?'⚠ Partial load':'✓ Loaded','rgba(100,255,150,0.7)');
   setTimeout(function(){setSyncStatus('','');},2000);
   // Re-render everything after Firebase load
-  renderDashboard();
-  // Re-render the currently active page
+  // Restore the last visited page (not just dashboard)
   var lastPage=localStorage.getItem('ces_lastPage')||'dashboard';
   if(lastPage==='projects')renderAllProjects();
   if(lastPage==='workers')renderWorkers();
@@ -871,6 +870,19 @@ async function loadAllFromFirebase(){
   if(lastPage==='grilles'){if(typeof renderGrilles==='function')renderGrilles();}
   if(lastPage==='calendar')renderCalendar();
   updateCalClientFilters();
+  // Navigate to last page
+  if(lastPage&&lastPage!=='dashboard'){
+    var navEl=null;
+    var allNavItems=document.querySelectorAll('.nav-item');
+    for(var i=0;i<allNavItems.length;i++){
+      var oc=allNavItems[i].getAttribute('onclick')||'';
+      if(oc.indexOf("'"+lastPage+"'")!==-1||oc.indexOf('"'+lastPage+'"')!==-1){navEl=allNavItems[i];break;}
+    }
+    if(navEl){showPage(lastPage,navEl);}
+    else{renderDashboard();}
+  } else {
+    renderDashboard();
+  }
 }
 
 function updateInMemory(key,arr){
@@ -1081,13 +1093,19 @@ function renderCalendar(){
       if(allTypes.length>1&&proj.schedulesByType&&Object.keys(proj.schedulesByType).length>0){
         allTypes.forEach(function(t){
           var sched=proj.schedulesByType[t];
-          if(sched&&sched.startDate===ds){
-            var virtual=Object.assign({},proj,{_calType:t,startDate:sched.startDate,startTime:sched.startTime||''});
-            dp.push(virtual);
+          if(sched&&sched.startDate){
+            var end=sched.endDate||sched.startDate;
+            if(ds>=sched.startDate&&ds<=end){
+              var virtual=Object.assign({},proj,{_calType:t,startDate:sched.startDate,startTime:sched.startTime||''});
+              dp.push(virtual);
+            }
           }
         });
       } else {
-        if(proj.startDate===ds)dp.push(proj);
+        var pStart=proj.startDate||'';
+        var pEnd=proj.endDate||proj.startDate||'';
+        if(pStart&&pEnd&&ds>=pStart&&ds<=pEnd)dp.push(proj);
+        else if(pStart&&ds===pStart)dp.push(proj);
       }
     });
     let dj=jobs.filter(j=>j.schedDate===ds);
