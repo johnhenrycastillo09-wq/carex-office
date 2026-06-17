@@ -870,27 +870,23 @@ async function loadAllFromFirebase(){
   if(lastPage==='grilles'){if(typeof renderGrilles==='function')renderGrilles();}
   if(lastPage==='calendar')renderCalendar();
   updateCalClientFilters();
-  // Update stats on dashboard without navigating away
-  // The page restore is handled by the synchronous restore block below
-  var currentPage=localStorage.getItem('ces_lastPage')||'dashboard';
-  if(currentPage==='dashboard'||!currentPage){
-    renderDashboard();
-  }
-  // Re-render current page content (data may have updated from Firebase)
+  // Silently re-render current active page with fresh Firebase data
   var activePage=document.querySelector('.page.active');
-  if(activePage){
-    var pid=activePage.id.replace('page-','');
-    if(pid==='projects')renderAllProjects();
-    if(pid==='workers')renderWorkers();
-    if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(pid))renderTypeProjects(pid);
-    if(pid==='pms'){renderPmsTable();updatePmsStats();}
-    if(pid==='stocks')renderStocks();
-    if(pid==='orders')renderOrders();
-    if(pid==='jobs')renderJobList();
-    if(pid==='clients'){if(typeof renderClients==='function')renderClients();}
-    if(pid==='calendar')renderCalendar();
-    if(pid==='dashboard')renderDashboard();
-  }
+  var pid=activePage?activePage.id.replace('page-',''):'dashboard';
+  if(pid==='dashboard'||!pid)renderDashboard();
+  else if(pid==='projects')renderAllProjects();
+  else if(pid==='workers')renderWorkers();
+  else if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(pid))renderTypeProjects(pid);
+  else if(pid==='pms'){renderPmsTable();updatePmsStats();}
+  else if(pid==='stocks')renderStocks();
+  else if(pid==='orders')renderOrders();
+  else if(pid==='jobs')renderJobList();
+  else if(pid==='clients'){if(typeof renderClients==='function')renderClients();}
+  else if(pid==='calendar')renderCalendar();
+  // Always update dashboard stats and notifications
+  checkDeliveryReminders();
+  checkScheduleReminders();
+  if(typeof updatePtwBadge==='function')updatePtwBadge();
 }
 
 function updateInMemory(key,arr){
@@ -4528,9 +4524,29 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   });
   if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
-// Load from Firebase and restore last page
-loadAllFromFirebase();
-// Restore last visited page AFTER data is loaded
+// ══ INIT ══
+// Step 1: Restore filters from localStorage immediately
+(function(){
+  try{
+    var lastCalFilters=localStorage.getItem('ces_calFilters');
+    if(lastCalFilters){try{window.calTypeFilters=JSON.parse(lastCalFilters);}catch(e){}}
+    var lastCalClientFilters=localStorage.getItem('ces_calClientFilters');
+    if(lastCalClientFilters){try{window.calClientFilters=JSON.parse(lastCalClientFilters);}catch(e){}}
+    var lastCalFilter=localStorage.getItem('ces_calFilter');
+    if(lastCalFilter){window.calTypeFilter=lastCalFilter;}
+    var lastCalClient=localStorage.getItem('ces_calClient');
+    if(lastCalClient){window.calClientFilter=lastCalClient;}
+    var lastProjType=localStorage.getItem('ces_projTypeFilter');
+    if(lastProjType){window.projTypeFilter=lastProjType;}
+    var lastProjStatus=localStorage.getItem('ces_projStatusFilter');
+    if(lastProjStatus){window.projStatusFilter=lastProjStatus;}
+  }catch(e){}
+})();
+
+// Step 2: Render from localStorage immediately (fast)
+renderDashboard();
+
+// Step 3: Restore last visited page from localStorage
 (function(){
   try{
     var lastPage=localStorage.getItem('ces_lastPage');
@@ -4546,21 +4562,12 @@ loadAllFromFirebase();
       }
       if(navEl){showPage(lastPage,navEl);}
     }
-    // Restore calendar filters
-    var lastCalFilters=localStorage.getItem('ces_calFilters');
-    if(lastCalFilters){try{window.calTypeFilters=JSON.parse(lastCalFilters);}catch(e){}}
-    var lastCalFilter=localStorage.getItem('ces_calFilter');
-    if(lastCalFilter){window.calTypeFilter=lastCalFilter;}
-    var lastCalClientFilters=localStorage.getItem('ces_calClientFilters');
-    if(lastCalClientFilters){try{window.calClientFilters=JSON.parse(lastCalClientFilters);}catch(e){}}
-    var lastCalClient=localStorage.getItem('ces_calClient');
-    if(lastCalClient){window.calClientFilter=lastCalClient;}
-    var lastProjType=localStorage.getItem('ces_projTypeFilter');
-    if(lastProjType){window.projTypeFilter=lastProjType;}
-    var lastProjStatus=localStorage.getItem('ces_projStatusFilter');
-    if(lastProjStatus){window.projStatusFilter=lastProjStatus;}
   }catch(e){}
 })();
+
+// Step 4: Load from Firebase in background (updates data silently)
+loadAllFromFirebase();
+
 setInterval(updateHeaderDate,60000);
 
 </script>
