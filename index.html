@@ -836,26 +836,8 @@ async function loadAllFromFirebase(){
   }
   setSyncStatus(failed>0?'⚠ Partial load':'✓ Loaded','rgba(100,255,150,0.7)');
   setTimeout(function(){setSyncStatus('','');},2000);
-  // Re-render everything after Firebase load
-  // Restore the last visited page (not just dashboard)
-  var lastPage=localStorage.getItem('ces_lastPage')||'dashboard';
-  if(lastPage==='projects')renderAllProjects();
-  if(lastPage==='workers')renderWorkers();
-  if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(lastPage))renderTypeProjects(lastPage);
-  if(lastPage==='pms'){renderPmsTable();updatePmsStats();}
-  if(lastPage==='stocks')renderStocks();
-  if(lastPage==='orders')renderOrders();
-  if(lastPage==='jobs'){renderJobList();if(typeof loadFieldTickets==='function')loadFieldTickets().then(function(){renderJobList();});}
-  if(lastPage==='clients'){if(typeof renderClients==='function')renderClients();}
-  if(lastPage==='billing'){if(typeof renderBilling==='function')renderBilling();}
-  if(lastPage==='servicereports'){if(typeof renderServiceReports==='function')renderServiceReports();}
-  if(lastPage==='ptw'){if(typeof renderPtw==='function')renderPtw();}
-  if(lastPage==='delivery'){if(typeof renderDelivery==='function')renderDelivery();}
-  if(lastPage==='equipment'){if(typeof renderEquipment==='function')renderEquipment();}
-  if(lastPage==='grilles'){if(typeof renderGrilles==='function')renderGrilles();}
-  if(lastPage==='calendar')renderCalendar();
-  updateCalClientFilters();
   // Silently re-render current active page with fresh Firebase data
+  updateCalClientFilters();
   var activePage=document.querySelector('.page.active');
   var pid=activePage?activePage.id.replace('page-',''):'dashboard';
   if(pid==='dashboard'||!pid)renderDashboard();
@@ -4702,8 +4684,8 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   }catch(e){}
 })();
 
-// Step 2: Render from localStorage immediately (fast)
-renderDashboard();
+// Step 2: Render current page from localStorage immediately
+// (handled by Step 3 navigation below)
 
 // Step 3: Restore last visited page from localStorage
 (function(){
