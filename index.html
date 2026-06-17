@@ -3446,6 +3446,8 @@ function renderProjectAssignees(p){
 }
 function renderJobList(){
   const el=document.getElementById('jobList');if(!el)return;
+  // Reload jobs from localStorage if empty
+  if(!jobs||jobs.length===0){try{jobs=JSON.parse(localStorage.getItem('cesv2_jobs')||'[]');}catch(e){}}
   const q=(document.getElementById('jobSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('jobFilterStatus')?.value||'all';
   const src=document.getElementById('ticketSourceFilter')?.value||'all';
@@ -4379,7 +4381,32 @@ function openEditOrderModal(id){
 
 function openEditJobModal(id){
   var j=jobs.find(function(x){return x.id===id;});if(!j)return;
-  selectJob(id);
+  editingJobId=id;
+  jobWorkerAssignees=JSON.parse(JSON.stringify(j.assignees||[]));
+  jobDriveLinks=JSON.parse(JSON.stringify(j.driveLinks||[]));
+  document.getElementById('ej_scope').value=j.scope||'';
+  document.getElementById('ej_merchant').value=j.merchant||'';
+  document.getElementById('ej_location').value=j.location||'';
+  document.getElementById('ej_issues').value=j.issues||'';
+  document.getElementById('ej_notes').value=j.notes||'';
+  document.getElementById('ej_priority').value=j.priority||'medium';
+  document.getElementById('ej_progress').value=j.progress||'open';
+  document.getElementById('ej_schedDate').value=j.schedDate||'';
+  document.getElementById('ej_schedTime').value=j.schedTime||'';
+  document.getElementById('ej_endDate').value=j.endDate||'';
+  document.getElementById('newJobModalTitle').textContent='Edit Ticket';
+  // Render assigned workers
+  var list=document.getElementById('ej_assignedList');
+  if(list){
+    list.innerHTML=jobWorkerAssignees.map(function(a){
+      return'<span style="display:inline-flex;align-items:center;gap:0.32rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
+        +'<span style="width:17px;height:17px;border-radius:50%;background:var(--primary);color:#fff;font-size:0.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
+        +esc(a.name)
+        +'<button style="background:none;border:none;cursor:pointer;color:rgba(15,76,129,0.4);font-size:0.75rem;padding:0;" data-wid="'+a.id+'" onclick="removeWorkerFromJobEdit(this.dataset.wid)">x</button>'
+        +'</span>';
+    }).join('');
+  }
+  openModal('newJobModal');
 }
 
 function openEditProjectModal(id){
