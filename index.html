@@ -251,7 +251,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <main class="main-content">
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
+<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="uploadAllToFirebase()" id="uploadFbBtn" style="background:linear-gradient(135deg,#f97316,#ea580c);border-color:#ea580c;">☁️ Upload to Cloud</button></div></div>
 <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
 <div id="scheduleNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1d4ed8;font-weight:600;"></div>
 <div class="stats-grid">
@@ -759,6 +759,48 @@ async function syncToFirebase(key,data){
 }
 
 // Load all collections from Firebase on startup
+async function uploadAllToFirebase(){
+  var btn=document.getElementById('uploadFbBtn');
+  if(btn){btn.textContent='☁️ Uploading...';btn.disabled=true;}
+  setSyncStatus('Uploading all data...','rgba(255,200,100,0.8)');
+
+  var collections={
+    'cesv2_projects': projects,
+    'cesv2_workers': workers,
+    'cesv2_stores': stores,
+    'cesv2_stocks': stocks,
+    'cesv2_orders': orders,
+    'cesv2_jobs': jobs,
+    'cesv2_clients': clients,
+    'cesv2_billing': typeof billing!=='undefined'?billing:[],
+    'cesv2_serviceReports': typeof serviceReports!=='undefined'?serviceReports:[],
+    'cesv2_ptws': typeof ptws!=='undefined'?ptws:[],
+    'cesv2_deliveries': typeof deliveries!=='undefined'?deliveries:[],
+    'cesv2_equipment': typeof equipment!=='undefined'?equipment:[],
+    'cesv2_toolboxTalks': typeof toolboxTalks!=='undefined'?toolboxTalks:[],
+    'cesv2_grilles': typeof grilles!=='undefined'?grilles:[]
+  };
+
+  var success=0;var failed=0;
+  for(var key in collections){
+    try{
+      await syncToFirebase(key, collections[key]);
+      success++;
+    }catch(e){
+      failed++;
+      console.warn('Failed to upload',key,e);
+    }
+  }
+
+  if(btn){
+    btn.textContent=failed>0?'⚠️ Partial Upload':'✅ Uploaded!';
+    setTimeout(function(){btn.textContent='☁️ Upload to Cloud';btn.disabled=false;},3000);
+  }
+  setSyncStatus(failed>0?'⚠ '+failed+' failed':'✓ All data uploaded!','rgba(100,255,150,0.7)');
+  setTimeout(function(){setSyncStatus('','');},4000);
+  showToast(failed>0?'Uploaded '+success+' collections ('+failed+' failed)':'All data uploaded to cloud! ✅ Open on any device now.');
+}
+
 async function loadAllFromFirebase(){
   setSyncStatus('Loading...','rgba(255,200,100,0.8)');
   var keys=Object.keys(FB_COLLECTIONS);
