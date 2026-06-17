@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Carex Engineering Services – Submit a Field Issue</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --orange:#ff6b35;--orange2:#ff8c42;
+  --bg:#f0f2f5;--white:#fff;
+  --gray100:#f1f3f5;--gray200:#e9ecef;--gray300:#dee2e6;
+  --gray400:#ced4da;--gray500:#adb5bd;--gray600:#868e96;--gray700:#495057;
+  --text:#1a1a2e;--radius:14px;
+  --shadow-lg:0 12px 48px rgba(0,0,0,0.14);
+}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:1.5rem 2rem;text-align:center;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(255,107,53,0.15) 0%,transparent 60%);pointer-events:none;}
+header::after{content:'';position:absolute;inset:0;opacity:0.04;background-image:linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;}
+.header-inner{position:relative;z-index:1;}
+.logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:900;color:#fff;letter-spacing:-0.5px;box-shadow:0 6px 20px rgba(255,107,53,0.45);margin:0 auto 1rem;}
+header h1{font-size:1.5rem;font-weight:900;color:#fff;letter-spacing:-0.03em;margin-bottom:0.35rem;}
+header p{font-size:0.85rem;color:rgba(255,255,255,0.55);font-weight:500;}
+.client-badge{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:#ffb899;padding:0.3rem 0.85rem;border-radius:20px;font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-top:0.75rem;}
+
+main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;}
+.form-card{background:var(--white);border-radius:20px;box-shadow:var(--shadow-lg);width:100%;max-width:620px;overflow:hidden;border:1.5px solid var(--gray200);}
+.form-section{padding:1.5rem 1.75rem;border-bottom:1.5px solid var(--gray100);}
+.form-section:last-of-type{border-bottom:none;}
+.section-label{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.1rem;}
+.section-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.si-orange{background:#fff3ee;}.si-blue{background:#eff6ff;}.si-pink{background:#fdf2f8;}
+.section-title{font-size:0.72rem;font-weight:800;color:var(--gray700);text-transform:uppercase;letter-spacing:0.1em;}
+
+.field-group{margin-bottom:1rem;}
+.field-group:last-child{margin-bottom:0;}
+.field-group label{display:block;font-size:0.68rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;}
+.field-group input,.field-group select,.field-group textarea{width:100%;padding:0.65rem 0.9rem;border:1.5px solid var(--gray200);border-radius:10px;font-size:0.88rem;font-family:inherit;outline:none;transition:all 0.2s;background:#fff;color:var(--text);}
+.field-group input::placeholder,.field-group textarea::placeholder{color:var(--gray400);}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,107,53,0.1);}
+.field-group textarea{resize:vertical;min-height:110px;line-height:1.6;}
+.input-error{border-color:#ef4444 !important;box-shadow:0 0 0 4px rgba(239,68,68,0.1) !important;}
+.err-msg{font-size:0.72rem;color:#ef4444;font-weight:600;margin-top:0.3rem;display:block;}
+
+.priority-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
+.prio-option{position:relative;}
+.prio-option input[type="radio"]{position:absolute;opacity:0;width:0;height:0;}
+.prio-option label{display:flex;flex-direction:column;align-items:center;gap:0.3rem;padding:0.65rem 0.5rem;border-radius:10px;border:1.5px solid var(--gray200);cursor:pointer;transition:all 0.18s;font-size:0.72rem;font-weight:700;text-align:center;background:#fff;}
+.prio-dot{width:10px;height:10px;border-radius:50%;}
+.prio-dot.low{background:#16a34a;}.prio-dot.medium{background:#ca8a04;}.prio-dot.high{background:#ea580c;}.prio-dot.critical{background:#dc2626;}
+.prio-option input:checked + label{border-color:var(--orange);background:#fff3ee;color:var(--orange);}
+.prio-option label:hover{border-color:var(--orange);background:#fff8f5;}
+
+.drop-zone{border:2px dashed var(--gray300);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--gray500);background:var(--gray50);}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--orange);background:#fff8f5;color:var(--orange);}
+.drop-zone .dz-icon{font-size:2rem;margin-bottom:0.5rem;}
+.drop-zone h4{font-size:0.85rem;font-weight:800;margin-bottom:0.25rem;}
+.drop-zone p{font-size:0.75rem;opacity:0.7;}
+.drop-zone small{font-size:0.68rem;opacity:0.55;display:block;margin-top:0.25rem;}
+.media-count{font-size:0.72rem;color:var(--orange);font-weight:700;margin-top:0.5rem;display:block;}
+.media-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.6rem;margin-top:0.75rem;}
+.preview-item{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;background:var(--gray100);border:1.5px solid var(--gray200);}
+.preview-media{width:100%;height:100%;object-fit:cover;display:block;}
+.preview-remove{position:absolute;top:4px;right:4px;background:rgba(239,68,68,0.9);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;}
+.preview-type{position:absolute;top:4px;left:4px;background:rgba(26,26,46,0.75);color:#fff;font-size:0.52rem;font-weight:800;padding:0.1rem 0.3rem;border-radius:4px;text-transform:uppercase;}
+.preview-vid-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(26,26,46,0.35);color:#fff;font-size:1.5rem;pointer-events:none;}
+
+.form-footer{padding:1.25rem 1.75rem;background:var(--gray100);display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.submit-btn{flex:1;padding:0.85rem 1.5rem;background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;border:none;border-radius:11px;font-size:0.9rem;font-weight:800;font-family:inherit;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 4px 16px rgba(255,107,53,0.35);}
+.submit-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,107,53,0.45);}
+.submit-btn:disabled{opacity:0.7;cursor:not-allowed;transform:none;}
+.footer-note{font-size:0.72rem;color:var(--gray500);line-height:1.5;max-width:200px;}
+
+.spinner-sm{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+#globalError{background:#fee2e2;color:#dc2626;border:1.5px solid #fecaca;border-radius:10px;padding:0.75rem 1rem;font-size:0.82rem;font-weight:600;margin:1rem 1.75rem 0;display:none;line-height:1.5;}
+
+#successScreen{display:none;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2rem;text-align:center;gap:1.25rem;}
+.success-icon{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:flex;align-items:center;justify-content:center;font-size:2.8rem;box-shadow:0 8px 32px rgba(22,163,74,0.2);border:2px solid rgba(22,163,74,0.2);}
+#successScreen h2{font-size:1.4rem;font-weight:900;color:var(--text);letter-spacing:-0.02em;}
+#successScreen p{font-size:0.85rem;color:var(--gray600);max-width:320px;line-height:1.6;}
+.submit-another{padding:0.65rem 1.5rem;background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;border:none;border-radius:10px;font-size:0.85rem;font-weight:800;font-family:inherit;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 14px rgba(255,107,53,0.3);}
+.submit-another:hover{transform:translateY(-1px);}
+
+.info-box{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #bfdbfe;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;display:flex;gap:0.6rem;align-items:flex-start;}
+.info-box p{font-size:0.78rem;color:#1d4ed8;font-weight:600;line-height:1.5;}
+
+footer{text-align:center;padding:1.25rem;font-size:0.72rem;color:var(--gray500);}
+footer strong{color:var(--orange);}
+
+@media(max-width:480px){
+  header{padding:1.25rem 1rem;}
+  header h1{font-size:1.2rem;}
+  .form-section{padding:1.25rem;}
+  .form-footer{flex-direction:column;}
+  .footer-note{max-width:100%;text-align:center;}
+  .priority-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+<header>
+<div class="header-inner">
+<div class="logo">CES</div>
+<h1>Carex Engineering Services</h1>
+<p>Field Issue Submission Form</p>
+<div class="client-badge">📋 Client Portal</div>
+</div>
+</header>
+<main>
+<div class="form-card">
+<div id="formWrap">
+<div style="padding:1.25rem 1.75rem 0;">
+<div class="info-box">
+<span>ℹ️</span>
+<p>Fill in the details below to report a field issue. You can attach photos and videos as evidence. Our team will review and assign the appropriate personnel.</p>
+</div>
+</div>
+<!-- SECTION 1: LOCATION -->
+<div class="form-section">
+<div class="section-label">
+<div class="section-icon si-orange">📍</div>
+<span class="section-title">Location &amp; Merchant</span>
+</div>
+<div class="field-group">
+<label>Location / Site *</label>
+<input id="c_location" placeholder="e.g. Site A – Building 3, Floor 2" type="text"/>
+<span class="err-msg" id="c_location_err"></span>
+</div>
+<div class="field-group">
+<label>Merchant / Company *</label>
+<input id="c_merchant" placeholder="e.g. ABC Supplies Co." type="text"/>
+<span class="err-msg" id="c_merchant_err"></span>
+</div>
+<div class="field-group">
+<label>Scope of Work *</label>
+<input id="c_scope" placeholder="e.g. Electrical installation, Plumbing repair…" type="text"/>
+<span class="err-msg" id="c_scope_err"></span>
+</div>
+</div>
+<!-- SECTION 2: ISSUE + MEDIA -->
+<div class="form-section">
+<div class="section-label">
+<div class="section-icon si-pink">⚠️</div>
+<span class="section-title">Field Issue Details</span>
+</div>
+<div class="field-group">
+<label>Describe the Issue *</label>
+<textarea id="c_issues" placeholder="Please describe the field issue in detail — what happened, when it was noticed, and any relevant observations…"></textarea>
+<span class="err-msg" id="c_issues_err"></span>
+</div>
+<div class="field-group">
+<label>📎 Attach Photos / Videos (Optional — max 5 files, 1MB each)</label>
+<div class="drop-zone" id="dropZone" onclick="document.getElementById('mediaFileInput').click()" ondragleave="handleDragLeave()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+<input accept="image/*,video/*" id="mediaFileInput" multiple="" onchange="handleMediaSelect(event)" onclick="event.stopPropagation()" style="display:none" type="file"/>
+<div class="dz-icon">📷</div>
+<h4>Click or drag &amp; drop photos / videos</h4>
+<p>JPG, PNG, GIF, MP4, MOV supported</p>
+<small>Max 5 files · 1MB per file (kept small for fast upload)</small>
+</div>
+<span class="media-count" id="mediaCount"></span>
+<div class="media-preview-grid" id="mediaPreview"></div>
+</div>
+<div class="field-group">
+<label>Priority Level</label>
+<div class="priority-grid">
+<div class="prio-option"><input id="prio_low" name="priority" type="radio" value="low"/><label for="prio_low"><span class="prio-dot low"></span>Low</label></div>
+<div class="prio-option"><input checked="" id="prio_medium" name="priority" type="radio" value="medium"/><label for="prio_medium"><span class="prio-dot medium"></span>Medium</label></div>
+<div class="prio-option"><input id="prio_high" name="priority" type="radio" value="high"/><label for="prio_high"><span class="prio-dot high"></span>High</label></div>
+<div class="prio-option"><input id="prio_critical" name="priority" type="radio" value="critical"/><label for="prio_critical"><span class="prio-dot critical"></span>Critical</label></div>
+</div>
+</div>
+</div>
+<!-- SECTION 3: CONTACT -->
+<div class="form-section">
+<div class="section-label">
+<div class="section-icon si-blue">👤</div>
+<span class="section-title">Your Contact Info</span>
+</div>
+<div class="field-group">
+<label>Your Name / Contact (Optional)</label>
+<input id="c_contact" placeholder="e.g. John Smith – 09XX XXX XXXX" type="text"/>
+</div>
+</div>
+<div id="globalError"></div>
+<div class="form-footer">
+<p class="footer-note">🔒 Your submission goes directly to the Carex Engineering team.</p>
+<button class="submit-btn" id="submitBtn" onclick="submitForm()">📤 Submit Issue</button>
+</div>
+</div>
+<!-- SUCCESS -->
+<div id="successScreen">
+<div class="success-icon">✅</div>
+<h2>Issue Submitted!</h2>
+<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:0.85rem 1.5rem;text-align:center;width:100%;max-width:320px;">
+<div style="font-size:0.68rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.3rem;">Your Ticket Number</div>
+<div id="successTicketNum" style="font-size:1.3rem;font-weight:900;color:#15803d;letter-spacing:0.05em;"></div>
+<div style="font-size:0.72rem;color:#16a34a;margin-top:0.25rem;">Please save this number for your reference</div>
+</div>
+<p>Thank you! Your field issue has been received by the Carex Engineering Services team. We'll review and assign the appropriate personnel shortly.</p>
+<button class="submit-another" onclick="resetForm()">＋ Submit Another Issue</button>
+</div>
+</div>
+</main>
+<footer>
+<strong>Carex Engineering Services</strong> · Field Ticketing System · All submissions are confidential
+</footer>
+<script>
+// ════════════════════════════════════════════════
+// FIREBASE CONFIG — uses REST API (works from file:// and any browser)
+// ════════════════════════════════════════════════
+const PROJECT_ID = 'carex-office';
+const API_KEY    = 'AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
+const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tickets`;
+
+// ── MEDIA STATE ──
+let clientMedia = [];
+
+// ── GENERATE TICKET NUMBER ──
+function genTicketNumber(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const m=String(now.getMonth()+1).padStart(2,'0');
+  const d=String(now.getDate()).padStart(2,'0');
+  const rand=Math.floor(1000+Math.random()*9000);
+  return `CES-${y}${m}${d}-${rand}`;
+}
+
+// ── READ FILE ──
+function readFile(file){
+  return new Promise(resolve=>{
+    const r=new FileReader();
+    r.onload=e=>resolve(e.target.result);
+    r.readAsDataURL(file);
+  });
+}
+
+// ── COMPRESS IMAGE ──
+function compressImage(dataUrl, maxSizeKB=800){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      let w=img.width, h=img.height;
+      const maxDim=1200;
+      if(w>maxDim||h>maxDim){
+        if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}
+        else{w=Math.round(w*maxDim/h);h=maxDim;}
+      }
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      let quality=0.8;
+      let result=canvas.toDataURL('image/jpeg',quality);
+      while(result.length>maxSizeKB*1024*1.37&&quality>0.3){
+        quality-=0.1;
+        result=canvas.toDataURL('image/jpeg',quality);
+      }
+      resolve(result);
+    };
+    img.src=dataUrl;
+  });
+}
+
+// ── HANDLE FILE SELECT ──
+async function handleMediaSelect(e){
+  const files=Array.from(e.target.files||[]);
+  for(const file of files){
+    if(clientMedia.length>=5){alert('Maximum 5 files allowed.');break;}
+    let dataUrl=await readFile(file);
+    if(file.type.startsWith('image/')){
+      dataUrl=await compressImage(dataUrl);
+    }
+    clientMedia.push({dataUrl,type:file.type.startsWith('video')?'video':'image',name:file.name});
+  }
+  renderMediaPreview();
+  e.target.value='';
+}
+window.handleMediaSelect=handleMediaSelect;
+
+function removeMedia(i){clientMedia.splice(i,1);renderMediaPreview();}
+window.removeMedia=removeMedia;
+
+function renderMediaPreview(){
+  const el=document.getElementById('mediaPreview');
+  const cnt=document.getElementById('mediaCount');
+  if(!el)return;
+  el.innerHTML=clientMedia.map((m,i)=>`
+    <div class="preview-item">
+      ${m.type==='video'
+        ?`<video src="${m.dataUrl}" class="preview-media"></video><div class="preview-vid-icon">▶</div>`
+        :`<img src="${m.dataUrl}" class="preview-media" alt="">`}
+      <button class="preview-remove" onclick="removeMedia(${i})">✕</button>
+      <div class="preview-type">${m.type==='video'?'VID':'IMG'}</div>
+    </div>`).join('');
+  if(cnt)cnt.textContent=clientMedia.length>0?`${clientMedia.length} file(s) attached`:'';
+}
+
+// ── DRAG & DROP ──
+window.handleDragOver=function(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag-over');};
+window.handleDragLeave=function(){document.getElementById('dropZone').classList.remove('drag-over');};
+window.handleDrop=async function(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image')||f.type.startsWith('video'));
+  await handleMediaSelect({target:{files,value:''}});
+};
+
+// ── SUBMIT via REST API ──
+window.submitForm=async function(){
+  const btn=document.getElementById('submitBtn');
+  const location=document.getElementById('c_location').value.trim();
+  const merchant=document.getElementById('c_merchant').value.trim();
+  const scope=document.getElementById('c_scope').value.trim();
+  const issues=document.getElementById('c_issues').value.trim();
+  const contact=document.getElementById('c_contact').value.trim();
+  const checked=document.querySelector('input[name="priority"]:checked');
+  const priority=checked?checked.value:'medium';
+
+  clearErrors();
+  let valid=true;
+  if(!location){showError('c_location','Please enter a location.');valid=false;}
+  if(!merchant){showError('c_merchant','Please enter a merchant/company name.');valid=false;}
+  if(!scope){showError('c_scope','Please describe the scope of work.');valid=false;}
+  if(!issues){showError('c_issues','Please describe the field issue.');valid=false;}
+  if(!valid)return;
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner-sm"></span> Submitting…';
+
+  const ticketNumber=genTicketNumber();
+
+  // Build Firestore REST API payload
+  const issueMedia=clientMedia.map(m=>({
+    mapValue:{fields:{
+      url:{stringValue:m.dataUrl},
+      dataUrl:{stringValue:m.dataUrl},
+      type:{stringValue:m.type},
+      name:{stringValue:m.name}
+    }}
+  }));
+
+  const payload={
+    fields:{
+      ticketNumber:{stringValue:ticketNumber},
+      location:{stringValue:location},
+      merchant:{stringValue:merchant},
+      scope:{stringValue:scope},
+      issues:{stringValue:issues},
+      contact:{stringValue:contact},
+      priority:{stringValue:priority},
+      notes:{stringValue:''},
+      progress:{stringValue:'open'},
+      submittedBy:{stringValue:'client'},
+      assignees:{arrayValue:{values:[]}},
+      issueMedia:{arrayValue:{values:issueMedia}},
+      notesMedia:{arrayValue:{values:[]}},
+      noteEntries:{arrayValue:{values:[]}},
+      createdAt:{stringValue:new Date().toISOString()},
+      updatedAt:{stringValue:new Date().toISOString()},
+    }
+  };
+
+  try{
+    const res=await fetch(`${FIRESTORE_URL}?key=${API_KEY}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      const err=await res.json();
+      throw new Error(err.error?.message||'Server error '+res.status);
+    }
+
+    // Success!
+    document.getElementById('formWrap').style.display='none';
+    document.getElementById('successScreen').style.display='flex';
+    document.getElementById('successTicketNum').textContent=ticketNumber;
+
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;
+    btn.innerHTML='📤 Submit Issue';
+    const ge=document.getElementById('globalError');
+    if(e.message.includes('Failed to fetch')||e.message.includes('NetworkError')){
+      ge.innerHTML='⚠️ <strong>No internet connection.</strong> Please check your connection and try again.';
+    } else if(e.message.includes('PERMISSION_DENIED')){
+      ge.innerHTML='⚠️ <strong>Permission denied.</strong> Please ask your administrator to check Firestore rules.';
+    } else {
+      ge.innerHTML='⚠️ <strong>Submission failed:</strong> '+e.message+'. Please try again.';
+    }
+    ge.style.display='block';
+  }
+};
+
+// ── RESET ──
+window.resetForm=function(){
+  document.getElementById('formWrap').style.display='block';
+  document.getElementById('successScreen').style.display='none';
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitBtn').innerHTML='📤 Submit Issue';
+  ['c_location','c_merchant','c_scope','c_issues','c_contact'].forEach(id=>document.getElementById(id).value='');
+  document.querySelector('input[name="priority"][value="medium"]').checked=true;
+  clientMedia=[];
+  renderMediaPreview();
+  clearErrors();
+};
+
+function showError(id,msg){
+  document.getElementById(id).classList.add('input-error');
+  const err=document.getElementById(id+'_err');
+  if(err)err.textContent=msg;
+}
+function clearErrors(){
+  document.querySelectorAll('.input-error').forEach(el=>el.classList.remove('input-error'));
+  document.querySelectorAll('.err-msg').forEach(el=>el.textContent='');
+  const ge=document.getElementById('globalError');
+  if(ge)ge.style.display='none';
+}
+
+// Spinner CSS
+const style=document.createElement('style');
+style.textContent='.spinner-sm{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}@keyframes spin{to{transform:rotate(360deg);}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
