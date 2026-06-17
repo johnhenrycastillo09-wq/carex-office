@@ -664,7 +664,171 @@ let jobDriveLinks=[];
 let currentJobId=null;
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function save(k,d){localStorage.setItem(k,JSON.stringify(d));}
+function save(k,d){
+  localStorage.setItem(k,JSON.stringify(d));
+
+// ══ FIREBASE SYNC ══
+const FB_BASE='https://firestore.googleapis.com/v1/projects/carex-ticketing-c74bc/databases/(default)/documents';
+const FB_KEY='AIzaSyDaAzhOGkz63pD2jnOZ8AsdpJQs5IcjnoY';
+
+// Collections to sync (localStorage key -> Firestore collection)
+const FB_COLLECTIONS={
+  'cesv2_projects':'ces_projects',
+  'cesv2_workers':'ces_workers',
+  'cesv2_stores':'ces_stores',
+  'cesv2_stocks':'ces_stocks',
+  'cesv2_orders':'ces_orders',
+  'cesv2_jobs':'ces_jobs',
+  'cesv2_clients':'ces_clients',
+  'cesv2_billing':'ces_billing',
+  'cesv2_serviceReports':'ces_serviceReports',
+  'cesv2_ptws':'ces_ptws',
+  'cesv2_deliveries':'ces_deliveries',
+  'cesv2_equipment':'ces_equipment',
+  'cesv2_toolboxTalks':'ces_toolboxTalks',
+  'cesv2_grilles':'ces_grilles'
+};
+
+function setSyncStatus(msg,color){
+  var el=document.getElementById('syncStatus');
+  if(el){el.textContent=msg;el.style.color=color||'rgba(255,255,255,0.5)';}
+}
+
+// Convert JS value to Firestore field value
+function toFBValue(v){
+  if(v===null||v===undefined)return{nullValue:null};
+  if(typeof v==='boolean')return{booleanValue:v};
+  if(typeof v==='number')return{integerValue:String(v)};
+  if(typeof v==='string')return{stringValue:v};
+  if(Array.isArray(v))return{arrayValue:{values:v.map(toFBValue)}};
+  if(typeof v==='object'){
+    var fields={};
+    Object.keys(v).forEach(function(k){fields[k]=toFBValue(v[k]);});
+    return{mapValue:{fields:fields}};
+  }
+  return{stringValue:String(v)};
+}
+
+// Convert Firestore document fields back to JS object
+function fromFBDoc(doc){
+  var f=doc.fields||{};
+  var obj={};
+  Object.keys(f).forEach(function(k){obj[k]=fromFBValue(f[k]);});
+  // Store the Firestore document name as _fbName for updates
+  obj._fbName=doc.name;
+  return obj;
+}
+
+function fromFBValue(v){
+  if(v.nullValue!==undefined)return null;
+  if(v.booleanValue!==undefined)return v.booleanValue;
+  if(v.integerValue!==undefined)return Number(v.integerValue);
+  if(v.doubleValue!==undefined)return v.doubleValue;
+  if(v.stringValue!==undefined)return v.stringValue;
+  if(v.timestampValue!==undefined)return v.timestampValue;
+  if(v.arrayValue){return(v.arrayValue.values||[]).map(fromFBValue);}
+  if(v.mapValue){
+    var obj={};
+    Object.keys(v.mapValue.fields||{}).forEach(function(k){obj[k]=fromFBValue(v.mapValue.fields[k]);});
+    return obj;
+  }
+  return null;
+}
+
+// Sync entire collection to Firebase
+// Strategy: store entire array as a single document per collection
+async function syncToFirebase(key,data){
+  var col=FB_COLLECTIONS[key];
+  if(!col)return; // Not a synced collection
+  setSyncStatus('Syncing...','rgba(255,200,100,0.8)');
+  try{
+    var fields={data:toFBValue(data),updatedAt:{timestampValue:new Date().toISOString()}};
+    var url=FB_BASE+'/'+col+'/main?key='+FB_KEY;
+    var r=await fetch(url,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({fields:fields})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    setSyncStatus('✓ Synced','rgba(100,255,150,0.7)');
+    setTimeout(function(){setSyncStatus('','');},2000);
+  }catch(e){
+    setSyncStatus('⚠ Sync failed','rgba(255,100,100,0.8)');
+    console.warn('Firebase sync failed for',key,e.message);
+  }
+}
+
+// Load all collections from Firebase on startup
+async function loadAllFromFirebase(){
+  setSyncStatus('Loading...','rgba(255,200,100,0.8)');
+  var keys=Object.keys(FB_COLLECTIONS);
+  var loaded=0;
+  var failed=0;
+  for(var i=0;i<keys.length;i++){
+    var key=keys[i];
+    var col=FB_COLLECTIONS[key];
+    try{
+      var url=FB_BASE+'/'+col+'/main?key='+FB_KEY;
+      var r=await fetch(url);
+      if(r.status===404){
+        // Collection doesn't exist yet - upload local data
+        var localData=JSON.parse(localStorage.getItem(key)||'[]');
+        if(localData.length>0){
+          await syncToFirebase(key,localData);
+        }
+        loaded++;
+        continue;
+      }
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      var doc=await r.json();
+      var dataField=doc.fields&&doc.fields.data;
+      if(dataField){
+        var arr=fromFBValue(dataField);
+        if(Array.isArray(arr)){
+          // Remove _fbName from items (internal field)
+          arr=arr.map(function(item){
+            if(item&&typeof item==='object'){var c=Object.assign({},item);delete c._fbName;return c;}
+            return item;
+          });
+          localStorage.setItem(key,JSON.stringify(arr));
+          // Update in-memory variables
+          updateInMemory(key,arr);
+          loaded++;
+        }
+      }
+    }catch(e){
+      failed++;
+      console.warn('Failed to load',key,'from Firebase:',e.message);
+    }
+  }
+  setSyncStatus(failed>0?'⚠ Partial load':'✓ Loaded','rgba(100,255,150,0.7)');
+  setTimeout(function(){setSyncStatus('','');},2000);
+  // Re-render everything
+  renderDashboard();
+}
+
+function updateInMemory(key,arr){
+  switch(key){
+    case 'cesv2_projects': projects=arr; break;
+    case 'cesv2_workers': workers=arr; break;
+    case 'cesv2_stores': stores=arr; break;
+    case 'cesv2_stocks': stocks=arr; break;
+    case 'cesv2_orders': orders=arr; break;
+    case 'cesv2_jobs': jobs=arr; break;
+    case 'cesv2_clients': clients=arr; break;
+    case 'cesv2_billing': billing=arr; break;
+    case 'cesv2_serviceReports': serviceReports=arr; break;
+    case 'cesv2_ptws': ptws=arr; break;
+    case 'cesv2_deliveries': deliveries=arr; break;
+    case 'cesv2_equipment': equipment=arr; break;
+    case 'cesv2_toolboxTalks': toolboxTalks=arr; break;
+    case 'cesv2_grilles': grilles=arr; break;
+  }
+}
+  // Sync to Firebase in background (non-blocking)
+  syncToFirebase(k,d);
+}
+
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 function fmtDate(d){if(!d||d==='undefined'||d==='null')return'--';try{const r=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return r.includes('NaN')?'--':r;}catch(e){return'--';}}
 function fmtDateTime(d){if(!d)return'--';try{return new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return'--';}}
@@ -4272,7 +4436,7 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   });
   if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
-renderDashboard();
+loadAllFromFirebase();
 // Restore last visited page AFTER data is loaded
 (function(){
   try{
