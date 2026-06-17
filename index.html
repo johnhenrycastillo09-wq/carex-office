@@ -803,8 +803,26 @@ async function loadAllFromFirebase(){
   }
   setSyncStatus(failed>0?'⚠ Partial load':'✓ Loaded','rgba(100,255,150,0.7)');
   setTimeout(function(){setSyncStatus('','');},2000);
-  // Re-render everything
+  // Re-render everything after Firebase load
   renderDashboard();
+  // Re-render the currently active page
+  var lastPage=localStorage.getItem('ces_lastPage')||'dashboard';
+  if(lastPage==='projects')renderAllProjects();
+  if(lastPage==='workers')renderWorkers();
+  if(['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].includes(lastPage))renderTypeProjects(lastPage);
+  if(lastPage==='pms'){renderPmsTable();updatePmsStats();}
+  if(lastPage==='stocks')renderStocks();
+  if(lastPage==='orders')renderOrders();
+  if(lastPage==='jobs')renderJobList();
+  if(lastPage==='clients'){if(typeof renderClients==='function')renderClients();}
+  if(lastPage==='billing'){if(typeof renderBilling==='function')renderBilling();}
+  if(lastPage==='servicereports'){if(typeof renderServiceReports==='function')renderServiceReports();}
+  if(lastPage==='ptw'){if(typeof renderPtw==='function')renderPtw();}
+  if(lastPage==='delivery'){if(typeof renderDelivery==='function')renderDelivery();}
+  if(lastPage==='equipment'){if(typeof renderEquipment==='function')renderEquipment();}
+  if(lastPage==='grilles'){if(typeof renderGrilles==='function')renderGrilles();}
+  if(lastPage==='calendar')renderCalendar();
+  updateCalClientFilters();
 }
 
 function updateInMemory(key,arr){
@@ -4436,6 +4454,9 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   });
   if(changed){save('cesv2_projects',projects);console.log('Projects migrated:',projects.length,'fixed');}
 })();
+// Show localStorage data immediately (fast)
+renderDashboard();
+// Then load from Firebase (updates with latest data)
 loadAllFromFirebase();
 // Restore last visited page AFTER data is loaded
 (function(){
