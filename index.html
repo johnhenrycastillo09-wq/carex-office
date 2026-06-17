@@ -340,7 +340,6 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <option value="client">Client</option>
 </select>
 <button class="btn btn-secondary btn-sm" onclick="loadFieldTickets()">&#8635; Refresh</button>
-<button class="btn btn-secondary btn-sm" onclick="uploadAllToFirebase()" style="background:#f97316;color:#fff;border-color:#f97316;">☁️ Sync</button>
 <button class="btn btn-primary btn-sm" onclick="openNewJobModal()">+ New Ticket</button>
 </div>
 </div>
@@ -3479,6 +3478,7 @@ function renderJobList(){
 
   // Field tickets from Firebase
   if(src==='all'||src==='client'){
+    if(fieldTickets.length===0&&src==='client'){loadFieldTickets();return;}
     fieldTickets.forEach(function(t){
       allTickets.push({
         _type:'client',
@@ -4385,19 +4385,19 @@ function openEditJobModal(id){
   editingJobId=id;
   jobWorkerAssignees=JSON.parse(JSON.stringify(j.assignees||[]));
   jobDriveLinks=JSON.parse(JSON.stringify(j.driveLinks||[]));
-  document.getElementById('ej_scope').value=j.scope||'';
-  document.getElementById('ej_merchant').value=j.merchant||'';
-  document.getElementById('ej_location').value=j.location||'';
-  document.getElementById('ej_issues').value=j.issues||'';
-  document.getElementById('ej_notes').value=j.notes||'';
-  document.getElementById('ej_priority').value=j.priority||'medium';
-  document.getElementById('ej_progress').value=j.progress||'open';
-  document.getElementById('ej_schedDate').value=j.schedDate||'';
-  document.getElementById('ej_schedTime').value=j.schedTime||'';
-  document.getElementById('ej_endDate').value=j.endDate||'';
+  document.getElementById('j_scope').value=j.scope||'';
+  document.getElementById('j_merchant').value=j.merchant||'';
+  document.getElementById('j_location').value=j.location||'';
+  document.getElementById('j_issues').value=j.issues||'';
+  document.getElementById('j_notes').value=j.notes||'';
+  document.getElementById('j_priority').value=j.priority||'medium';
+  document.getElementById('j_progress').value=j.progress||'open';
+  document.getElementById('j_schedDate').value=j.schedDate||'';
+  document.getElementById('j_schedTime').value=j.schedTime||'';
+  document.getElementById('j_endDate').value=j.endDate||'';
   document.getElementById('newJobModalTitle').textContent='Edit Ticket';
   // Render assigned workers
-  var list=document.getElementById('ej_assignedList');
+  var list=document.getElementById('ej_assignedList');if(!list)list=document.getElementById('jobWorkerList');
   if(list){
     list.innerHTML=jobWorkerAssignees.map(function(a){
       return'<span style="display:inline-flex;align-items:center;gap:0.32rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;">'
