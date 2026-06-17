@@ -227,7 +227,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="nav-divider"></div>
 <div class="nav-section">
 <div class="nav-section-label">Operations</div>
-<div class="nav-item" onclick="showPage('jobs',this)"><span class="nav-icon">📝</span> Jobs / Tickets <span class="nav-badge" id="openJobCount">0</span></div>
+<div class="nav-item" onclick="showPage('jobs',this)"><span class="nav-icon">🎫</span> Tickets <span class="nav-badge" id="openJobCount">0</span></div>
 <div class="nav-item" onclick="showPage('pms',this)"><span class="nav-icon">🧹</span> PMS Tracker <span class="nav-badge" id="pmsOverdueCount">0</span></div>
 <div class="nav-item" onclick="showPage('stocks',this)"><span class="nav-icon">📦</span> Stocks</div>
 <div class="nav-item" onclick="showPage('orders',this)"><span class="nav-icon">🛒</span> Purchase Orders</div>
@@ -845,7 +845,7 @@ async function loadAllFromFirebase(){
   if(lastPage==='pms'){renderPmsTable();updatePmsStats();}
   if(lastPage==='stocks')renderStocks();
   if(lastPage==='orders')renderOrders();
-  if(lastPage==='jobs')renderJobList();
+  if(lastPage==='jobs'){renderJobList();if(typeof loadFieldTickets==='function')loadFieldTickets();}
   if(lastPage==='clients'){if(typeof renderClients==='function')renderClients();}
   if(lastPage==='billing'){if(typeof renderBilling==='function')renderBilling();}
   if(lastPage==='servicereports'){if(typeof renderServiceReports==='function')renderServiceReports();}
@@ -986,7 +986,7 @@ function showPage(pageId,navEl){
   if(pageId==='stocks')renderStocks();
   if(pageId==='orders')renderOrders();
 
-  if(pageId==='jobs')renderJobList();
+  if(pageId==='jobs'){renderJobList();if(typeof loadFieldTickets==='function')loadFieldTickets();}
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
@@ -3128,7 +3128,7 @@ async function loadFieldTickets(){
     if(ftBadge)ftBadge.textContent=openCount;
     const lu=document.getElementById('ftLastUpdated');
     if(lu)lu.textContent='Updated: '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    renderFieldTicketList();
+    renderJobList();
   }catch(e){
     if(listEl)listEl.innerHTML=`<div class="empty-state"><div class="empty-icon">&#9888;</div><div class="empty-title">Could not load</div><div class="empty-desc">${e.message}</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="loadFieldTickets()">Retry</button></div>`;
   }
