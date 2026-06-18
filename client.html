@@ -110,9 +110,19 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
         <label>Priority</label>
         <select id="ct_priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select>
         <label>Details</label><textarea id="ct_issues" placeholder="Additional details..." style="min-height:60px;"></textarea>
-        <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
+        <div style="margin-top:0.6rem;">
+          <div style="font-size:0.72rem;font-weight:800;color:#374151;margin-bottom:0.35rem;">📎 Photos / Videos</div>
+          <div style="font-size:0.65rem;color:#94a3b8;margin-bottom:0.4rem;">Upload to Google Drive → Share → Copy link → Paste below</div>
+          <div id="ct_mediaList" style="margin-bottom:0.35rem;"></div>
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+            <input id="ct_mediaLink" placeholder="Paste Google Drive link..." type="url" style="flex:1;min-width:180px;margin-bottom:0;"/>
+            <input id="ct_mediaLabel" placeholder="Label (e.g. Issue photo)" type="text" style="width:150px;margin-bottom:0;"/>
+            <button class="btn btn-secondary btn-sm" onclick="addTicketMedia()">+ Add</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
           <button class="btn btn-primary btn-sm" onclick="submitClientTicket()">Submit Ticket</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('cp_newTicketForm').style.display='none'">Cancel</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('cp_newTicketForm').style.display='none';ctMediaLinks=[];document.getElementById('ct_mediaList').innerHTML='';">Cancel</button>
         </div>
       </div>
       <div id="cp_ticketsList"></div>
@@ -288,6 +298,7 @@ function renderClientTickets(){
       +'</div>'
       +(t.issues?'<div style="font-size:0.75rem;color:var(--gray600);margin-top:0.35rem;white-space:pre-wrap;">'+esc(t.issues.slice(0,100))+(t.issues.length>100?'...':'')+'</div>':'')
       +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.3rem;">'+fmtDate(t.createdAt)+'</div>'
+      +'<div style="margin-top:0.4rem;"><button class="btn btn-secondary btn-sm" data-tid="'+t.id+'" data-ttype="'+(t._type||'client')+'" onclick="openEditTicket(this.dataset.tid,this.dataset.ttype)">✏️ Edit</button></div>'
       +'</div>';
   }).join('');
 }
@@ -343,6 +354,50 @@ function checkClientNotifications(){
   if(msgs.length){notifEl.style.display='block';notifEl.innerHTML='🔔 Upcoming this week:<br>'+msgs.map(function(m){return'• '+m;}).join('<br>');}
 }
 
+var ctMediaLinks=[];
+
+function addTicketMedia(){
+  var url=document.getElementById('ct_mediaLink').value.trim();
+  if(!url){alert('Please paste a Google Drive link.');return;}
+  var label=document.getElementById('ct_mediaLabel').value.trim()||'Photo/Video';
+  ctMediaLinks.push({url:url,label:label});
+  document.getElementById('ct_mediaLink').value='';
+  document.getElementById('ct_mediaLabel').value='';
+  renderTicketMediaList();
+}
+
+function renderTicketMediaList(){
+  var el=document.getElementById('ct_mediaList');if(!el)return;
+  el.innerHTML=ctMediaLinks.map(function(m,i){
+    return'<div style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.5rem;border:1.5px solid var(--gray200);border-radius:6px;background:#fff;margin-bottom:0.25rem;">'
+      +'<span>📎</span>'
+      +'<span style="flex:1;font-size:0.72rem;font-weight:700;">'+esc(m.label)+'</span>'
+      +'<a href="'+esc(m.url)+'" target="_blank" style="font-size:0.65rem;color:var(--primary);font-weight:700;text-decoration:none;">Open</a>'
+      +'<button data-idx="'+i+'" onclick="ctMediaLinks.splice(parseInt(this.dataset.idx),1);renderTicketMediaList();" style="background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:0.1rem 0.35rem;font-size:0.65rem;cursor:pointer;">x</button>'
+      +'</div>';
+  }).join('');
+}
+
+function openEditTicket(id,type){
+  // Find the ticket
+  var t=null;
+  if(type==='internal'){t=cpJobs.find(function(x){return x.id===id;});}
+  else{t=cpFieldTickets.find(function(x){return x.id===id;});}
+  if(!t)return;
+  // Pre-fill the form
+  document.getElementById('ct_scope').value=t.scope||'';
+  document.getElementById('ct_location').value=t.location||t.merchant||'';
+  document.getElementById('ct_priority').value=t.priority||'medium';
+  document.getElementById('ct_issues').value=t.issues||'';
+  ctMediaLinks=[];
+  renderTicketMediaList();
+  // Store editing ID
+  document.getElementById('cp_newTicketForm').dataset.editId=id;
+  document.getElementById('cp_newTicketForm').dataset.editType=type;
+  document.getElementById('cp_newTicketForm').style.display='block';
+  document.getElementById('cp_newTicketForm').scrollIntoView({behavior:'smooth'});
+}
+
 async function submitClientTicket(){
   var scope=document.getElementById('ct_scope').value.trim();
   var location=document.getElementById('ct_location').value.trim();
@@ -395,14 +450,14 @@ function renderClientCalendar(){
   var firstDay=new Date(cpCalYear,cpCalMonth,1).getDay();
   var daysInMonth=new Date(cpCalYear,cpCalMonth+1,0).getDate();
   var today=new Date().toISOString().split('T')[0];
-  for(var i=0;i<firstDay;i++)html+='<div style="min-height:60px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
+  for(var i=0;i<firstDay;i++)html+='<div style="min-height:100px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
   for(var d=1;d<=daysInMonth;d++){
     var ds=cpCalYear+'-'+String(cpCalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isToday=ds===today;
     var events='';
     cpProjects.forEach(function(p){if(p.startDate&&ds>=p.startDate&&ds<=(p.endDate||p.startDate))events+='<div style="font-size:0.55rem;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📋 '+esc(p.name.slice(0,12))+'</div>';});
     cpStores.forEach(function(s){if(s.schedDate===ds)events+='<div style="font-size:0.55rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:1px 4px;margin-bottom:1px;">🔧 PMS: '+esc(s.name.slice(0,10))+'</div>';});
-    html+='<div style="min-height:60px;border-radius:6px;padding:0.3rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
+    html+='<div style="min-height:100px;border-radius:6px;padding:0.3rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
   }
   grid.innerHTML=html;
 }
