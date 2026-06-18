@@ -235,6 +235,8 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <div class="nav-divider"></div>
 <div class="nav-section">
+<div class="nav-section-label">Tools</div>
+<div class="nav-item" onclick="showPage('tools',this)"><span class="nav-icon">📐</span> Duct Calculator</div>
 <div class="nav-section-label">Business</div>
 <div class="nav-item" onclick="showPage('clients',this)"><span class="nav-icon">🏪</span> Clients</div>
 <div class="nav-item" onclick="showPage('billing',this)"><span class="nav-icon">💰</span> Billing and Quotes</div>
@@ -382,6 +384,52 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="page-header"><div><div class="page-title">Purchase Orders</div><div class="page-subtitle">Track material and equipment purchase requests</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewOrderModal()">+ New Order</button></div></div>
 <div class="tab-bar"><button class="tab-btn active" onclick="filterOrders('all',this)">All</button><button class="tab-btn" onclick="filterOrders('pending',this)">Pending</button><button class="tab-btn" onclick="filterOrders('approved',this)">Approved</button><button class="tab-btn" onclick="filterOrders('completed',this)">Completed</button></div>
 <div class="project-list" id="ordersList"></div>
+</div>
+
+<!-- DUCT CALCULATOR PAGE -->
+<div class="page" id="page-tools">
+<div class="page-header"><div><div class="page-title">🔧 Duct Sizing Calculator</div><div class="page-subtitle">SMACNA-based duct sizing for rectangular and round ducts</div></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+<!-- INPUT PANEL -->
+<div class="card">
+<div class="card-header"><div class="card-title">📐 Input Parameters</div></div>
+<div class="form-grid" style="padding:0.5rem;">
+<div class="fg full">
+<label>Airflow Unit</label>
+<div style="display:flex;gap:0.5rem;">
+<button id="unit_cfm" onclick="setAirflowUnit('cfm')" class="btn btn-primary btn-sm">CFM</button>
+<button id="unit_cmh" onclick="setAirflowUnit('cmh')" class="btn btn-secondary btn-sm">CMH</button>
+</div>
+</div>
+<div class="fg"><label>FCU Capacity (TR)</label><input id="dc_tr" type="number" placeholder="e.g. 2" min="0" step="0.5" oninput="calcFromTR()"/></div>
+<div class="fg"><label id="dc_airflow_label">Total Airflow (CFM)</label><input id="dc_airflow" type="number" placeholder="e.g. 800" min="0" oninput="calcDuct()"/></div>
+<div class="fg"><label>Number of Diffusers/Grilles</label><input id="dc_diffusers" type="number" placeholder="e.g. 4" min="1" oninput="calcDuct()"/></div>
+<div class="fg"><label>Number of Branches</label><input id="dc_branches" type="number" placeholder="e.g. 2" min="1" oninput="calcDuct()"/></div>
+<div class="fg full"><label>Duct Shape</label>
+<div style="display:flex;gap:0.5rem;">
+<button id="shape_rect" onclick="setShape('rect')" class="btn btn-primary btn-sm">Rectangular</button>
+<button id="shape_round" onclick="setShape('round')" class="btn btn-secondary btn-sm">Round</button>
+<button id="shape_both" onclick="setShape('both')" class="btn btn-secondary btn-sm">Both</button>
+</div></div>
+<div class="fg"><label>Main Duct Velocity (FPM)</label><input id="dc_vel_main" type="number" placeholder="e.g. 700" value="700" min="100" oninput="calcDuct()"/></div>
+<div class="fg"><label>Branch Duct Velocity (FPM)</label><input id="dc_vel_branch" type="number" placeholder="e.g. 500" value="500" min="100" oninput="calcDuct()"/></div>
+<div class="fg"><label>Stub Out Velocity (FPM)</label><input id="dc_vel_stub" type="number" placeholder="e.g. 400" value="400" min="100" oninput="calcDuct()"/></div>
+<div class="fg"><label>Aspect Ratio Preference</label>
+<select id="dc_aspect" onchange="calcDuct()">
+<option value="2">Max 2:1</option>
+<option value="3" selected>Max 3:1</option>
+<option value="4">Max 4:1 (SMACNA limit)</option>
+</select></div>
+</div>
+</div>
+<!-- OUTPUT PANEL -->
+<div class="card">
+<div class="card-header"><div class="card-title">📊 Results</div></div>
+<div id="dc_results" style="padding:1rem;">
+<div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Enter values to calculate</div></div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- CLIENTS PAGE -->
@@ -895,12 +943,10 @@ const WF={
     {id:'fabrication',title:'Fabrication of Duct Sections',desc:'Cut GI sheets, bend to form duct sections, assemble per SMACNA standards, apply sealant on joints'},
     {id:'hangers',title:'Hangers and Supports Installation',desc:'Mark hanger locations per approved drawings, drill and fix anchors, install threaded rods and hangers'},
     {id:'installation',title:'Duct Installation',desc:'Lift and position fabricated duct sections, connect and seal all joints, ensure proper alignment and slope'},
-    
+    {id:'ducttest',title:'Duct Leakage Test — Final (Light or Smoke)',desc:'Final leakage test required by the mall/building before turnover. Select test type: Light Test or Smoke Test. Seal any detected leaks. Mark Pass or Fail. Attach the signed test certificate via Drive Link.'},
     {id:'insulation',title:'Insulation',desc:'Apply insulation material per specifications, ensure vapor barriers are intact'},
     {id:'grilles',title:'Installation of Grilles',desc:'Install supply and return grilles per approved layout and coordination drawings'},
     {id:'airbalancing',title:'Air Balancing',desc:'Balance airflow per design specifications using Balometer, adjust dampers and fan speeds'},
-    {id:'ducttest',title:'Duct Leakage Test — Final (Light or Smoke)',desc:'Final leakage test required by the mall/building before turnover. Select test type: Light Test or Smoke Test. Seal any detected leaks. Mark Pass or Fail. Attach the signed test certificate via Drive Link.'},
-    
     {id:'punchlist',title:'Punch List',desc:'Address all punch list items identified during inspection'},
     {id:'asbuilt',title:'As-Built Plan',desc:'Upload final as-built drawings to Google Drive, submit link here'},
     {id:'inspection',title:'Consultant Inspection and Turnover',desc:'Coordinate with QA/QC and consultants for final inspection, address punch list, prepare for turnover'},
@@ -953,6 +999,7 @@ function showPage(pageId,navEl){
   if(pageId==='calendar')renderCalendar();
   if(pageId==='workers')renderWorkers();
   if(pageId==='fieldtickets'){showPage('jobs',document.querySelector('[onclick*=jobs]'));return;}
+  if(pageId==='tools'){if(typeof initDuctCalc==='function')initDuctCalc();}
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
@@ -2107,7 +2154,8 @@ function openProjectDetail(id){
   var statusHtml='';
   if(p.status!=='completed'){
     statusHtml='<div style="margin-top:1.1rem;padding-top:0.9rem;border-top:1.5px solid var(--gray100);display:flex;gap:0.45rem;flex-wrap:wrap;">'
-      +'<button class="btn btn-success btn-sm" onclick="completeProject(\''+p.id+'\')">Mark Project Complete</button>'
+      +'<button class="btn btn-secondary btn-sm" data-pid="'+p.id+'" onclick="generateSocialPost(this.dataset.pid)">📱 Generate Post</button>'
+    +'<button class="btn btn-success btn-sm" onclick="completeProject(\''+p.id+'\')">Mark Project Complete</button>'
       +'<button class="btn btn-danger btn-sm" onclick="deleteProject(\''+p.id+'\')">Delete Project</button>'
       +'</div>';
   } else {
@@ -2575,14 +2623,16 @@ function savePmsCleaned(){
   var date=document.getElementById('pmsCleanedDate').value||new Date().toISOString().split('T')[0];
   var link=document.getElementById('pmsCleanedLink').value.trim();
   s.lastCleaned=date;
-  s.schedDate='';
+  // Auto-schedule next cleaning 3 months from completion date
+  var nextDate=addMonths(date,3);
+  s.schedDate=nextDate;
   s.schedTime='';
   if(link){if(!s.serviceReports)s.serviceReports=[];s.serviceReports.push({date:date,link:link});}
   save('cesv2_stores',stores);
   closeModal('pmsCleanedModal');
   renderPmsTable();
   renderDashboard();
-  showToast('PMS cleaning recorded! Last cleaned updated to '+fmtDate(date));
+  showToast('PMS cleaning recorded! Next cleaning auto-scheduled for '+fmtDate(nextDate));
 }
 function deleteStore(id){if(!confirm('Delete this store?'))return;stores=stores.filter(s=>s.id!==id);save('cesv2_stores',stores);renderPmsTable();renderDashboard();showToast('Store deleted.');}
 
@@ -3657,17 +3707,161 @@ function renderProjectDeliveries(pid){
 }
 
 
+// ══ DUCT SIZING CALCULATOR ══
+var dcUnit='cfm';
+var dcShape='rect';
+
+function initDuctCalc(){
+  setAirflowUnit('cfm');
+  setShape('rect');
+}
+
+function setAirflowUnit(unit){
+  dcUnit=unit;
+  document.getElementById('unit_cfm').className=unit==='cfm'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  document.getElementById('unit_cmh').className=unit==='cmh'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  document.getElementById('dc_airflow_label').textContent='Total Airflow ('+(unit==='cfm'?'CFM':'CMH')+')';
+  calcDuct();
+}
+
+function setShape(shape){
+  dcShape=shape;
+  document.getElementById('shape_rect').className=shape==='rect'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  document.getElementById('shape_round').className=shape==='round'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  document.getElementById('shape_both').className=shape==='both'?'btn btn-primary btn-sm':'btn btn-secondary btn-sm';
+  calcDuct();
+}
+
+function calcFromTR(){
+  var tr=parseFloat(document.getElementById('dc_tr').value)||0;
+  if(tr>0){
+    var cfm=tr*400;
+    var airflowEl=document.getElementById('dc_airflow');
+    if(dcUnit==='cfm'){airflowEl.value=cfm;}
+    else{airflowEl.value=Math.round(cfm*1.699);}
+  }
+  calcDuct();
+}
+
+function calcDuct(){
+  var airflowRaw=parseFloat(document.getElementById('dc_airflow').value)||0;
+  var diffusers=parseInt(document.getElementById('dc_diffusers').value)||1;
+  var branches=parseInt(document.getElementById('dc_branches').value)||1;
+  var velMain=parseFloat(document.getElementById('dc_vel_main').value)||700;
+  var velBranch=parseFloat(document.getElementById('dc_vel_branch').value)||500;
+  var velStub=parseFloat(document.getElementById('dc_vel_stub').value)||400;
+  var maxAspect=parseInt(document.getElementById('dc_aspect').value)||3;
+
+  if(airflowRaw<=0){
+    document.getElementById('dc_results').innerHTML='<div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Enter airflow or TR to calculate</div></div>';
+    return;
+  }
+
+  // Convert to CFM for calculations
+  var cfm=dcUnit==='cfm'?airflowRaw:airflowRaw/1.699;
+  var cmh=dcUnit==='cmh'?airflowRaw:airflowRaw*1.699;
+
+  // Calculate duct areas (sqft)
+  var mainArea=cfm/velMain;
+  var branchCFM=cfm/branches;
+  var branchArea=branchCFM/velBranch;
+  var stubCFM=cfm/diffusers;
+  var stubArea=stubCFM/velStub;
+
+  // Convert sqft to sqmm (1 sqft = 92903 sqmm)
+  function sqftToSqmm(sqft){return sqft*92903;}
+
+  // Get rectangular dimensions (W x H in mm)
+  function getRectDims(areaSqft, maxAR){
+    var areaSqmm=sqftToSqmm(areaSqft);
+    // Try different aspect ratios
+    for(var ar=1;ar<=maxAR;ar++){
+      var h=Math.sqrt(areaSqmm/ar);
+      var w=h*ar;
+      // Round to nearest 50mm
+      h=Math.ceil(h/50)*50;
+      w=Math.ceil(w/50)*50;
+      var actualAR=w/h;
+      if(actualAR<=maxAR){
+        return{w:w,h:h,ar:actualAR.toFixed(1)};
+      }
+    }
+    var h=Math.ceil(Math.sqrt(areaSqmm/maxAR)/50)*50;
+    var w=Math.ceil((areaSqmm/h)/50)*50;
+    return{w:w,h:h,ar:(w/h).toFixed(1)};
+  }
+
+  // Get round diameter (mm)
+  function getRoundDiam(areaSqft){
+    var areaSqmm=sqftToSqmm(areaSqft);
+    var diam=Math.sqrt(areaSqmm*4/Math.PI);
+    return Math.ceil(diam/25)*25; // round to nearest 25mm
+  }
+
+  var mainRect=getRectDims(mainArea,maxAspect);
+  var branchRect=getRectDims(branchArea,maxAspect);
+  var stubRect=getRectDims(stubArea,maxAspect);
+  var mainRound=getRoundDiam(mainArea);
+  var branchRound=getRoundDiam(branchArea);
+  var stubRound=getRoundDiam(stubArea);
+
+  function velCheck(vel,min,max){
+    if(vel<min)return'<span style="color:#f97316;">⚠️ Low</span>';
+    if(vel>max)return'<span style="color:#dc2626;">⚠️ High</span>';
+    return'<span style="color:#15803d;">✅ OK</span>';
+  }
+
+  function arCheck(ar,max){
+    return parseFloat(ar)<=max?'<span style="color:#15803d;">✅ '+ar+':1</span>':'<span style="color:#dc2626;">⚠️ '+ar+':1 exceeds limit</span>';
+  }
+
+  var html='<div style="margin-bottom:1rem;padding:0.75rem;background:#eff6ff;border-radius:8px;border:1.5px solid #bfdbfe;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.4rem;">Airflow Summary</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">'
+    +'<div><div style="font-size:0.6rem;color:var(--gray500);">Total CFM</div><div style="font-weight:800;">'+Math.round(cfm)+' CFM</div></div>'
+    +'<div><div style="font-size:0.6rem;color:var(--gray500);">Total CMH</div><div style="font-weight:800;">'+Math.round(cmh)+' CMH</div></div>'
+    +'<div><div style="font-size:0.6rem;color:var(--gray500);">Per Branch</div><div style="font-weight:800;">'+Math.round(branchCFM)+' CFM</div></div>'
+    +'<div><div style="font-size:0.6rem;color:var(--gray500);">Per Diffuser</div><div style="font-weight:800;">'+Math.round(stubCFM)+' CFM</div></div>'
+    +'</div></div>';
+
+  function ductRow(label,rect,round,vel,velMin,velMax,maxAR){
+    var row='<div style="margin-bottom:0.75rem;padding:0.75rem;border:1.5px solid var(--gray200);border-radius:8px;background:#fff;">'
+      +'<div style="font-size:0.68rem;font-weight:800;color:var(--primary);margin-bottom:0.5rem;">'+label+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;font-size:0.78rem;">';
+    if(dcShape==='rect'||dcShape==='both'){
+      row+='<div><div style="font-size:0.6rem;color:var(--gray500);">Rectangular</div><div style="font-weight:800;">'+rect.w+' × '+rect.h+' mm</div><div style="font-size:0.65rem;">AR: '+arCheck(rect.ar,maxAR)+'</div></div>';
+    }
+    if(dcShape==='round'||dcShape==='both'){
+      row+='<div><div style="font-size:0.6rem;color:var(--gray500);">Round</div><div style="font-weight:800;">Ø '+round+' mm</div></div>';
+    }
+    row+='<div><div style="font-size:0.6rem;color:var(--gray500);">Velocity</div><div style="font-weight:800;">'+Math.round(vel)+' FPM</div><div style="font-size:0.65rem;">'+velCheck(vel,velMin,velMax)+'</div></div>';
+    row+='</div></div>';
+    return row;
+  }
+
+  html+=ductRow('🔵 Main Duct',mainRect,mainRound,velMain,500,800,maxAspect);
+  html+=ductRow('🟢 Branch Duct (per branch)',branchRect,branchRound,velBranch,400,600,maxAspect);
+  html+=ductRow('🟡 Stub Out (per diffuser)',stubRect,stubRound,velStub,300,500,maxAspect);
+
+  html+='<div style="font-size:0.65rem;color:var(--gray400);margin-top:0.5rem;">Based on SMACNA standards. Round to nearest standard size. Always verify with actual site conditions.</div>';
+
+  document.getElementById('dc_results').innerHTML=html;
+}
+
 function checkScheduleReminders(){
   var notifEl=document.getElementById('scheduleNotif');
   if(!notifEl)return;
-  var tomorrow=new Date();
-  tomorrow.setDate(tomorrow.getDate()+1);
-  var tomorrowStr=tomorrow.toISOString().split('T')[0];
-  var today=new Date().toISOString().split('T')[0];
+  var today=new Date();
+  var in7days=new Date();
+  in7days.setDate(today.getDate()+7);
+  var todayStr=today.toISOString().split('T')[0];
+  var in7Str=in7days.toISOString().split('T')[0];
+  var tomorrowStr=new Date(today.getTime()+86400000).toISOString().split('T')[0];
+
   var reminders=[];
   var warnings=[];
 
-  // Check projects (per-type schedules)
+  // Tomorrow's schedules (projects, jobs, PMS)
   projects.forEach(function(p){
     if(p.status==='completed')return;
     var allTypes=p.types&&p.types.length>0?p.types:[p.type];
@@ -3684,7 +3878,6 @@ function checkScheduleReminders(){
     }
   });
 
-  // Check jobs/tickets
   if(typeof jobs!=='undefined'){
     jobs.forEach(function(j){
       if(j.status==='resolved'||j.status==='closed')return;
@@ -3694,37 +3887,106 @@ function checkScheduleReminders(){
     });
   }
 
-  // Check PMS stores - tomorrow schedule
-  if(typeof stores!=='undefined'){
+  // ══ SMART PMS NOTIFICATIONS — grouped by client company ══
+  if(typeof stores!=='undefined'&&typeof clients!=='undefined'){
+    // Tomorrow's PMS
     stores.forEach(function(s){
       if(s.schedDate===tomorrowStr){
         reminders.push('🔧 <strong>PMS: '+esc(s.name)+'</strong>'+(s.schedTime?' at '+fmtTime(s.schedTime):''));
       }
     });
 
-    // Check PMS overdue (3 months since last cleaned, no schedule set)
+    // 7-day PMS warning — grouped by client company
+    var pmsIn7Days=stores.filter(function(s){
+      return s.schedDate&&s.schedDate>todayStr&&s.schedDate<=in7Str;
+    });
+
+    if(pmsIn7Days.length>0){
+      // Group by client company
+      var clientGroups={};
+      var ungrouped=[];
+
+      pmsIn7Days.forEach(function(s){
+        // Find which client this store belongs to
+        var matchedClient=null;
+        clients.forEach(function(c){
+          var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
+          if(allNames.some(function(n){return n===s.name.toLowerCase();})){
+            matchedClient=c;
+          }
+        });
+        if(matchedClient){
+          if(!clientGroups[matchedClient.name])clientGroups[matchedClient.name]={client:matchedClient,stores:[]};
+          clientGroups[matchedClient.name].stores.push(s);
+        } else {
+          ungrouped.push(s);
+        }
+      });
+
+      // Build grouped notification
+      Object.keys(clientGroups).forEach(function(clientName){
+        var group=clientGroups[clientName];
+        var storeList=group.stores;
+        // Group stores by location
+        var byLocation={};
+        storeList.forEach(function(s){
+          var loc=s.location||'Unknown Location';
+          if(!byLocation[loc])byLocation[loc]=[];
+          byLocation[loc].push(s);
+        });
+        var locationLines=Object.keys(byLocation).map(function(loc){
+          return '&nbsp;&nbsp;📍 '+esc(loc)+' → '+byLocation[loc].map(function(s){return esc(s.name)+(s.schedDate?' ('+fmtDate(s.schedDate)+')':'');}).join(', ');
+        }).join('<br>');
+        warnings.push('🔧 <strong>PMS Due in 7 days — '+esc(clientName)+'</strong> ('+storeList.length+' store'+(storeList.length>1?'s':'')+')<br>'+locationLines);
+      });
+
+      // Ungrouped stores
+      if(ungrouped.length>0){
+        warnings.push('🔧 <strong>PMS Due in 7 days:</strong> '+ungrouped.map(function(s){return esc(s.name)+(s.schedDate?' ('+fmtDate(s.schedDate)+')':'');}).join(', '));
+      }
+    }
+
+    // Overdue PMS (no schedule set, overdue)
+    var overdueByClient={};
     stores.forEach(function(s){
-      if(s.schedDate)return; // already scheduled
+      if(s.schedDate)return;
       if(!s.lastCleaned){
-        warnings.push('⚠️ <strong>PMS: '+esc(s.name)+'</strong> — Never cleaned. Please schedule FCU cleaning.');
+        var matchedClient=null;
+        clients.forEach(function(c){
+          var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
+          if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;
+        });
+        var key=matchedClient?matchedClient.name:'Other';
+        if(!overdueByClient[key])overdueByClient[key]=[];
+        overdueByClient[key].push(s.name);
         return;
       }
       var nextDue=addMonths(s.lastCleaned,3);
-      if(nextDue<=today){
-        warnings.push('⚠️ <strong>PMS: '+esc(s.name)+'</strong> — FCU cleaning overdue since '+fmtDate(nextDue)+'. Please schedule.');
+      if(nextDue<=todayStr){
+        var matchedClient=null;
+        clients.forEach(function(c){
+          var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
+          if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;
+        });
+        var key=matchedClient?matchedClient.name:'Other';
+        if(!overdueByClient[key])overdueByClient[key]=[];
+        overdueByClient[key].push(s.name+' (overdue since '+fmtDate(nextDue)+')');
       }
     });
+    Object.keys(overdueByClient).forEach(function(clientName){
+      warnings.push('⚠️ <strong>PMS Overdue — '+esc(clientName)+':</strong> '+overdueByClient[clientName].join(', ')+'. Please schedule.');
+    });
 
-    // Check Y-Strainer (1 year)
+    // Y-Strainer warnings
     stores.forEach(function(s){
       if(s.ystrainerNeed==='yes'){
-        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Marked as needs cleaning. Please schedule.');
+        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Marked as needs cleaning.');
         return;
       }
       if(!s.lastYstrainer)return;
       var nextYdue=addMonths(s.lastYstrainer,12);
-      if(nextYdue<=today){
-        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Due for cleaning since '+fmtDate(nextYdue)+'. Please schedule.');
+      if(nextYdue<=todayStr){
+        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Due since '+fmtDate(nextYdue)+'. Please schedule.');
       }
     });
   }
@@ -3736,7 +3998,7 @@ function checkScheduleReminders(){
   }
   if(warnings.length>0){
     if(html)html+='<br><br>';
-    html+='<span style="color:#dc2626;">'+warnings.map(function(w){return w;}).join('<br>');+'</span>';
+    html+='<span style="color:#dc2626;">'+warnings.join('<br><br>')+'</span>';
   }
 
   if(html){
@@ -3746,6 +4008,7 @@ function checkScheduleReminders(){
     notifEl.style.display='none';
   }
 }
+
 
 
 function checkDeliveryReminders(){
@@ -4044,6 +4307,69 @@ function saveDebugFix(){
   renderDashboard();renderAllProjects();
   ['ducting','sprinkler','airbalancing','fcuinstall','fcudismantling'].forEach(function(t){renderTypeProjects(t);});
   showToast('Project types saved!');
+}
+
+function generateSocialPost(pid){
+  var p=projects.find(function(x){return x.id===pid;});if(!p)return;
+  var allTypes=p.types&&p.types.length>0?p.types:[p.type];
+  var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
+
+  var hashtags={
+    ducting:'#DuctingWorks #DuctInstallation #DuctFabrication #DuctSystem #AirDuct #HVACDuct #HVACPhilippines #AirconMaintenance #HVACInstallation #CarexEngineering #CarexEngineeringServices #EngineeringServices #HVACSystem #SheetMetal #AirFlow',
+    sprinkler:'#SprinklerSystem #SprinklerInstallation #FireProtection #FireSafety #HydroTesting #FireSprinkler #FireProtectionSystem #CarexEngineering #CarexEngineeringServices #EngineeringServices #FireSuppression #BuildingSafety',
+    airbalancing:'#AirBalancing #AirBalancingWorks #AirFlow #AirflowOptimization #HVACPhilippines #AirconMaintenance #FCUCleaning #HVACInstallation #CarexEngineering #CarexEngineeringServices #EngineeringServices #HVACSystem #IndoorAirQuality #AirDistribution',
+    fcuinstall:'#FCUInstallation #FCU #FanCoilUnit #HVACPhilippines #AirconMaintenance #HVACInstallation #ChilledWater #CarexEngineering #CarexEngineeringServices #EngineeringServices #HVACSystem #CoolingSystem #AirConditioning #AirFlow',
+    fcudismantling:'#FCUDismantling #FCU #FanCoilUnit #HVACPhilippines #AirconMaintenance #HVACInstallation #CarexEngineering #CarexEngineeringServices #EngineeringServices #HVACSystem #CoolingSystem'
+  };
+
+  var captions={
+    ducting:'✅ Project Complete!\n\nCarex Engineering Services successfully completed Ducting Works for '+esc(p.client||'our valued client')+'.\n\nOur team delivered quality HVAC duct installation — fabricated, installed, tested, and balanced to ensure optimal airflow and comfort. 💨🏗️\n\nThank you for trusting Carex Engineering Services!\n\n📞 Contact us for your HVAC needs!',
+    sprinkler:'✅ Project Complete!\n\nCarex Engineering Services successfully completed Sprinkler System installation for '+esc(p.client||'our valued client')+'.\n\nFire protection is not just a requirement — it\'s a commitment to safety. Our team ensures every installation meets the highest standards. 🚿🔥\n\nThank you for trusting Carex Engineering Services!\n\n📞 Contact us for your fire protection needs!',
+    airbalancing:'✅ Air Balancing Complete!\n\nCarex Engineering Services successfully completed Air Balancing works for '+esc(p.client||'our valued client')+'.\n\nProper air balancing ensures optimal airflow distribution, energy efficiency, and comfort for every space we service. 💨❄️\n\nThank you for trusting Carex Engineering Services!\n\n📞 Contact us for your HVAC needs!',
+    fcuinstall:'✅ Project Complete!\n\nCarex Engineering Services successfully completed FCU Installation for '+esc(p.client||'our valued client')+'.\n\nFrom mounting to commissioning — our team ensures every Fan Coil Unit is installed correctly for maximum cooling performance. ❄️🔧\n\nThank you for trusting Carex Engineering Services!\n\n📞 Contact us for your HVAC needs!',
+    fcudismantling:'✅ Project Complete!\n\nCarex Engineering Services successfully completed FCU Dismantling works for '+esc(p.client||'our valued client')+'.\n\nSafe, clean, and professional dismantling — our team handles every job with care and precision. 🔧\n\nThank you for trusting Carex Engineering Services!\n\n📞 Contact us for your HVAC needs!'
+  };
+
+  var primaryType=allTypes[0];
+  var caption=captions[primaryType]||captions.ducting;
+  var tags=hashtags[primaryType]||hashtags.ducting;
+
+  // FB version (fewer hashtags)
+  var fbTags=tags.split(' ').slice(0,7).join(' ');
+
+  var html='<div style="padding:1rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.75rem;">📱 Social Media Post Generator</div>'
+
+    // Facebook
+    +'<div style="margin-bottom:1rem;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">'
+    +'<div style="font-size:0.72rem;font-weight:800;color:#1877f2;">📘 Facebook Caption</div>'
+    +'<button onclick="copyToClipboard(\'fb_caption_'+pid+'\')" class="btn btn-secondary btn-xs">📋 Copy</button>'
+    +'</div>'
+    +'<textarea id="fb_caption_'+pid+'" style="width:100%;min-height:140px;padding:0.5rem;border:1.5px solid #1877f2;border-radius:8px;font-size:0.78rem;font-family:inherit;resize:vertical;box-sizing:border-box;">'+caption+'\n\n'+fbTags+'</textarea>'
+    +'</div>'
+
+    // Instagram
+    +'<div style="margin-bottom:1rem;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">'
+    +'<div style="font-size:0.72rem;font-weight:800;color:#e1306c;">📸 Instagram Caption</div>'
+    +'<button onclick="copyToClipboard(\'ig_caption_'+pid+'\')" class="btn btn-secondary btn-xs">📋 Copy</button>'
+    +'</div>'
+    +'<textarea id="ig_caption_'+pid+'" style="width:100%;min-height:160px;padding:0.5rem;border:1.5px solid #e1306c;border-radius:8px;font-size:0.78rem;font-family:inherit;resize:vertical;box-sizing:border-box;">'+caption+'\n\n'+tags+'</textarea>'
+    +'</div>'
+
+    +'<div style="font-size:0.68rem;color:var(--gray400);">💡 Tip: Edit the caption as needed, then copy and paste to your social media.</div>'
+    +'</div>';
+
+  document.getElementById('projectDetailBody').innerHTML=html;
+}
+
+function copyToClipboard(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.select();
+  document.execCommand('copy');
+  showToast('Copied to clipboard! ✅');
 }
 
 function completeProject(id){
