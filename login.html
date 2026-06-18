@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carex Engineering Services — Login</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(135deg,#0a2f52 0%,#1a6bb5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.login-card{background:#fff;border-radius:16px;padding:2.5rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.logo{text-align:center;margin-bottom:1.5rem;}
+.logo-badge{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#0a2f52,#1a6bb5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1.2rem;margin:0 auto 0.75rem;}
+.logo h1{font-size:1.1rem;font-weight:800;color:#0a2f52;}
+.logo p{font-size:0.75rem;color:#64748b;}
+.form-group{margin-bottom:1rem;}
+.form-group label{display:block;font-size:0.75rem;font-weight:700;color:#374151;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.05em;}
+.form-group input{width:100%;padding:0.65rem 0.85rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.9rem;font-family:inherit;outline:none;transition:border-color 0.15s;}
+.form-group input:focus{border-color:#1a6bb5;}
+.btn-login{width:100%;padding:0.75rem;background:linear-gradient(135deg,#0a2f52,#1a6bb5);color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:0.5rem;transition:opacity 0.15s;}
+.btn-login:hover{opacity:0.9;}
+.error{background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;padding:0.6rem 0.85rem;font-size:0.78rem;color:#dc2626;font-weight:600;margin-bottom:1rem;display:none;}
+.loading{text-align:center;color:#64748b;font-size:0.8rem;margin-top:0.5rem;display:none;}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="logo">
+    <div class="logo-badge">CES</div>
+    <h1>Carex Engineering Services</h1>
+    <p>Office Management System</p>
+  </div>
+  <div class="error" id="loginError"></div>
+  <div class="form-group">
+    <label>Username</label>
+    <input type="text" id="loginUsername" placeholder="Enter username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"/>
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+  </div>
+  <button class="btn-login" onclick="doLogin()">Login</button>
+  <div class="loading" id="loginLoading">Verifying credentials...</div>
+</div>
+
+<script>
+const FB_LOGIN_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
+const FB_LOGIN_KEY='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
+
+// Check if already logged in
+(function(){
+  var session=null;
+  try{session=JSON.parse(sessionStorage.getItem('ces_session')||'null');}catch(e){}
+  if(session&&session.role==='admin'){window.location.href='index.html';return;}
+  if(session&&session.role==='client'){window.location.href='client.html';return;}
+})();
+
+async function doLogin(){
+  var username=document.getElementById('loginUsername').value.trim();
+  var password=document.getElementById('loginPassword').value.trim();
+  var errorEl=document.getElementById('loginError');
+  var loadingEl=document.getElementById('loginLoading');
+
+  if(!username||!password){errorEl.textContent='Please enter username and password.';errorEl.style.display='block';return;}
+
+  errorEl.style.display='none';
+  loadingEl.style.display='block';
+
+  try{
+    var url=FB_LOGIN_BASE+'/ces_users/accounts?key='+FB_LOGIN_KEY;
+    var r=await fetch(url);
+
+    if(r.status===404){
+      // No users yet - create default admin
+      await createDefaultAdmin();
+      loadingEl.style.display='none';
+      errorEl.textContent='First time setup: use username "admin" and password "carex2024"';
+      errorEl.style.display='block';
+      return;
+    }
+
+    if(!r.ok)throw new Error('Connection failed');
+    var doc=await r.json();
+    var users=[];
+    if(doc.fields&&doc.fields.data){
+      var arr=fromFBValue(doc.fields.data);
+      if(Array.isArray(arr))users=arr;
+    }
+
+    var user=users.find(function(u){
+      return u.username.toLowerCase()===username.toLowerCase()&&atob(u.password||'')===password;
+    });
+
+    if(!user){
+      loadingEl.style.display='none';
+      errorEl.textContent='Invalid username or password.';
+      errorEl.style.display='block';
+      return;
+    }
+
+    // Save session
+    sessionStorage.setItem('ces_session',JSON.stringify({id:user.id,username:user.username,role:user.role,clientName:user.clientName||''}));
+
+    // Update last login
+    user.lastLogin=new Date().toISOString();
+    var fields={data:toFBValue(users),updatedAt:{timestampValue:new Date().toISOString()}};
+    await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+
+    // Redirect based on role
+    if(user.role==='admin'){window.location.href='index.html';}
+    else{window.location.href='client.html';}
+
+  }catch(e){
+    loadingEl.style.display='none';
+    errorEl.textContent='Connection error. Please try again.';
+    errorEl.style.display='block';
+  }
+}
+
+function fromFBValue(v){
+  if(!v)return null;
+  if(v.nullValue!==undefined)return null;
+  if(v.booleanValue!==undefined)return v.booleanValue;
+  if(v.integerValue!==undefined)return Number(v.integerValue);
+  if(v.stringValue!==undefined)return v.stringValue;
+  if(v.arrayValue){return(v.arrayValue.values||[]).map(fromFBValue);}
+  if(v.mapValue){var obj={};Object.keys(v.mapValue.fields||{}).forEach(function(k){obj[k]=fromFBValue(v.mapValue.fields[k]);});return obj;}
+  return null;
+}
+
+function toFBValue(v){
+  if(v===null||v===undefined)return{nullValue:null};
+  if(typeof v==='boolean')return{booleanValue:v};
+  if(typeof v==='number')return{integerValue:String(v)};
+  if(typeof v==='string')return{stringValue:v};
+  if(Array.isArray(v))return{arrayValue:{values:v.map(toFBValue)}};
+  if(typeof v==='object'){var fields={};Object.keys(v).forEach(function(k){fields[k]=toFBValue(v[k]);});return{mapValue:{fields:fields}};}
+  return{stringValue:String(v)};
+}
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+async function createDefaultAdmin(){
+  var users=[{id:uid(),username:'admin',password:btoa('carex2024'),role:'admin',clientName:'',createdAt:new Date().toISOString(),lastLogin:''}];
+  var fields={data:toFBValue(users),updatedAt:{timestampValue:new Date().toISOString()}};
+  var url=FB_LOGIN_BASE+'/ces_users/accounts?key='+FB_LOGIN_KEY;
+  await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+}
+</script>
+</body>
+</html>

@@ -236,6 +236,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="nav-divider"></div>
 <div class="nav-section">
 <div class="nav-section-label">Tools</div>
+<div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management</div>
 <div class="nav-item" onclick="showPage('tools',this)"><span class="nav-icon">📐</span> Duct Calculator</div>
 <div class="nav-section-label">Business</div>
 <div class="nav-item" onclick="showPage('clients',this)"><span class="nav-icon">🏪</span> Clients</div>
@@ -428,6 +429,37 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div id="dc_results" style="padding:1rem;">
 <div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Enter values to calculate</div></div>
 </div>
+</div>
+</div>
+</div>
+
+<!-- USER MANAGEMENT PAGE -->
+<div class="page" id="page-users">
+<div class="page-header">
+<div><div class="page-title">👥 User Management</div><div class="page-subtitle">Manage client portal accounts</div></div>
+<div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ Add Client Account</button></div>
+</div>
+<div class="card">
+<div class="card-header"><div class="card-title">Client Accounts</div></div>
+<div id="usersList"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Loading...</div></div></div>
+</div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal">
+<div class="modal" style="max-width:420px;">
+<div class="modal-header"><h2>Add Client Account</h2><button class="modal-close" onclick="closeModal('addUserModal')">X Close</button></div>
+<div class="modal-body">
+<div class="form-grid">
+<div class="fg full"><label>Username *</label><input id="nu_username" placeholder="e.g. cln_client" type="text"/></div>
+<div class="fg full"><label>Password *</label><input id="nu_password" placeholder="Set a password" type="password"/></div>
+<div class="fg full"><label>Client Company Name *</label><input id="nu_client" placeholder="e.g. CLN Retail Group" type="text"/></div>
+</div>
+<div style="font-size:0.72rem;color:var(--gray500);margin-top:0.5rem;">The client will use this username and password to log in to their portal. The company name must match exactly what's in your Clients tab.</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+<button class="btn btn-primary" onclick="addClientUser()">Create Account</button>
 </div>
 </div>
 </div>
@@ -682,6 +714,28 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 </div>
 <script>
+// ══ AUTH CHECK ══
+const FB_AUTH_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
+const FB_AUTH_KEY='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
+
+(function checkAuth(){
+  var session=null;
+  try{session=JSON.parse(sessionStorage.getItem('ces_session')||'null');}catch(e){}
+  if(!session||session.role!=='admin'){
+    window.location.href='login.html';
+    return;
+  }
+  // Show logged in user
+  var userEl=document.getElementById('loggedInUser');
+  if(userEl)userEl.textContent=session.username||'Admin';
+})();
+
+function logout(){
+  if(!confirm('Are you sure you want to logout?'))return;
+  sessionStorage.removeItem('ces_session');
+  window.location.href='login.html';
+}
+
 let projects=JSON.parse(localStorage.getItem('cesv2_projects')||'[]');
 let workers=JSON.parse(localStorage.getItem('cesv2_workers')||'[]');
 let stores=JSON.parse(localStorage.getItem('cesv2_stores')||'[]');
@@ -1000,6 +1054,7 @@ function showPage(pageId,navEl){
   if(pageId==='workers')renderWorkers();
   if(pageId==='fieldtickets'){showPage('jobs',document.querySelector('[onclick*=jobs]'));return;}
   if(pageId==='tools'){if(typeof initDuctCalc==='function')initDuctCalc();}
+  if(pageId==='users'){if(typeof renderUsers==='function')renderUsers();}
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
@@ -3848,6 +3903,101 @@ function calcDuct(){
   document.getElementById('dc_results').innerHTML=html;
 }
 
+// ══ USER MANAGEMENT ══
+var users=[];
+
+async function loadUsers(){
+  try{
+    var url=FB_AUTH_BASE+'/ces_users/accounts?key='+FB_AUTH_KEY;
+    var r=await fetch(url);
+    if(r.status===404){users=[];return;}
+    if(!r.ok)return;
+    var doc=await r.json();
+    var dataField=doc.fields&&doc.fields.data;
+    if(dataField){users=fromFBValue(dataField)||[];}
+  }catch(e){console.warn('Failed to load users:',e);}
+}
+
+async function saveUsers(){
+  try{
+    var fields={data:toFBValue(users),updatedAt:{timestampValue:new Date().toISOString()}};
+    var url=FB_AUTH_BASE+'/ces_users/accounts?key='+FB_AUTH_KEY;
+    await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+  }catch(e){console.warn('Failed to save users:',e);}
+}
+
+async function renderUsers(){
+  await loadUsers();
+  var el=document.getElementById('usersList');if(!el)return;
+  if(!users.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">No client accounts yet</div><div class="empty-desc">Add client accounts so they can log in to their portal</div></div>';
+    return;
+  }
+  el.innerHTML=users.filter(function(u){return u.role==='client';}).map(function(u){
+    return'<div class="project-item">'
+      +'<div class="project-type-badge" style="background:#e8f1fb;">👤</div>'
+      +'<div class="project-info">'
+      +'<div class="project-name">'+esc(u.username)+'</div>'
+      +'<div class="project-meta">Client: '+esc(u.clientName||'--')+' — Last login: '+(u.lastLogin?fmtDate(u.lastLogin):'Never')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:0.3rem;">'
+      +'<button class="btn btn-secondary btn-xs" data-uid="'+u.id+'" onclick="resetPassword(this.dataset.uid)">Reset Password</button>'
+      +'<button class="btn btn-danger btn-xs" data-uid="'+u.id+'" onclick="deleteUser(this.dataset.uid)">Delete</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function addClientUser(){
+  var username=document.getElementById('nu_username').value.trim();
+  var password=document.getElementById('nu_password').value.trim();
+  var clientName=document.getElementById('nu_client').value.trim();
+  if(!username||!password||!clientName){alert('Please fill in all fields.');return;}
+  await loadUsers();
+  if(users.find(function(u){return u.username.toLowerCase()===username.toLowerCase();})){
+    alert('Username already exists. Please choose a different one.');return;
+  }
+  users.push({id:uid(),username:username,password:btoa(password),role:'client',clientName:clientName,createdAt:new Date().toISOString(),lastLogin:''});
+  await saveUsers();
+  document.getElementById('nu_username').value='';
+  document.getElementById('nu_password').value='';
+  document.getElementById('nu_client').value='';
+  closeModal('addUserModal');
+  renderUsers();
+  showToast('Client account created! ✅');
+}
+
+async function deleteUser(id){
+  if(!confirm('Delete this client account?'))return;
+  await loadUsers();
+  users=users.filter(function(u){return u.id!==id;});
+  await saveUsers();
+  renderUsers();
+  showToast('Account deleted.');
+}
+
+async function resetPassword(id){
+  var newPass=prompt('Enter new password for this account:');
+  if(!newPass)return;
+  await loadUsers();
+  var u=users.find(function(x){return x.id===id;});
+  if(!u)return;
+  u.password=btoa(newPass);
+  await saveUsers();
+  showToast('Password reset successfully!');
+}
+
+// Initialize admin account if none exists
+async function initAdminAccount(){
+  await loadUsers();
+  var admin=users.find(function(u){return u.role==='admin';});
+  if(!admin){
+    users.push({id:uid(),username:'admin',password:btoa('carex2024'),role:'admin',clientName:'',createdAt:new Date().toISOString(),lastLogin:''});
+    await saveUsers();
+    console.log('Admin account initialized');
+  }
+}
+
 function checkScheduleReminders(){
   var notifEl=document.getElementById('scheduleNotif');
   if(!notifEl)return;
@@ -5032,6 +5182,7 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
   }catch(e){}
 })();
 renderDashboard(); // Always update dashboard stats and notifications
+initAdminAccount(); // Create default admin if none exists
 
 // Step 4: Load from Firebase in background (updates data silently)
 loadAllFromFirebase();

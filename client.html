@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carex Engineering — Client Portal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--primary:#0a2f52;--primary-light:#e8f1fb;--orange:#f97316;--success:#16a34a;--danger:#dc2626;--warning:#ca8a04;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;--gray300:#cbd5e1;--gray400:#94a3b8;--gray500:#64748b;--gray600:#475569;--gray700:#334155;--text:#1e293b;--white:#ffffff;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--gray50);color:var(--text);}
+.header{background:linear-gradient(135deg,#0a2f52,#1a6bb5);color:#fff;padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:0.75rem;}
+.logo-badge{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.7rem;color:#fff;}
+.header-title{font-size:0.9rem;font-weight:800;}
+.header-sub{font-size:0.65rem;opacity:0.7;}
+.btn-logout{font-size:0.65rem;color:rgba(255,255,255,0.7);background:none;border:1.5px solid rgba(255,255,255,0.2);border-radius:6px;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;}
+.nav{background:#fff;border-bottom:1.5px solid var(--gray200);display:flex;overflow-x:auto;padding:0 1rem;}
+.nav-btn{padding:0.75rem 1rem;font-size:0.78rem;font-weight:700;color:var(--gray500);border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2.5px solid transparent;white-space:nowrap;}
+.nav-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.content{padding:1rem;max-width:1200px;margin:0 auto;}
+.page{display:none;}.page.active{display:block;}
+.card{background:#fff;border-radius:12px;border:1.5px solid var(--gray200);padding:1rem;margin-bottom:1rem;}
+.card-title{font-size:0.82rem;font-weight:800;color:var(--text);margin-bottom:0.75rem;}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem;}
+.stat-card{background:#fff;border-radius:10px;border:1.5px solid var(--gray200);padding:0.85rem;text-align:center;}
+.stat-value{font-size:1.5rem;font-weight:900;color:var(--primary);}
+.stat-label{font-size:0.65rem;color:var(--gray500);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;}
+.badge{font-size:0.6rem;font-weight:800;padding:0.18rem 0.55rem;border-radius:20px;}
+.badge-progress{background:#dbeafe;color:#1d4ed8;}
+.badge-done{background:#dcfce7;color:#15803d;}
+.badge-pending{background:#f1f5f9;color:var(--gray600);}
+.badge-open{background:#fff3ee;color:var(--orange);}
+.project-item{padding:0.85rem;border:1.5px solid var(--gray200);border-radius:10px;margin-bottom:0.5rem;background:#fff;}
+.progress-wrap{background:var(--gray100);border-radius:10px;height:6px;margin:0.4rem 0;}
+.progress-fill{background:linear-gradient(90deg,#1a6bb5,#0a2f52);border-radius:10px;height:6px;transition:width 0.3s;}
+.btn{padding:0.45rem 0.85rem;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;border:none;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-secondary{background:var(--gray100);color:var(--gray700);border:1.5px solid var(--gray200);}
+.btn-sm{padding:0.32rem 0.65rem;font-size:0.72rem;}
+.empty-state{text-align:center;padding:2rem;color:var(--gray400);}
+.empty-icon{font-size:2rem;margin-bottom:0.5rem;}
+.empty-title{font-size:0.85rem;font-weight:700;}
+.notif{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.78rem;color:#1d4ed8;font-weight:600;display:none;}
+input,select,textarea{width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.83rem;font-family:inherit;outline:none;background:#fff;color:var(--text);margin-bottom:0.5rem;}
+label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin-bottom:0.2rem;text-transform:uppercase;letter-spacing:0.05em;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-badge">CES</div>
+    <div>
+      <div class="header-title">Carex Engineering Services</div>
+      <div class="header-sub">Client Portal — <span id="clientNameHeader"></span></div>
+    </div>
+  </div>
+  <button class="btn-logout" onclick="clientLogout()">🚪 Logout</button>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showClientPage('dashboard',this)">📊 Dashboard</button>
+  <button class="nav-btn" onclick="showClientPage('projects',this)">📋 Projects</button>
+  <button class="nav-btn" onclick="showClientPage('tickets',this)">🎫 Tickets</button>
+  <button class="nav-btn" onclick="showClientPage('pms',this)">🔧 PMS</button>
+  <button class="nav-btn" onclick="showClientPage('calendar',this)">📅 Calendar</button>
+</div>
+
+<div class="content">
+  <div class="notif" id="clientNotif"></div>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="cp-dashboard">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-value" id="cp_totalProjects">0</div><div class="stat-label">Total Projects</div></div>
+      <div class="stat-card"><div class="stat-value" id="cp_activeProjects">0</div><div class="stat-label">Active</div></div>
+      <div class="stat-card"><div class="stat-value" id="cp_openTickets">0</div><div class="stat-label">Open Tickets</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Active Projects</div>
+      <div id="cp_dashProjects"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Tickets</div>
+      <div id="cp_dashTickets"></div>
+    </div>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="page" id="cp-projects">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <div class="card-title" style="margin:0;">All Projects</div>
+      </div>
+      <div id="cp_projectsList"></div>
+    </div>
+  </div>
+
+  <!-- TICKETS -->
+  <div class="page" id="cp-tickets">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <div class="card-title" style="margin:0;">My Tickets</div>
+        <button class="btn btn-primary btn-sm" onclick="showNewTicketForm()">+ New Ticket</button>
+      </div>
+      <div id="cp_newTicketForm" style="display:none;border:1.5px solid var(--gray200);border-radius:8px;padding:0.85rem;margin-bottom:0.75rem;background:var(--gray50);">
+        <div style="font-size:0.75rem;font-weight:800;margin-bottom:0.5rem;">New Ticket</div>
+        <label>Issue / Scope</label><input id="ct_scope" placeholder="Describe the issue..."/>
+        <label>Store / Location</label><input id="ct_location" placeholder="e.g. SM Clark - 2nd Floor"/>
+        <label>Priority</label>
+        <select id="ct_priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select>
+        <label>Details</label><textarea id="ct_issues" placeholder="Additional details..." style="min-height:60px;"></textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.3rem;">
+          <button class="btn btn-primary btn-sm" onclick="submitClientTicket()">Submit Ticket</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('cp_newTicketForm').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="cp_ticketsList"></div>
+    </div>
+  </div>
+
+  <!-- PMS -->
+  <div class="page" id="cp-pms">
+    <div class="card">
+      <div class="card-title">PMS Cleaning Schedule</div>
+      <div id="cp_pmsList"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="page" id="cp-calendar">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <div class="card-title" style="margin:0;" id="cp_calLabel"></div>
+        <div style="display:flex;gap:0.4rem;">
+          <button class="btn btn-secondary btn-sm" onclick="cpPrevMonth()">Prev</button>
+          <button class="btn btn-secondary btn-sm" onclick="cpNextMonth()">Next</button>
+        </div>
+      </div>
+      <div id="cp_calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CP_FB_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
+const CP_FB_KEY='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
+const CP_FT_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
+
+var cpSession=null;
+var cpProjects=[];var cpJobs=[];var cpStores=[];var cpFieldTickets=[];
+var cpCalYear,cpCalMonth;
+
+// Auth check
+(function(){
+  try{cpSession=JSON.parse(sessionStorage.getItem('ces_session')||'null');}catch(e){}
+  if(!cpSession||cpSession.role!=='client'){window.location.href='login.html';return;}
+  document.getElementById('clientNameHeader').textContent=cpSession.clientName||cpSession.username;
+  loadClientData();
+})();
+
+function clientLogout(){
+  if(!confirm('Logout?'))return;
+  sessionStorage.removeItem('ces_session');
+  window.location.href='login.html';
+}
+
+function showClientPage(page,btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('cp-'+page).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(page==='calendar')renderClientCalendar();
+}
+
+function fromFBValue(v){
+  if(!v)return null;
+  if(v.nullValue!==undefined)return null;
+  if(v.booleanValue!==undefined)return v.booleanValue;
+  if(v.integerValue!==undefined)return Number(v.integerValue);
+  if(v.stringValue!==undefined)return v.stringValue;
+  if(v.arrayValue){return(v.arrayValue.values||[]).map(fromFBValue);}
+  if(v.mapValue){var obj={};Object.keys(v.mapValue.fields||{}).forEach(function(k){obj[k]=fromFBValue(v.mapValue.fields[k]);});return obj;}
+  return null;
+}
+function toFBValue(v){
+  if(v===null||v===undefined)return{nullValue:null};
+  if(typeof v==='boolean')return{booleanValue:v};
+  if(typeof v==='number')return{integerValue:String(v)};
+  if(typeof v==='string')return{stringValue:v};
+  if(Array.isArray(v))return{arrayValue:{values:v.map(toFBValue)}};
+  if(typeof v==='object'){var fields={};Object.keys(v).forEach(function(k){fields[k]=toFBValue(v[k]);});return{mapValue:{fields:fields}};}
+  return{stringValue:String(v)};
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function fmtDate(d){if(!d||d==='--')return'--';try{var r=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return r.includes('NaN')?'--':r;}catch(e){return'--';}}
+function addMonths(date,months){var d=new Date(date+'T00:00:00');d.setMonth(d.getMonth()+months);return d.toISOString().split('T')[0];}
+
+function isMyClient(name){
+  var myName=(cpSession.clientName||'').toLowerCase();
+  return(name||'').toLowerCase().includes(myName)||myName.includes((name||'').toLowerCase());
+}
+
+async function loadClientData(){
+  try{
+    // Load projects
+    var r=await fetch(CP_FB_BASE+'/ces_projects/main?key='+CP_FB_KEY);
+    if(r.ok){var doc=await r.json();var arr=fromFBValue(doc.fields&&doc.fields.data);if(Array.isArray(arr))cpProjects=arr.filter(function(p){return isMyClient(p.client);});}
+    // Load jobs
+    r=await fetch(CP_FB_BASE+'/ces_jobs/main?key='+CP_FB_KEY);
+    if(r.ok){var doc=await r.json();var arr=fromFBValue(doc.fields&&doc.fields.data);if(Array.isArray(arr))cpJobs=arr.filter(function(j){return isMyClient(j.merchant);});}
+    // Load stores (PMS)
+    r=await fetch(CP_FB_BASE+'/ces_stores/main?key='+CP_FB_KEY);
+    if(r.ok){var doc=await r.json();var arr=fromFBValue(doc.fields&&doc.fields.data);if(Array.isArray(arr))cpStores=arr.filter(function(s){return isMyClient(s.name);});}
+    // Load field tickets
+    r=await fetch(CP_FT_BASE+'/tickets?pageSize=100&key='+CP_FB_KEY);
+    if(r.ok){var doc=await r.json();var docs=doc.documents||[];cpFieldTickets=docs.map(function(d){var f=d.fields||{};function gv(k){var v=f[k];if(!v)return'';if(v.stringValue!==undefined)return v.stringValue;return'';}return{id:d.name.split('/').pop(),ticketNumber:gv('ticketNumber'),scope:gv('scope'),merchant:gv('merchant'),location:gv('location'),progress:gv('progress'),priority:gv('priority'),issues:gv('issues'),notes:gv('notes'),createdAt:gv('createdAt'),submittedBy:gv('submittedBy')};}).filter(function(t){return isMyClient(t.merchant);});}
+  }catch(e){console.warn('Load error:',e);}
+  renderClientDashboard();
+  renderClientProjects();
+  renderClientTickets();
+  renderClientPMS();
+  checkClientNotifications();
+}
+
+function renderClientDashboard(){
+  document.getElementById('cp_totalProjects').textContent=cpProjects.length;
+  document.getElementById('cp_activeProjects').textContent=cpProjects.filter(function(p){return p.status!=='completed';}).length;
+  var allTickets=cpJobs.concat(cpFieldTickets);
+  document.getElementById('cp_openTickets').textContent=allTickets.filter(function(t){return t.progress==='open';}).length;
+
+  var activeProjects=cpProjects.filter(function(p){return p.status!=='completed';}).slice(0,3);
+  document.getElementById('cp_dashProjects').innerHTML=activeProjects.length?activeProjects.map(function(p){
+    var cs=(p.steps||[]).filter(function(s){return s.status==='completed';}).length;
+    var ts=(p.steps||[]).length;
+    var pct=ts>0?Math.round(cs/ts*100):0;
+    return'<div class="project-item"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:0.82rem;font-weight:800;">'+esc(p.name)+'</div><span class="badge badge-'+(p.status==='completed'?'done':'progress')+'">'+esc(p.status||'active')+'</span></div><div class="progress-wrap"><div class="progress-fill" style="width:'+pct+'%"></div></div><div style="font-size:0.65rem;color:var(--gray500);">'+pct+'% complete</div></div>';
+  }).join(''):'<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No active projects</div></div>';
+
+  var recentTickets=cpJobs.concat(cpFieldTickets).slice(0,3);
+  document.getElementById('cp_dashTickets').innerHTML=recentTickets.length?recentTickets.map(function(t){
+    return'<div class="project-item"><div style="display:flex;justify-content:space-between;"><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div><span class="badge badge-'+(t.progress==='open'?'open':'done')+'">'+esc(t.progress||'open')+'</span></div><div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>';
+  }).join(''):'<div class="empty-state"><div class="empty-icon">🎫</div><div class="empty-title">No tickets</div></div>';
+}
+
+function renderClientProjects(){
+  var el=document.getElementById('cp_projectsList');
+  if(!cpProjects.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No projects yet</div></div>';return;}
+  el.innerHTML=cpProjects.map(function(p){
+    var cs=(p.steps||[]).filter(function(s){return s.status==='completed';}).length;
+    var ts=(p.steps||[]).length;
+    var pct=ts>0?Math.round(cs/ts*100):0;
+    var workers=(p.assignees||[]).map(function(a){return a.name;}).join(', ');
+    var certs=(p.steps||[]).filter(function(s){return s.driveLink&&['ducttest','hydrotesting','handover','result'].some(function(id){return s.id.endsWith(id);});});
+    return'<div class="project-item">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem;">'
+      +'<div><div style="font-size:0.88rem;font-weight:800;">'+esc(p.name)+'</div>'
+      +'<div style="font-size:0.68rem;color:var(--gray500);">'+esc(p.location||'')+'</div></div>'
+      +'<span class="badge badge-'+(p.status==='completed'?'done':p.status==='active'?'progress':'pending')+'">'+esc(p.status||'active')+'</span>'
+      +'</div>'
+      +'<div class="progress-wrap"><div class="progress-fill" style="width:'+pct+'%"></div></div>'
+      +'<div style="font-size:0.65rem;color:var(--gray500);margin-bottom:0.4rem;">'+pct+'% complete ('+cs+'/'+ts+' steps)</div>'
+      +(workers?'<div style="font-size:0.68rem;color:var(--gray600);">👷 '+esc(workers)+'</div>':'')
+      +(certs.length?'<div style="margin-top:0.4rem;">'+certs.map(function(s){return'<a href="'+esc(s.driveLink)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;margin-right:0.5rem;">📎 '+esc(s.title)+'</a>';}).join('')+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function renderClientTickets(){
+  var el=document.getElementById('cp_ticketsList');
+  var allTickets=cpJobs.concat(cpFieldTickets);
+  allTickets.sort(function(a,b){return new Date(b.createdAt||0)-new Date(a.createdAt||0);});
+  if(!allTickets.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🎫</div><div class="empty-title">No tickets yet</div></div>';return;}
+  var pc={open:'var(--orange)','in-progress':'var(--warning)',resolved:'var(--success)',closed:'var(--gray500)'};
+  el.innerHTML=allTickets.map(function(t){
+    return'<div class="project-item">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+      +'<div><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div>'
+      +'<div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>'
+      +'<span style="font-size:0.6rem;font-weight:700;padding:0.16rem 0.48rem;border-radius:5px;background:#f1f5f9;color:'+(pc[t.progress]||'var(--gray600)')+';">'+(t.progress||'open').replace('-',' ')+'</span>'
+      +'</div>'
+      +(t.issues?'<div style="font-size:0.75rem;color:var(--gray600);margin-top:0.35rem;white-space:pre-wrap;">'+esc(t.issues.slice(0,100))+(t.issues.length>100?'...':'')+'</div>':'')
+      +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.3rem;">'+fmtDate(t.createdAt)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderClientPMS(){
+  var el=document.getElementById('cp_pmsList');
+  if(!cpStores.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No stores registered</div></div>';return;}
+  var FT={chilled_water:'Chilled Water',split_type:'Split Type',water_cooled:'Water Cooled'};
+  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
+    +'<thead><tr style="background:var(--gray50);">'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">Store</th>'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">FCU Type</th>'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">Last Cleaned</th>'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">Next Due</th>'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">Scheduled</th>'
+    +'<th style="padding:0.5rem;text-align:left;font-size:0.65rem;color:var(--gray500);text-transform:uppercase;">Status</th>'
+    +'<th style="padding:0.5rem;"></th>'
+    +'</tr></thead><tbody>'
+    +cpStores.map(function(s){
+      var nd=s.lastCleaned?addMonths(s.lastCleaned,3):'--';
+      var today=new Date().toISOString().split('T')[0];
+      var status=!s.lastCleaned?'overdue':nd<today?'overdue':nd<=addMonths(today,1)?'due':'ok';
+      var statusColor=status==='overdue'?'var(--danger)':status==='due'?'var(--warning)':'var(--success)';
+      var statusText=status==='overdue'?'Overdue':status==='due'?'Due Soon':'Up to Date';
+      return'<tr style="border-top:1px solid var(--gray100);">'
+        +'<td style="padding:0.5rem;font-weight:700;">'+esc(s.name)+'<div style="font-size:0.65rem;color:var(--gray500);">'+esc(s.location||'')+'</div></td>'
+        +'<td style="padding:0.5rem;">'+esc(FT[s.fcuType]||'--')+'<div style="font-size:0.65rem;color:var(--gray500);">'+esc(s.fcuCount||'')+(s.fcuCount?' units':'')+'</div></td>'
+        +'<td style="padding:0.5rem;">'+fmtDate(s.lastCleaned)+'</td>'
+        +'<td style="padding:0.5rem;font-weight:700;color:'+statusColor+';">'+fmtDate(nd)+'</td>'
+        +'<td style="padding:0.5rem;">'+(s.schedDate?'<span style="color:var(--primary);font-weight:700;">'+fmtDate(s.schedDate)+'</span>':'<span style="color:var(--gray400);">Not set</span>')+'</td>'
+        +'<td style="padding:0.5rem;"><span style="font-size:0.65rem;font-weight:800;color:'+statusColor+';">'+statusText+'</span></td>'
+        +'<td style="padding:0.5rem;"><button class="btn btn-secondary btn-sm" data-sid="'+s.id+'" data-sname="'+esc(s.name)+'" onclick="requestCleaning(this.dataset.sid,this.dataset.sname)">Request Cleaning</button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function checkClientNotifications(){
+  var notifEl=document.getElementById('clientNotif');
+  var msgs=[];
+  var today=new Date().toISOString().split('T')[0];
+  var in7=new Date();in7.setDate(in7.getDate()+7);var in7Str=in7.toISOString().split('T')[0];
+  cpStores.forEach(function(s){
+    if(s.schedDate&&s.schedDate>today&&s.schedDate<=in7Str){
+      msgs.push('🔧 PMS cleaning scheduled for <strong>'+esc(s.name)+'</strong> on '+fmtDate(s.schedDate));
+    }
+  });
+  cpProjects.filter(function(p){return p.status!=='completed';}).forEach(function(p){
+    if(p.startDate&&p.startDate>today&&p.startDate<=in7Str){
+      msgs.push('📋 Project <strong>'+esc(p.name)+'</strong> scheduled on '+fmtDate(p.startDate));
+    }
+  });
+  if(msgs.length){notifEl.style.display='block';notifEl.innerHTML='🔔 Upcoming this week:<br>'+msgs.map(function(m){return'• '+m;}).join('<br>');}
+}
+
+async function submitClientTicket(){
+  var scope=document.getElementById('ct_scope').value.trim();
+  var location=document.getElementById('ct_location').value.trim();
+  var priority=document.getElementById('ct_priority').value;
+  var issues=document.getElementById('ct_issues').value.trim();
+  if(!scope){alert('Please describe the issue.');return;}
+  var now=new Date();
+  var ticketNum='CES-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+Math.floor(1000+Math.random()*9000);
+  var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:location,priority:priority,issues:issues,progress:'open',submittedBy:'client',createdAt:now.toISOString()};
+  try{
+    var fields={};Object.keys(ticket).forEach(function(k){fields[k]={stringValue:String(ticket[k])};});
+    var r=await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    if(!r.ok)throw new Error('Failed');
+    document.getElementById('ct_scope').value='';document.getElementById('ct_location').value='';document.getElementById('ct_issues').value='';
+    document.getElementById('cp_newTicketForm').style.display='none';
+    await loadClientData();
+    alert('Ticket submitted successfully! Ticket #: '+ticketNum);
+  }catch(e){alert('Failed to submit ticket. Please try again.');}
+}
+
+function showNewTicketForm(){
+  var f=document.getElementById('cp_newTicketForm');
+  f.style.display=f.style.display==='none'?'block':'none';
+}
+
+async function requestCleaning(sid,sname){
+  var msg=prompt('Request PMS cleaning for '+sname+'.\n\nPreferred date (optional):');
+  if(msg===null)return;
+  var scope='PMS Cleaning Request — '+sname+(msg?' (Preferred: '+msg+')':'');
+  var now=new Date();
+  var ticketNum='CES-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+Math.floor(1000+Math.random()*9000);
+  var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:sname,priority:'medium',issues:'Client requested PMS cleaning'+(msg?' on '+msg:''),progress:'open',submittedBy:'client',createdAt:now.toISOString()};
+  try{
+    var fields={};Object.keys(ticket).forEach(function(k){fields[k]={stringValue:String(ticket[k])};});
+    await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    alert('Cleaning request submitted! We will contact you to confirm the schedule.');
+    await loadClientData();
+  }catch(e){alert('Failed to submit request. Please try again.');}
+}
+
+// Calendar
+var cpCalYear=new Date().getFullYear();
+var cpCalMonth=new Date().getMonth();
+
+function renderClientCalendar(){
+  document.getElementById('cp_calLabel').textContent=new Date(cpCalYear,cpCalMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var grid=document.getElementById('cp_calGrid');
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var html=days.map(function(d){return'<div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-align:center;padding:0.3rem 0;text-transform:uppercase;">'+d+'</div>';}).join('');
+  var firstDay=new Date(cpCalYear,cpCalMonth,1).getDay();
+  var daysInMonth=new Date(cpCalYear,cpCalMonth+1,0).getDate();
+  var today=new Date().toISOString().split('T')[0];
+  for(var i=0;i<firstDay;i++)html+='<div style="min-height:60px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=cpCalYear+'-'+String(cpCalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isToday=ds===today;
+    var events='';
+    cpProjects.forEach(function(p){if(p.startDate&&ds>=p.startDate&&ds<=(p.endDate||p.startDate))events+='<div style="font-size:0.55rem;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📋 '+esc(p.name.slice(0,12))+'</div>';});
+    cpStores.forEach(function(s){if(s.schedDate===ds)events+='<div style="font-size:0.55rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:1px 4px;margin-bottom:1px;">🔧 PMS: '+esc(s.name.slice(0,10))+'</div>';});
+    html+='<div style="min-height:60px;border-radius:6px;padding:0.3rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
+  }
+  grid.innerHTML=html;
+}
+
+function cpPrevMonth(){cpCalMonth--;if(cpCalMonth<0){cpCalMonth=11;cpCalYear--;}renderClientCalendar();}
+function cpNextMonth(){cpCalMonth++;if(cpCalMonth>11){cpCalMonth=0;cpCalYear++;}renderClientCalendar();}
+</script>
+</body>
+</html>
