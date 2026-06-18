@@ -1107,8 +1107,9 @@ function renderDashboard(){
   document.getElementById('statActiveP').textContent=active.length+' Active';
   document.getElementById('statTotalW').textContent=workers.length;
   document.getElementById('statFreeW').textContent=workers.filter(w=>w.type==='regular').length+' Regular';
-  const openJobs=jobs.filter(j=>j.progress==='open'||j.progress==='in-progress');
-  document.getElementById('statTotalJ').textContent=jobs.length;
+  const allTickets=jobs.concat(typeof fieldTickets!=='undefined'?fieldTickets:[]);
+  const openJobs=allTickets.filter(j=>j.progress==='open'||j.progress==='in-progress');
+  document.getElementById('statTotalJ').textContent=allTickets.length;
   document.getElementById('statOpenJ').textContent=openJobs.length+' Open';
   document.getElementById('statTotalS').textContent=stores.length;
   document.getElementById('statDueP').textContent=stores.filter(s=>getPmsStatus(s)!=='ok').length+' Due';
@@ -2134,7 +2135,7 @@ function saveNewProject(){
     assignees:allAssignees,
     assigneesByType:JSON.parse(JSON.stringify(projectWorkersByType)),
     steps:steps,status:'active',createdAt:new Date().toISOString(),dailyProgress:[]};
-  projects.push(p);save('cesv2_projects',projects);autoCreateProjectRecords(p);closeModal('newProjectModal');renderDashboard();renderAllProjects();
+  projects.push(p);save('cesv2_projects',projects);autoCreateProjectRecords(p);closeModal('newProjectModal');renderDashboard();renderAllProjects();var calPage=document.getElementById('page-calendar');if(calPage&&calPage.classList.contains('active'))renderCalendar();
   types.forEach(function(t){renderTypeProjects(t);});
 }
 
@@ -3680,9 +3681,10 @@ function renderJobList(){
 
   // Update badge
   var openCount=allTickets.filter(function(t){return t.progress==='open';}).length;
-  var badge=document.getElementById('jobOpenCount');
+  var badge=document.getElementById('jobOpenCount')||document.getElementById('openJobCount');
   if(badge)badge.textContent=openCount;
   var ftBadge=document.getElementById('ftOpenCount');
+  var navBadge=document.getElementById('openJobCount');if(navBadge)navBadge.textContent=openCount;
   if(ftBadge)ftBadge.textContent=openCount;
 
   if(!allTickets.length){
@@ -3746,7 +3748,7 @@ function renderJobDetail(j){
     +'<span style="font-size:0.65rem;font-weight:700;padding:0.18rem 0.55rem;border-radius:5px;background:#f1f5f9;color:'+(pc[j.progress]||'var(--gray600)')+';">'+(j.progress||'open').replace('-',' ')+'</span>'
     +'</div></div>'
     +'<div style="display:flex;gap:0.3rem;">'
-    +'<button class="btn btn-secondary btn-xs" onclick="openEditJobModal(\''+j.id+'\')">Edit</button>'
+    +'<button class="btn btn-secondary btn-xs" data-jid="'+j.id+'" onclick="openEditJobModal(this.dataset.jid)">Edit</button>'
     +'<button class="btn btn-danger btn-xs" onclick="deleteJob(\''+j.id+'\')">Delete</button>'
     +'</div></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.85rem;">'
