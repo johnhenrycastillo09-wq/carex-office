@@ -199,7 +199,13 @@ function addMonths(date,months){var d=new Date(date+'T00:00:00');d.setMonth(d.ge
 
 function isMyClient(name){
   var myName=(cpSession.clientName||'').toLowerCase();
-  return(name||'').toLowerCase().includes(myName)||myName.includes((name||'').toLowerCase());
+  var myBranches=(cpSession.branches||[]).map(function(b){return b.toLowerCase();});
+  var checkName=(name||'').toLowerCase();
+  // Match company name
+  if(checkName.includes(myName)||myName.includes(checkName))return true;
+  // Match any branch
+  if(myBranches.some(function(b){return checkName.includes(b)||b.includes(checkName);}))return true;
+  return false;
 }
 
 async function loadClientData(){

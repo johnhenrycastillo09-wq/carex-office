@@ -86,9 +86,25 @@ async function doLogin(){
       if(Array.isArray(arr))users=arr;
     }
 
+    // Check admin accounts
     var user=users.find(function(u){
-      return u.username.toLowerCase()===username.toLowerCase()&&atob(u.password||'')===password;
+      return u.role==='admin'&&u.username.toLowerCase()===username.toLowerCase()&&atob(u.password||'')===password;
     });
+
+    // If not admin, check client portal credentials from clients array
+    if(!user){
+      var clientsDoc=await fetch(FB_LOGIN_BASE+'/ces_clients/main?key='+FB_LOGIN_KEY);
+      if(clientsDoc.ok){
+        var cd=await clientsDoc.json();
+        var clientsArr=fromFBValue(cd.fields&&cd.fields.data)||[];
+        var matchedClient=clientsArr.find(function(c){
+          return c.portalEnabled&&c.portalUsername&&c.portalUsername.toLowerCase()===username.toLowerCase()&&atob(c.portalPassword||'')===password;
+        });
+        if(matchedClient){
+          user={id:matchedClient.id,username:matchedClient.portalUsername,role:'client',clientName:matchedClient.name,branches:matchedClient.branches||[]};
+        }
+      }
+    }
 
     if(!user){
       loadingEl.style.display='none';

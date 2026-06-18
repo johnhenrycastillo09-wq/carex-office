@@ -236,7 +236,6 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="nav-divider"></div>
 <div class="nav-section">
 <div class="nav-section-label">Tools</div>
-<div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management</div>
 <div class="nav-item" onclick="showPage('tools',this)"><span class="nav-icon">📐</span> Duct Calculator</div>
 <div class="nav-section-label">Business</div>
 <div class="nav-item" onclick="showPage('clients',this)"><span class="nav-icon">🏪</span> Clients</div>
@@ -2776,10 +2775,13 @@ function renderClients(filter='all'){
     var branchHtml=branches.length>0?'<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;">'
       +branches.map(b=>'<span style="font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:12px;background:#e8f1fb;color:var(--primary);">'+esc(b)+'</span>').join('')
       +'</div>':'';
+    var portalBadge=c.portalEnabled
+      ?'<span style="font-size:0.6rem;font-weight:800;padding:0.12rem 0.45rem;border-radius:10px;background:#dcfce7;color:#15803d;margin-left:0.4rem;">🔐 Portal: '+esc(c.portalUsername||'')+'</span>'
+      :'<span style="font-size:0.6rem;font-weight:700;padding:0.12rem 0.45rem;border-radius:10px;background:#f1f5f9;color:var(--gray500);margin-left:0.4rem;">No Portal</span>';
     return`<div class="project-item" ondblclick="openEditClientModal('${c.id}')" title="Double-click to edit" style="cursor:pointer;">
       <div class="project-type-badge" style="background:#e8f1fb;">&#127968;</div>
       <div class="project-info">
-        <div class="project-name">${esc(c.name)}</div>
+        <div class="project-name">${esc(c.name)}${portalBadge}</div>
         <div class="project-meta">${esc(c.address||'')}${c.contact?' — '+esc(c.contact):''}${c.phone?' · '+esc(c.phone):''}</div>
         ${branchHtml}
       </div>
@@ -2794,10 +2796,96 @@ function renderClients(filter='all'){
   }).join('');
 }
 
+
 function filterClients(f,el){document.querySelectorAll('#page-clients .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderClients(f);}
 function openAddClientModal(){editingClientId=null;['cl_name','cl_address','cl_contact','cl_phone','cl_email','cl_notes'].forEach(i=>document.getElementById(i).value='');var br=document.getElementById('cl_branches');if(br)br.value='';document.getElementById('cl_status').value='active';document.getElementById('clientModalTitle').textContent='Add Client';openModal('addClientModal');}
-function openEditClientModal(id){const c=clients.find(x=>x.id===id);if(!c)return;editingClientId=id;document.getElementById('cl_name').value=c.name||'';document.getElementById('cl_address').value=c.address||'';document.getElementById('cl_contact').value=c.contact||'';document.getElementById('cl_phone').value=c.phone||'';document.getElementById('cl_email').value=c.email||'';document.getElementById('cl_status').value=c.status||'active';document.getElementById('cl_notes').value=c.notes||'';var br=document.getElementById('cl_branches');if(br)br.value=(c.branches||[]).join('\n');document.getElementById('clientModalTitle').textContent='Edit Client';openModal('addClientModal');}
-function saveClient(){const name=document.getElementById('cl_name').value.trim();if(!name){alert('Please enter a name.');return;}var branchesRaw=document.getElementById('cl_branches')?document.getElementById('cl_branches').value:'';var branches=branchesRaw.split('\n').map(function(b){return b.trim();}).filter(function(b){return b.length>0;});const data={name,address:document.getElementById('cl_address').value.trim(),contact:document.getElementById('cl_contact').value.trim(),phone:document.getElementById('cl_phone').value.trim(),email:document.getElementById('cl_email').value.trim(),status:document.getElementById('cl_status').value,branches:branches,notes:document.getElementById('cl_notes').value.trim()};if(editingClientId){Object.assign(clients.find(c=>c.id===editingClientId),data);showToast('Client updated!');}else{clients.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Client added!');}save('cesv2_clients',clients);closeModal('addClientModal');renderClients();populateClientDatalist();if(window._addClientFromProject){var npClient=document.getElementById('np_client');if(npClient)npClient.value=document.getElementById('cl_name').value;window._addClientFromProject=false;var w=document.getElementById('np_clientWarning');if(w)w.style.display='none';}}
+function openEditClientModal(id){
+  const c=clients.find(x=>x.id===id);if(!c)return;
+  editingClientId=id;
+  document.getElementById('cl_name').value=c.name||'';
+  document.getElementById('cl_address').value=c.address||'';
+  document.getElementById('cl_contact').value=c.contact||'';
+  document.getElementById('cl_phone').value=c.phone||'';
+  document.getElementById('cl_email').value=c.email||'';
+  document.getElementById('cl_status').value=c.status||'active';
+  document.getElementById('cl_notes').value=c.notes||'';
+  var br=document.getElementById('cl_branches');if(br)br.value=(c.branches||[]).join('\n');
+  // Portal access fields
+  var portalToggle=document.getElementById('cl_portalEnabled');
+  if(portalToggle)portalToggle.checked=c.portalEnabled||false;
+  togglePortalFields(c.portalEnabled||false);
+  var unEl=document.getElementById('cl_username');if(unEl)unEl.value=c.portalUsername||'';
+  var pwEl=document.getElementById('cl_password');if(pwEl)pwEl.value='';
+  var pwHint=document.getElementById('cl_passwordHint');if(pwHint)pwHint.style.display=c.portalUsername?'block':'none';
+  document.getElementById('clientModalTitle').textContent='Edit Client';
+  openModal('addClientModal');
+}
+function togglePortalFields(enabled){
+  var fields=document.getElementById('cl_portalFields');
+  if(fields)fields.style.display=enabled?'block':'none';
+}
+
+function saveClient(){
+  const name=document.getElementById('cl_name').value.trim();
+  if(!name){alert('Please enter a name.');return;}
+  var branchesRaw=document.getElementById('cl_branches')?document.getElementById('cl_branches').value:'';
+  var branches=branchesRaw.split('\n').map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
+  var portalEnabled=document.getElementById('cl_portalEnabled')?document.getElementById('cl_portalEnabled').checked:false;
+  var portalUsername=document.getElementById('cl_username')?document.getElementById('cl_username').value.trim():'';
+  var portalPassword=document.getElementById('cl_password')?document.getElementById('cl_password').value.trim():'';
+
+  if(portalEnabled&&!portalUsername){alert('Please enter a portal username.');return;}
+  if(portalEnabled&&!editingClientId&&!portalPassword){alert('Please set a portal password.');return;}
+
+  // Check username uniqueness
+  if(portalEnabled&&portalUsername){
+    var duplicate=clients.find(function(c){return c.id!==editingClientId&&c.portalUsername&&c.portalUsername.toLowerCase()===portalUsername.toLowerCase();});
+    if(duplicate){alert('Username "'+portalUsername+'" is already used by another client. Please choose a different one.');return;}
+  }
+
+  const data={
+    name,
+    address:document.getElementById('cl_address').value.trim(),
+    contact:document.getElementById('cl_contact').value.trim(),
+    phone:document.getElementById('cl_phone').value.trim(),
+    email:document.getElementById('cl_email').value.trim(),
+    status:document.getElementById('cl_status').value,
+    branches:branches,
+    notes:document.getElementById('cl_notes').value.trim(),
+    portalEnabled:portalEnabled,
+    portalUsername:portalEnabled?portalUsername:''
+  };
+
+  // Only update password if provided
+  if(portalEnabled&&portalPassword){
+    data.portalPassword=btoa(portalPassword);
+  }
+
+  if(editingClientId){
+    var existing=clients.find(c=>c.id===editingClientId);
+    if(existing){
+      // Keep existing password if not changed
+      if(!data.portalPassword&&existing.portalPassword){data.portalPassword=existing.portalPassword;}
+      Object.assign(existing,data);
+    }
+    showToast('Client updated!');
+  } else {
+    clients.push({id:uid(),...data,createdAt:new Date().toISOString()});
+    showToast('Client added!'+(portalEnabled?' Portal access enabled.':''));
+  }
+
+  save('cesv2_clients',clients);
+  closeModal('addClientModal');
+  renderClients();
+  populateClientDatalist();
+  if(window._addClientFromProject){
+    var npClient=document.getElementById('np_client');
+    if(npClient)npClient.value=document.getElementById('cl_name').value;
+    window._addClientFromProject=false;
+    var w=document.getElementById('np_clientWarning');if(w)w.style.display='none';
+  }
+}
+
 function deleteClient(id){if(!confirm('Delete this client?'))return;clients=clients.filter(c=>c.id!==id);save('cesv2_clients',clients);renderClients();showToast('Client deleted.');}
 
 // ══ BILLING ══
@@ -5192,26 +5280,45 @@ setInterval(updateHeaderDate,60000);
 </script>
 <!-- CLIENT MODAL -->
 <div class="modal-overlay" id="addClientModal">
-<div class="modal">
-<div class="modal-header"><h2 id="clientModalTitle">Add Client / Store</h2><button class="modal-close" onclick="closeModal('addClientModal')">X Close</button></div>
+<div class="modal" style="max-width:600px;">
+<div class="modal-header"><h2 id="clientModalTitle">Add Client</h2><button class="modal-close" onclick="closeModal('addClientModal')">X Close</button></div>
 <div class="modal-body">
 <div class="form-grid">
-<div class="fg full"><label>Client / Company Name *</label><input id="cl_name" placeholder="e.g. CLN, SM Supermalls, Robinsons" type="text"/></div>
+<div class="fg full"><label>Client / Company Name *</label><input id="cl_name" placeholder="e.g. CLN Retail Group" type="text"/></div>
 <div class="fg full"><label>Address / Location</label><input id="cl_address" placeholder="e.g. North Ave, Quezon City" type="text"/></div>
 <div class="fg"><label>Contact Person</label><input id="cl_contact" placeholder="e.g. Juan dela Cruz" type="text"/></div>
 <div class="fg"><label>Contact Number</label><input id="cl_phone" placeholder="09XX XXX XXXX" type="text"/></div>
 <div class="fg"><label>Email</label><input id="cl_email" placeholder="email@example.com" type="email"/></div>
 <div class="fg"><label>Status</label><select id="cl_status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
 <div class="fg full">
-<label>Store Branches <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(one per line, e.g. So Fab, CMG, Traffic, Shubiz, CLN)</span></label>
+<label>Store Branches <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(one per line)</span></label>
 <textarea id="cl_branches" placeholder="So Fab&#10;CMG&#10;Traffic&#10;Shubiz&#10;Bella Bianca&#10;CLN" style="min-height:80px;"></textarea>
 </div>
 <div class="fg full"><label>Notes</label><textarea id="cl_notes" placeholder="Additional notes..."></textarea></div>
+</div>
+<!-- PORTAL ACCESS SECTION -->
+<div style="margin-top:1rem;border-top:1.5px solid var(--gray200);padding-top:1rem;">
+<div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+<label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin:0;">
+<input type="checkbox" id="cl_portalEnabled" onchange="togglePortalFields(this.checked)" style="width:auto;margin:0;accent-color:var(--primary);"/>
+<span style="font-size:0.78rem;font-weight:800;color:var(--text);">🔐 Enable Client Portal Access</span>
+</label>
+</div>
+<div id="cl_portalFields" style="display:none;background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.85rem;">
+<div style="font-size:0.68rem;color:var(--gray500);margin-bottom:0.65rem;">Client will use these credentials to log in to their portal and see their projects, tickets, and PMS schedule.</div>
+<div class="form-grid">
+<div class="fg"><label>Portal Username *</label><input id="cl_username" placeholder="e.g. cln_client" type="text" autocomplete="off"/></div>
+<div class="fg"><label>Portal Password *</label><input id="cl_password" placeholder="Set a password" type="password" autocomplete="new-password"/>
+<div id="cl_passwordHint" style="display:none;font-size:0.65rem;color:var(--gray400);margin-top:0.2rem;">Leave blank to keep existing password</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addClientModal')">Cancel</button><button class="btn btn-primary" onclick="saveClient()">Save Client</button></div>
 </div>
 </div>
+
 <!-- BILLING MODAL -->
 <div class="modal-overlay" id="newBillingModal">
 <div class="modal">
