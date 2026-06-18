@@ -3335,15 +3335,10 @@ function renderFieldTicketList(){
     </div>`).join('');
 }
 
-function selectFieldTicket(id){
-  currentFtId=id;
-  renderFieldTicketList();
-  const t=fieldTickets.find(x=>x.id===id);
-  if(t)renderFieldTicketDetail(t);
-}
+function selectFieldTicket(id){selectTicket(id,'client');}
 
 function renderFieldTicketDetail(t){
-  const panel=document.getElementById('ftDetailPanel');if(!panel)return;
+  const panel=document.getElementById('ftDetailPanel')||document.getElementById('jobDetailPanel');if(!panel)return;
   const pct={open:5,'in-progress':50,resolved:90,closed:100}[t.progress]||0;
   const issueMediaHtml=(t.issueMedia||[]).filter(m=>m&&(m.url||m.dataUrl)).map(m=>{
     const src=m.url||m.dataUrl||'';

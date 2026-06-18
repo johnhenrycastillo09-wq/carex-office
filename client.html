@@ -147,7 +147,7 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
           <button class="btn btn-secondary btn-sm" onclick="cpNextMonth()">Next</button>
         </div>
       </div>
-      <div id="cp_calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+      <div id="cp_calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;min-height:600px;"></div>
     </div>
   </div>
 </div>
@@ -240,6 +240,13 @@ async function loadClientData(){
   checkClientNotifications();
 }
 
+function goToTicket(el){
+  var tid=el.dataset.tid;
+  var ttype=el.dataset.ttype||'client';
+  showClientPage('tickets',document.querySelectorAll('.nav-btn')[2]);
+  setTimeout(function(){if(tid)openEditTicket(tid,ttype);},300);
+}
+
 function renderClientDashboard(){
   document.getElementById('cp_totalProjects').textContent=cpProjects.length;
   document.getElementById('cp_activeProjects').textContent=cpProjects.filter(function(p){return p.status!=='completed';}).length;
@@ -256,7 +263,7 @@ function renderClientDashboard(){
 
   var recentTickets=cpJobs.concat(cpFieldTickets).slice(0,3);
   document.getElementById('cp_dashTickets').innerHTML=recentTickets.length?recentTickets.map(function(t){
-    return'<div class="project-item"><div style="display:flex;justify-content:space-between;"><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div><span class="badge badge-'+(t.progress==='open'?'open':'done')+'">'+esc(t.progress||'open')+'</span></div><div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>';
+    return'<div class="project-item" style="cursor:pointer;" data-tid="'+t.id+'" data-ttype="'+(t._type||'client')+'" ondblclick="goToTicket(this)"><div style="display:flex;justify-content:space-between;"><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div><span class="badge badge-'+(t.progress==='open'?'open':'done')+'">'+esc(t.progress||'open')+'</span></div><div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>';
   }).join(''):'<div class="empty-state"><div class="empty-icon">🎫</div><div class="empty-title">No tickets</div></div>';
 }
 
@@ -404,39 +411,80 @@ async function submitClientTicket(){
   var priority=document.getElementById('ct_priority').value;
   var issues=document.getElementById('ct_issues').value.trim();
   if(!scope){alert('Please describe the issue.');return;}
-  var now=new Date();
-  var ticketNum='CES-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+Math.floor(1000+Math.random()*9000);
-  var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:location,priority:priority,issues:issues,progress:'open',submittedBy:'client',createdAt:now.toISOString()};
+
+  var form=document.getElementById('cp_newTicketForm');
+  var editId=form.dataset.editId||'';
+  var editType=form.dataset.editType||'';
+
   try{
-    var fields={};Object.keys(ticket).forEach(function(k){fields[k]={stringValue:String(ticket[k])};});
-    var r=await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
-    if(!r.ok)throw new Error('Failed');
-    document.getElementById('ct_scope').value='';document.getElementById('ct_location').value='';document.getElementById('ct_issues').value='';
-    document.getElementById('cp_newTicketForm').style.display='none';
+    if(editId&&editType==='client'){
+      // UPDATE existing field ticket
+      var fields={scope:{stringValue:scope},location:{stringValue:location},priority:{stringValue:priority},issues:{stringValue:issues}};
+      if(ctMediaLinks.length>0){
+        fields.issueMedia={arrayValue:{values:ctMediaLinks.map(function(m){return{mapValue:{fields:{url:{stringValue:m.url},label:{stringValue:m.label},type:{stringValue:'link'}}}};})}}; 
+      }
+      var mask='updateMask.fieldPaths=scope&updateMask.fieldPaths=location&updateMask.fieldPaths=priority&updateMask.fieldPaths=issues'+(ctMediaLinks.length>0?'&updateMask.fieldPaths=issueMedia':'');
+      var r=await fetch(CP_FT_BASE+'/tickets/'+editId+'?'+mask+'&key='+CP_FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+      if(!r.ok)throw new Error('Failed to update');
+      alert('Ticket updated successfully!');
+    } else {
+      // CREATE new ticket
+      var now=new Date();
+      var ticketNum='CES-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+Math.floor(1000+Math.random()*9000);
+      var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:location,priority:priority,issues:issues,progress:'open',submittedBy:'client',createdAt:now.toISOString()};
+      var fields={};Object.keys(ticket).forEach(function(k){fields[k]={stringValue:String(ticket[k])};});
+      if(ctMediaLinks.length>0){
+        fields.issueMedia={arrayValue:{values:ctMediaLinks.map(function(m){return{mapValue:{fields:{url:{stringValue:m.url},label:{stringValue:m.label},type:{stringValue:'link'}}}};})}}; 
+      }
+      var r=await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+      if(!r.ok)throw new Error('Failed to create');
+      alert('Ticket submitted! Ticket #: '+ticketNum);
+    }
+    // Reset form
+    document.getElementById('ct_scope').value='';
+    document.getElementById('ct_location').value='';
+    document.getElementById('ct_issues').value='';
+    ctMediaLinks=[];
+    if(document.getElementById('ct_mediaList'))document.getElementById('ct_mediaList').innerHTML='';
+    form.dataset.editId='';
+    form.dataset.editType='';
+    form.style.display='none';
     await loadClientData();
-    alert('Ticket submitted successfully! Ticket #: '+ticketNum);
-  }catch(e){alert('Failed to submit ticket. Please try again.');}
+  }catch(e){alert('Failed. Please try again.');}
 }
+
 
 function showNewTicketForm(){
   var f=document.getElementById('cp_newTicketForm');
   f.style.display=f.style.display==='none'?'block':'none';
 }
 
-async function requestCleaning(sid,sname){
-  var msg=prompt('Request PMS cleaning for '+sname+'.\n\nPreferred date (optional):');
-  if(msg===null)return;
-  var scope='PMS Cleaning Request — '+sname+(msg?' (Preferred: '+msg+')':'');
+function requestCleaning(sid,sname){
+  document.getElementById('rcStoreId').value=sid;
+  document.getElementById('rcStoreName').textContent='Store: '+sname;
+  document.getElementById('rcDate').value='';
+  document.getElementById('rcNotes').value='';
+  document.getElementById('rcModal').style.display='flex';
+}
+
+async function submitCleaningRequest(){
+  var sid=document.getElementById('rcStoreId').value;
+  var sname=document.getElementById('rcStoreName').textContent.replace('Store: ','');
+  var date=document.getElementById('rcDate').value;
+  var notes=document.getElementById('rcNotes').value.trim();
   var now=new Date();
   var ticketNum='CES-'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+Math.floor(1000+Math.random()*9000);
-  var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:sname,priority:'medium',issues:'Client requested PMS cleaning'+(msg?' on '+msg:''),progress:'open',submittedBy:'client',createdAt:now.toISOString()};
+  var scope='PMS Cleaning Request — '+sname+(date?' (Preferred: '+date+')':'');
+  var ticket={ticketNumber:ticketNum,scope:scope,merchant:cpSession.clientName||cpSession.username,location:sname,priority:'medium',issues:'Client requested PMS cleaning'+(date?' on '+date:'')+(notes?'\n\nNotes: '+notes:''),progress:'open',submittedBy:'client',createdAt:now.toISOString()};
   try{
     var fields={};Object.keys(ticket).forEach(function(k){fields[k]={stringValue:String(ticket[k])};});
     await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    document.getElementById('rcModal').style.display='none';
     alert('Cleaning request submitted! We will contact you to confirm the schedule.');
     await loadClientData();
   }catch(e){alert('Failed to submit request. Please try again.');}
 }
+
 
 // Calendar
 var cpCalYear=new Date().getFullYear();
@@ -450,14 +498,14 @@ function renderClientCalendar(){
   var firstDay=new Date(cpCalYear,cpCalMonth,1).getDay();
   var daysInMonth=new Date(cpCalYear,cpCalMonth+1,0).getDate();
   var today=new Date().toISOString().split('T')[0];
-  for(var i=0;i<firstDay;i++)html+='<div style="min-height:100px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
+  for(var i=0;i<firstDay;i++)html+='<div style="min-height:130px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
   for(var d=1;d<=daysInMonth;d++){
     var ds=cpCalYear+'-'+String(cpCalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isToday=ds===today;
     var events='';
     cpProjects.forEach(function(p){if(p.startDate&&ds>=p.startDate&&ds<=(p.endDate||p.startDate))events+='<div style="font-size:0.55rem;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📋 '+esc(p.name.slice(0,12))+'</div>';});
     cpStores.forEach(function(s){if(s.schedDate===ds)events+='<div style="font-size:0.55rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:1px 4px;margin-bottom:1px;">🔧 PMS: '+esc(s.name.slice(0,10))+'</div>';});
-    html+='<div style="min-height:100px;border-radius:6px;padding:0.3rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
+    html+='<div style="min-height:130px;border-radius:6px;padding:0.45rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
   }
   grid.innerHTML=html;
 }
@@ -465,5 +513,21 @@ function renderClientCalendar(){
 function cpPrevMonth(){cpCalMonth--;if(cpCalMonth<0){cpCalMonth=11;cpCalYear--;}renderClientCalendar();}
 function cpNextMonth(){cpCalMonth++;if(cpCalMonth>11){cpCalMonth=0;cpCalYear++;}renderClientCalendar();}
 </script>
+<div id="rcModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center;">
+<div style="background:#fff;border-radius:12px;padding:1.5rem;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+<div style="font-size:0.9rem;font-weight:800;margin-bottom:0.5rem;">🔧 Request PMS Cleaning</div>
+<div id="rcStoreName" style="font-size:0.78rem;color:var(--gray500);margin-bottom:1rem;"></div>
+<input type="hidden" id="rcStoreId"/>
+<label>Preferred Cleaning Date</label>
+<input type="date" id="rcDate" style="margin-bottom:0.75rem;"/>
+<label>Additional Notes (optional)</label>
+<textarea id="rcNotes" placeholder="Any special instructions or concerns..." style="min-height:60px;margin-bottom:0.75rem;"></textarea>
+<div style="display:flex;gap:0.5rem;">
+<button class="btn btn-primary" onclick="submitCleaningRequest()" style="flex:1;">Submit Request</button>
+<button class="btn btn-secondary" onclick="document.getElementById('rcModal').style.display='none'">Cancel</button>
+</div>
+</div>
+</div>
+
 </body>
 </html>
