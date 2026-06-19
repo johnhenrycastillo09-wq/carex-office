@@ -3783,7 +3783,7 @@ function renderJobDetail(j){
     +'</div></div>'
     +'<div style="display:flex;gap:0.3rem;">'
     +'<button class="btn btn-secondary btn-xs" data-jid="'+j.id+'" onclick="openEditJobModal(this.dataset.jid)">Edit</button>'
-    +'<button class="btn btn-danger btn-xs" onclick="deleteJob(\''+j.id+'\')">Delete</button>'
+    +'<button class="btn btn-danger btn-xs" data-djid=\"'+j.id+'\" onclick=\"deleteJob(this.dataset.djid)\">Delete</button>'
     +'</div></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.85rem;">'
     +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.82rem;font-weight:700;">'+esc(j.location||'--')+'</div></div>'
