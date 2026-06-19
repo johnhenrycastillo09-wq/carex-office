@@ -1175,8 +1175,12 @@ function renderCalendar(){
           }
         });
       } else {
-        var pStart=proj.startDate||'';
-        var pEnd=proj.endDate||proj.startDate||'';
+        // Single type - check schedulesByType first, then fall back to startDate
+        var primaryType=proj.types&&proj.types.length>0?proj.types[0]:proj.type;
+        var sched=proj.schedulesByType&&proj.schedulesByType[primaryType]?proj.schedulesByType[primaryType]:null;
+        var pStart=sched?sched.startDate:proj.startDate||'';
+        var pEnd=sched?sched.endDate:proj.endDate||proj.startDate||'';
+        if(!pEnd)pEnd=pStart;
         if(pStart&&pEnd&&ds>=pStart&&ds<=pEnd)dp.push(proj);
         else if(pStart&&ds===pStart)dp.push(proj);
       }
