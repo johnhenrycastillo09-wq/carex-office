@@ -717,17 +717,17 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 const FB_AUTH_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
 const FB_AUTH_KEY='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
 
-(function checkAuth(){
+// Auth check runs after page loads to ensure all functions are defined
+window.addEventListener('DOMContentLoaded',function(){
   var session=null;
   try{session=JSON.parse(sessionStorage.getItem('ces_session')||'null');}catch(e){}
   if(!session||session.role!=='admin'){
     window.location.href='login.html';
     return;
   }
-  // Show logged in user
   var userEl=document.getElementById('loggedInUser');
   if(userEl)userEl.textContent=session.username||'Admin';
-})();
+});
 
 function logout(){
   if(!confirm('Are you sure you want to logout?'))return;
