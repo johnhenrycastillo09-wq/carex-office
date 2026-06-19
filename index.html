@@ -2129,10 +2129,10 @@ function saveNewProject(){
   });
   var primaryType=types[0];
   var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,
-    startDate:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].startDate||'':''),
-    startTime:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].startTime||'':''),
-    endDate:(projectSchedulesByType&&Object.keys(projectSchedulesByType).length>0?Object.values(projectSchedulesByType)[0].endDate||'':''),
-    schedulesByType:JSON.parse(JSON.stringify(projectSchedulesByType||{})),
+    startDate:(function(){var t=types[0];var el=document.getElementById('np_sd_'+t);return el?el.value:'';}()),
+    startTime:(function(){var t=types[0];var el=document.getElementById('np_st_'+t);return el?el.value:'';}()),
+    endDate:(function(){var t=types[0];var el=document.getElementById('np_ed_'+t);return el?el.value:'';}()),
+    schedulesByType:(function(){var sbt={};types.forEach(function(t){var sd=document.getElementById('np_sd_'+t);var st=document.getElementById('np_st_'+t);var ed=document.getElementById('np_ed_'+t);sbt[t]={startDate:sd?sd.value:'',startTime:st?st.value:'',endDate:ed?ed.value:''};});return sbt;}()),
     driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),
     shopDrawingsByType:JSON.parse(JSON.stringify(projectShopDrawingsByType)),
     notes:document.getElementById('np_notes').value.trim(),
