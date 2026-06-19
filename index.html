@@ -623,7 +623,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 </div>
 </div>
-<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newJobModal')">Cancel</button><button class="btn btn-primary" onclick="saveJob()">Save Job</button></div>
+<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newJobModal')">Cancel</button><button class="btn btn-primary" id="saveJobBtn" onclick="saveJob()">Save Job</button></div>
 </div>
 </div>
 <div class="modal-overlay" id="addWorkerModal">
@@ -2558,6 +2558,7 @@ function saveJob(){
       existing.driveLinks=JSON.parse(JSON.stringify(jobDriveLinks));
       existing.updatedAt=new Date().toISOString();
       save('cesv2_jobs',jobs);
+      var saveBtn=document.getElementById('saveJobBtn');if(saveBtn)saveBtn.textContent='Save Job';
       closeModal('newJobModal');showToast('Ticket updated!');
       editingJobId=null;
       renderJobList();renderDashboard();
@@ -4981,6 +4982,7 @@ function openEditJobModal(id){
     }).join('');
   }
   document.getElementById('newJobModal').dataset.editingId=id;
+  var saveBtn=document.getElementById('saveJobBtn');if(saveBtn)saveBtn.textContent='Update Ticket';
   openModal('newJobModal');
 }
 
