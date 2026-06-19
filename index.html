@@ -561,11 +561,10 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div style="font-size:0.68rem;font-weight:700;color:var(--gray500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem;">Auto-generated Project Name</div>
 <div id="np_namePreview" style="font-size:0.88rem;font-weight:800;color:var(--text);">—</div>
 </div>
-<input type="hidden" id="np_startDate"/><input type="hidden" id="np_startTime"/><input type="hidden" id="np_endDate"/>
-<div class="fg full" id="np_schedulesSection">
-<label>Scheduled Dates &amp; Times <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — optional)</span></label>
-<div id="np_schedulesByType" style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.35rem;"></div>
-</div>
+<div class="fg"><label>Scheduled Date <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startDate" type="date"/></div>
+<div class="fg"><label>Scheduled Time <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(optional)</span></label><input id="np_startTime" type="time"/></div>
+<div class="fg"><label>Target End Date</label><input id="np_endDate" type="date"/></div>
+<div style="display:none" id="np_schedulesSection"><div id="np_schedulesByType"></div></div>
 <div class="fg full" id="np_workerSection">
 <label>Assign Workers <span style="font-size:0.7rem;color:var(--gray500);font-weight:400;">(per project type — same worker can be assigned to multiple types on same site)</span></label>
 <div id="np_workersByType" style="display:flex;flex-direction:column;gap:0.7rem;margin-top:0.35rem;"></div>
@@ -1624,7 +1623,7 @@ function openNewProjectModal(type){
   document.getElementById('np_driveLinksPreview').innerHTML='';
   document.getElementById('np_startDate').value='';
   document.getElementById('np_endDate').value='';
-  var stEl=document.getElementById('np_startTime');if(stEl)stEl.value='';
+  var stEl=document.getElementById('np_startTime');if(stEl)stEl.value='';var sdEl=document.getElementById('np_startDate');if(sdEl)sdEl.value='';var edEl=document.getElementById('np_endDate');if(edEl)edEl.value='';
   projectShopDrawingsByType={};
   projectSchedulesByType={};
   document.querySelectorAll('#np_typeCheckboxes input[type=checkbox]').forEach(cb=>{cb.checked=false;});
@@ -2129,10 +2128,10 @@ function saveNewProject(){
   });
   var primaryType=types[0];
   var p={id:uid(),type:primaryType,types:types,name:name,client:client2,location:loc2,
-    startDate:(function(){var t=types[0];var el=document.getElementById('np_sd_'+t);return el?el.value:'';}()),
-    startTime:(function(){var t=types[0];var el=document.getElementById('np_st_'+t);return el?el.value:'';}()),
-    endDate:(function(){var t=types[0];var el=document.getElementById('np_ed_'+t);return el?el.value:'';}()),
-    schedulesByType:(function(){var sbt={};types.forEach(function(t){var sd=document.getElementById('np_sd_'+t);var st=document.getElementById('np_st_'+t);var ed=document.getElementById('np_ed_'+t);sbt[t]={startDate:sd?sd.value:'',startTime:st?st.value:'',endDate:ed?ed.value:''};});return sbt;}()),
+    startDate:document.getElementById('np_startDate').value||'',
+    startTime:document.getElementById('np_startTime').value||'',
+    endDate:document.getElementById('np_endDate').value||'',
+    schedulesByType:(function(){var sbt={};var sd=document.getElementById('np_startDate').value;var st=document.getElementById('np_startTime').value;var ed=document.getElementById('np_endDate').value;types.forEach(function(t){sbt[t]={startDate:sd,startTime:st,endDate:ed};});return sbt;}()),
     driveLinks:JSON.parse(JSON.stringify(projectDriveLinks)),
     shopDrawingsByType:JSON.parse(JSON.stringify(projectShopDrawingsByType)),
     notes:document.getElementById('np_notes').value.trim(),
