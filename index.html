@@ -2494,7 +2494,8 @@ function deleteJob(id){
 
 // New Job Modal
 function openNewJobModal(type){
-  editingJobId=null;jobWorkerAssignees=[];jobDriveLinks=[];
+  editingJobId=null;
+  document.getElementById("newJobModal").dataset.editingId="";jobWorkerAssignees=[];jobDriveLinks=[];
   ['j_scope','j_merchant','j_location','j_issues','j_notes','j_refTicket'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('j_priority').value='medium';
   document.getElementById('j_progress').value='open';
@@ -2537,7 +2538,9 @@ function renderJobDriveLinksPreview(){
 function saveJob(){
   const scope=document.getElementById('j_scope').value.trim();
   if(!scope){alert('Please enter a job title/scope.');return;}
-  if(editingJobId){
+  var modalEditId=document.getElementById("newJobModal").dataset.editingId||"";
+  if(editingJobId||modalEditId){
+    editingJobId=editingJobId||modalEditId;
     // UPDATE existing job
     var existing=jobs.find(function(x){return x.id===editingJobId;});
     if(existing){
@@ -4977,6 +4980,7 @@ function openEditJobModal(id){
         +'</span>';
     }).join('');
   }
+  document.getElementById('newJobModal').dataset.editingId=id;
   openModal('newJobModal');
 }
 
