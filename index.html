@@ -2537,6 +2537,33 @@ function renderJobDriveLinksPreview(){
 function saveJob(){
   const scope=document.getElementById('j_scope').value.trim();
   if(!scope){alert('Please enter a job title/scope.');return;}
+  if(editingJobId){
+    // UPDATE existing job
+    var existing=jobs.find(function(x){return x.id===editingJobId;});
+    if(existing){
+      existing.scope=scope;
+      existing.merchant=document.getElementById('j_merchant').value.trim();
+      existing.location=document.getElementById('j_location').value.trim();
+      existing.priority=document.getElementById('j_priority').value;
+      existing.progress=document.getElementById('j_progress').value;
+      existing.schedDate=document.getElementById('j_schedDate').value;
+      existing.schedTime=document.getElementById('j_schedTime').value;
+      existing.endDate=document.getElementById('j_endDate').value;
+      existing.issues=document.getElementById('j_issues').value.trim();
+      existing.notes=document.getElementById('j_notes').value.trim();
+      existing.assignees=JSON.parse(JSON.stringify(jobWorkerAssignees));
+      existing.driveLinks=JSON.parse(JSON.stringify(jobDriveLinks));
+      existing.updatedAt=new Date().toISOString();
+      save('cesv2_jobs',jobs);
+      closeModal('newJobModal');showToast('Ticket updated!');
+      editingJobId=null;
+      renderJobList();renderDashboard();
+      currentJobId=existing.id;
+      renderJobDetail(existing);
+    }
+    return;
+  }
+  // CREATE new job
   const j={
     id:uid(),
     jobNumber:genJobNumber(),
@@ -2558,7 +2585,7 @@ function saveJob(){
     updatedAt:new Date().toISOString(),
   };
   jobs.push(j);save('cesv2_jobs',jobs);
-  closeModal('newJobModal');showToast('Job created!');
+  closeModal('newJobModal');showToast('Ticket created!');
   renderJobList();renderDashboard();
   currentJobId=j.id;
   renderJobList();
