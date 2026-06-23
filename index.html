@@ -1184,7 +1184,7 @@ function renderCalendar(){
         else if(pStart&&ds===pStart)dp.push(proj);
       }
     });
-    let dj=jobs.filter(j=>j.schedDate===ds);
+    let dj=jobs.filter(j=>j.schedDate===ds).concat((typeof fieldTickets!=='undefined'?fieldTickets:[]).filter(function(t){return t.schedDate===ds;}));
     let dpms=stores.filter(s=>s.schedDate===ds||s.nextCleaning===ds);
 
     // Apply multi-select type filter
@@ -3457,6 +3457,7 @@ async function saveFtInline(id){
     var t=fieldTickets.find(function(x){return x.id===id;});
     if(t){t.scope=scope;t.merchant=merchant;t.location=location;t.priority=priority;t.progress=progress;t.schedDate=schedDate;t.schedTime=schedTime;t.issues=issues;t.notes=notes;}
     renderJobList();
+    var calPage=document.getElementById('page-calendar');if(calPage&&calPage.classList.contains('active'))renderCalendar();
     showToast('Ticket saved to Firebase! ✅');
   }catch(e){showToast('Failed to save. Please try again.','error');}
 }
@@ -3870,6 +3871,7 @@ function saveJobInline(id){
   renderJobList();
   renderDashboard();
   renderJobDetail(j);
+  var calPage=document.getElementById('page-calendar');if(calPage&&calPage.classList.contains('active'))renderCalendar();
   showToast('Ticket updated! ✅');
 }
 
