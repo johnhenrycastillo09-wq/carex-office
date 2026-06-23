@@ -3373,91 +3373,106 @@ function renderFieldTicketList(){
 function selectFieldTicket(id){selectTicket(id,'client');}
 
 function renderFieldTicketDetail(t){
-  const panel=document.getElementById('ftDetailPanel')||document.getElementById('jobDetailPanel');if(!panel)return;
-  const pct={open:5,'in-progress':50,resolved:90,closed:100}[t.progress]||0;
-  const issueMediaHtml=(t.issueMedia||[]).filter(m=>m&&(m.url||m.dataUrl)).map(m=>{
-    const src=m.url||m.dataUrl||'';
-    const isVid=(m.type||'image')==='video';
-    return`<div onclick="window.open('${src}','_blank')" style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--gray100);border:1.5px solid var(--gray200);cursor:pointer;width:80px;height:80px;flex-shrink:0;">
-      ${isVid?`<video src="${src}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);color:#fff;font-size:1rem;">&#9654;</div>`:`<img src="${src}" style="width:100%;height:100%;object-fit:cover;" alt="">`}
-    </div>`;
+  var panel=document.getElementById('ftDetailPanel')||document.getElementById('jobDetailPanel');
+  if(!panel)return;
+
+  // Build issue media
+  var issueMediaHtml=(t.issueMedia||[]).filter(function(m){return m&&(m.url||m.dataUrl||m.link);}).map(function(m){
+    var src=m.url||m.dataUrl||m.link||'';
+    var label=m.label||m.name||'Photo/Video';
+    return '<a href="'+esc(src)+'" target="_blank" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--primary);font-weight:700;text-decoration:none;padding:0.3rem 0.6rem;border:1.5px solid #b3d0f0;border-radius:7px;background:var(--primary-light);">📎 '+esc(label)+'</a>';
   }).join('');
 
-  panel.innerHTML=`
-    <div style="padding:1.25rem;">
-      <div style="background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);border-radius:12px;padding:1.1rem;margin-bottom:1rem;position:relative;overflow:hidden;">
-        <div style="position:absolute;inset:0;opacity:0.04;background-image:linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px);background-size:26px 26px;pointer-events:none;"></div>
-        <div style="position:relative;z-index:1;">
-          <div style="font-size:0.63rem;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:0.1em;margin-bottom:0.3rem;">${esc(t.ticketNumber||'CES-'+t.id.slice(0,8).toUpperCase())}${t.submittedBy==='client'?' <span style="background:rgba(255,107,53,0.2);color:#ffb899;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.58rem;">CLIENT SUBMITTED</span>':''}</div>
-          <div style="font-size:1.1rem;font-weight:900;color:#fff;margin-bottom:0.5rem;line-height:1.2;">${esc(t.scope||'Untitled Ticket')}</div>
-          <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:0.65rem;">${esc(t.location||'')}${t.merchant?' - '+esc(t.merchant):''}</div>
-          <div style="display:flex;gap:0.38rem;flex-wrap:wrap;">
-            <span style="font-size:0.63rem;font-weight:800;padding:0.22rem 0.65rem;border-radius:20px;background:rgba(255,107,53,0.2);color:#ffb899;border:1px solid rgba(255,107,53,0.3);">● ${t.priority||'medium'}</span>
-            <span style="font-size:0.63rem;font-weight:800;padding:0.22rem 0.65rem;border-radius:20px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.15);">${(t.progress||'open').replace('-',' ')}</span>
-            ${t.schedDate?`<span style="font-size:0.63rem;font-weight:700;padding:0.22rem 0.65rem;border-radius:20px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">&#128197; ${fmtDate(t.schedDate)}${t.schedTime?' at '+fmtTime(t.schedTime):''}</span>`:''}
-          </div>
-          <div style="margin-top:0.75rem;"><div style="display:flex;justify-content:space-between;margin-bottom:0.28rem;"><span style="font-size:0.57rem;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;">Progress</span><strong style="font-size:0.57rem;font-weight:800;color:rgba(255,255,255,0.65);">${pct}%</strong></div><div style="background:rgba(255,255,255,0.08);border-radius:20px;height:5px;overflow:hidden;"><div style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--orange),var(--orange2));width:${pct}%;"></div></div></div>
-        </div>
-      </div>
+  panel.innerHTML='<div style="padding:1rem;">'
+    // Header
+    +'<div style="background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);border-radius:12px;padding:1rem;margin-bottom:1rem;">'
+    +'<div style="font-size:0.63rem;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:0.1em;margin-bottom:0.3rem;">'+esc(t.ticketNumber||'CES-'+t.id.slice(0,8).toUpperCase())+' <span style="background:rgba(255,107,53,0.2);color:#ffb899;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.58rem;">CLIENT SUBMITTED</span></div>'
+    +'<div style="font-size:1rem;font-weight:900;color:#fff;margin-bottom:0.3rem;">'+esc(t.scope||'Untitled Ticket')+'</div>'
+    +'<div style="font-size:0.72rem;color:rgba(255,255,255,0.5);">'+esc(t.location||'')+(t.merchant?' - '+esc(t.merchant):'')+'</div>'
+    +'</div>'
 
-      <!-- QUICK UPDATE STATUS -->
-      <div style="background:var(--white);border:1.5px solid var(--gray200);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;padding-bottom:0.55rem;border-bottom:1.5px solid var(--gray100);">Quick Update</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.75rem;">
-          <div style="display:flex;flex-direction:column;gap:0.28rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;">Status</label>
-            <select id="ft_progress_${t.id}" style="padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;background:#fff;color:var(--text);">
-              <option value="open" ${t.progress==='open'?'selected':''}>Open</option>
-              <option value="in-progress" ${t.progress==='in-progress'?'selected':''}>In Progress</option>
-              <option value="resolved" ${t.progress==='resolved'?'selected':''}>Resolved</option>
-              <option value="closed" ${t.progress==='closed'?'selected':''}>Closed</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:0.28rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;">Priority</label>
-            <select id="ft_priority_${t.id}" style="padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;background:#fff;color:var(--text);">
-              <option value="low" ${t.priority==='low'?'selected':''}>Low</option>
-              <option value="medium" ${t.priority==='medium'?'selected':''}>Medium</option>
-              <option value="high" ${t.priority==='high'?'selected':''}>High</option>
-              <option value="critical" ${t.priority==='critical'?'selected':''}>Critical</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="updateFieldTicket('${t.id}')">&#128190; Save Changes to Firebase</button>
-      </div>
-
-      <!-- TICKET INFO -->
-      <div style="background:var(--white);border:1.5px solid var(--gray200);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;padding-bottom:0.55rem;border-bottom:1.5px solid var(--gray100);">Ticket Details</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
-          <div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.82rem;font-weight:700;">${esc(t.location||'--')}</div></div>
-          <div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Merchant</div><div style="font-size:0.82rem;font-weight:700;">${esc(t.merchant||'--')}</div></div>
-          <div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Date Submitted</div><div style="font-size:0.82rem;font-weight:700;">${fmtDateTime(t.createdAt)}</div></div>
-          <div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Contact</div><div style="font-size:0.82rem;font-weight:700;">${esc(t.contact||'--')}</div></div>
-          ${t.schedDate?`<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Scheduled</div><div style="font-size:0.82rem;font-weight:700;">${fmtDate(t.schedDate)}${t.schedTime?' at '+fmtTime(t.schedTime):''}</div></div>`:''}
-          ${t.endDate?`<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Completion Date</div><div style="font-size:0.82rem;font-weight:700;">${fmtDate(t.endDate)}</div></div>`:''}
-        </div>
-      </div>
-
-      <!-- FIELD ISSUES -->
-      ${t.issues?`<div style="background:var(--white);border:1.5px solid var(--gray200);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;padding-bottom:0.55rem;border-bottom:1.5px solid var(--gray100);">&#9888;&#65039; Field Issues</div>
-        <div style="font-size:0.84rem;color:var(--gray700);line-height:1.65;">${esc(t.issues)}</div>
-        ${issueMediaHtml?`<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">${issueMediaHtml}</div>`:''}
-      </div>`:''}
-
-      <!-- NOTES -->
-      ${t.notes?`<div style="background:var(--white);border:1.5px solid var(--gray200);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;padding-bottom:0.55rem;border-bottom:1.5px solid var(--gray100);">&#128203; Notes</div>
-        <div style="font-size:0.84rem;color:var(--gray700);line-height:1.65;">${esc(t.notes)}</div>
-      </div>`:''}
-
-      <!-- NOTE ENTRIES -->
-      ${(t.noteEntries||[]).length?`<div style="background:var(--white);border:1.5px solid var(--gray200);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:0.63rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;padding-bottom:0.55rem;border-bottom:1.5px solid var(--gray100);">Note History</div>
-        ${(t.noteEntries||[]).map(n=>`<div style="border:1.5px solid var(--gray200);border-radius:10px;padding:0.82rem;margin-bottom:0.55rem;background:var(--gray50);border-left:3px solid var(--orange);"><div style="display:flex;justify-content:space-between;margin-bottom:0.32rem;"><span style="font-size:0.72rem;font-weight:800;color:var(--orange);">${esc(n.author||'Team')}</span><span style="font-size:0.63rem;color:var(--gray500);">${n.date||''}</span></div><div style="font-size:0.8rem;color:var(--gray700);line-height:1.55;">${esc(n.text||'')}</div></div>`).join('')}
-      </div>`:''}
-    </div>
-  `;
+    // INLINE EDIT FORM
+    +'<div style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.85rem;margin-bottom:0.75rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">✏️ Edit Ticket</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scope/Title</label><input id="fte_scope" value="'+esc(t.scope||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Store/Merchant</label><input id="fte_merchant" value="'+esc(t.merchant||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Location</label><input id="fte_location" value="'+esc(t.location||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Priority</label>'
+    +'<select id="fte_priority" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;">'
+    +'<option value="low"'+(t.priority==='low'?' selected':'')+'>Low</option>'
+    +'<option value="medium"'+(t.priority==='medium'?' selected':'')+'>Medium</option>'
+    +'<option value="high"'+(t.priority==='high'?' selected':'')+'>High</option>'
+    +'<option value="critical"'+(t.priority==='critical'?' selected':'')+'>Critical</option>'
+    +'</select></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Status</label>'
+    +'<select id="fte_progress" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;">'
+    +'<option value="open"'+(t.progress==='open'?' selected':'')+'>Open</option>'
+    +'<option value="in-progress"'+(t.progress==='in-progress'?' selected':'')+'>In Progress</option>'
+    +'<option value="resolved"'+(t.progress==='resolved'?' selected':'')+'>Resolved</option>'
+    +'<option value="closed"'+(t.progress==='closed'?' selected':'')+'>Closed</option>'
+    +'</select></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scheduled Date</label><input id="fte_schedDate" type="date" value="'+(t.schedDate||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scheduled Time</label><input id="fte_schedTime" type="time" value="'+(t.schedTime||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'</div>'
+    // Workers
+    +'<div style="margin-bottom:0.5rem;">'
+    +'<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.3rem;">Assign Workers</label>'
+    +'<div id="fte_workerChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;min-height:20px;">'
+    +(t.assignees||[]).map(function(a){return'<span style="display:inline-flex;align-items:center;gap:0.28rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.18rem 0.5rem;font-size:0.7rem;font-weight:700;"><span style="width:15px;height:15px;border-radius:50%;background:var(--primary);color:#fff;font-size:0.45rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'+esc(a.name)+'</span>';}).join('')
+    +'</div>'
+    +'<select id="fte_workerSelect" onchange="addWorkerToFtInline(\''+t.id+'\')" style="font-size:0.78rem;padding:0.3rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-family:inherit;outline:none;background:#fff;">'
+    +'<option value="">+ Add worker</option>'
+    +workers.filter(function(w){var aids=(t.assignees||[]).map(function(a){return a.id;});return aids.indexOf(w.id)===-1;}).map(function(w){return'<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';}).join('')
+    +'</select>'
+    +'</div>'
+    // Issues
+    +'<div style="margin-bottom:0.5rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Field Issues</label>'
+    +'<textarea id="fte_issues" style="width:100%;min-height:55px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(t.issues||'')+'</textarea></div>'
+    +'<div style="margin-bottom:0.65rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Notes</label>'
+    +'<textarea id="fte_notes" style="width:100%;min-height:45px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(t.notes||'')+'</textarea></div>'
+    +'<button class="btn btn-primary btn-sm" data-ftid="'+t.id+'" onclick="saveFtInline(this.dataset.ftid)">💾 Save Changes to Firebase</button>'
+    +'</div>'
+    // Media
+    +(issueMediaHtml?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;">📎 Attached Photos/Videos</div><div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+issueMediaHtml+'</div></div>':'')
+    +'</div>';
 }
+
+async function saveFtInline(id){
+  var scope=document.getElementById('fte_scope').value.trim();
+  var merchant=document.getElementById('fte_merchant').value.trim();
+  var location=document.getElementById('fte_location').value.trim();
+  var priority=document.getElementById('fte_priority').value;
+  var progress=document.getElementById('fte_progress').value;
+  var schedDate=document.getElementById('fte_schedDate').value;
+  var schedTime=document.getElementById('fte_schedTime').value;
+  var issues=document.getElementById('fte_issues').value.trim();
+  var notes=document.getElementById('fte_notes').value.trim();
+  try{
+    var fields={scope:{stringValue:scope},merchant:{stringValue:merchant},location:{stringValue:location},priority:{stringValue:priority},progress:{stringValue:progress},schedDate:{stringValue:schedDate},schedTime:{stringValue:schedTime},issues:{stringValue:issues},notes:{stringValue:notes}};
+    var mask='updateMask.fieldPaths=scope&updateMask.fieldPaths=merchant&updateMask.fieldPaths=location&updateMask.fieldPaths=priority&updateMask.fieldPaths=progress&updateMask.fieldPaths=schedDate&updateMask.fieldPaths=schedTime&updateMask.fieldPaths=issues&updateMask.fieldPaths=notes';
+    var r=await fetch(FS_BASE_FT+'/tickets/'+id+'?'+mask+'&key='+API_KEY_FT,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    if(!r.ok)throw new Error('Failed');
+    // Update local fieldTickets array
+    var t=fieldTickets.find(function(x){return x.id===id;});
+    if(t){t.scope=scope;t.merchant=merchant;t.location=location;t.priority=priority;t.progress=progress;t.schedDate=schedDate;t.schedTime=schedTime;t.issues=issues;t.notes=notes;}
+    renderJobList();
+    showToast('Ticket saved to Firebase! ✅');
+  }catch(e){showToast('Failed to save. Please try again.','error');}
+}
+
+function addWorkerToFtInline(tid){
+  var sel=document.getElementById('fte_workerSelect');
+  var wid=sel.value;if(!wid)return;
+  var t=fieldTickets.find(function(x){return x.id===tid;});if(!t)return;
+  var worker=workers.find(function(w){return w.id===wid;});if(!worker)return;
+  if(!t.assignees)t.assignees=[];
+  if(t.assignees.find(function(a){return a.id===wid;})){sel.value='';return;}
+  t.assignees.push({id:worker.id,name:worker.name});
+  sel.value='';
+  renderFieldTicketDetail(t);
+}
+
 
 async function updateFieldTicket(id){
   const progress=document.getElementById('ft_progress_'+id)?.value;
