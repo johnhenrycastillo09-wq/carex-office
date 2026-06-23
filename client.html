@@ -127,6 +127,7 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
         </div>
       </div>
       <div id="cp_ticketsList"></div>
+      <div id="cp_ticketDetail" style="display:none;margin-top:0.75rem;border:1.5px solid var(--gray200);border-radius:10px;padding:1rem;background:#fff;"></div>
     </div>
   </div>
 
@@ -156,7 +157,7 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
           <button class="btn btn-secondary btn-sm" onclick="cpNextMonth()">Next</button>
         </div>
       </div>
-      <div id="cp_calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;min-height:600px;"></div>
+      <div id="cp_calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;min-height:700px;"></div>
     </div>
   </div>
 </div>
@@ -346,15 +347,15 @@ function renderClientTickets(){
   var pc={open:'var(--orange)','in-progress':'var(--warning)',resolved:'var(--success)',closed:'var(--gray500)'};
   el.innerHTML=allTickets.map(function(t){
     var workers=(t.assignees||[]).map(function(a){return esc(a.name);}).join(', ');
-    var schedInfo=t.schedDate?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.35rem;padding:0.35rem 0.6rem;background:#eff6ff;border-radius:7px;border:1.5px solid #bfdbfe;">'
-      +'<span style="font-size:0.72rem;">📅</span>'
-      +'<span style="font-size:0.72rem;font-weight:700;color:#1d4ed8;">Scheduled: '+fmtDate(t.schedDate)+(t.schedTime?' at '+fmtTime(t.schedTime):'')+'</span>'
+    var schedInfo=t.schedDate?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;padding:0.3rem 0.55rem;background:#eff6ff;border-radius:6px;border:1.5px solid #bfdbfe;">'
+      +'<span style="font-size:0.7rem;">📅</span>'
+      +'<span style="font-size:0.7rem;font-weight:700;color:#1d4ed8;">'+fmtDate(t.schedDate)+(t.schedTime?' at '+fmtTime(t.schedTime):'')+'</span>'
       +'</div>':'';
-    var workerInfo=workers?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;">'
-      +'<span style="font-size:0.72rem;">👷</span>'
-      +'<span style="font-size:0.72rem;color:var(--gray600);">'+workers+'</span>'
+    var workerInfo=workers?'<div style="display:flex;align-items:center;gap:0.35rem;margin-top:0.25rem;">'
+      +'<span style="font-size:0.7rem;">👷</span>'
+      +'<span style="font-size:0.7rem;color:var(--gray600);">'+workers+'</span>'
       +'</div>':'';
-    return'<div class="project-item">'
+    return'<div class="project-item" style="cursor:pointer;" data-tid="'+t.id+'" data-ttype="'+(t._type||'client')+'" onclick="showClientTicketDetail(this.dataset.tid,this.dataset.ttype)">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
       +'<div><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div>'
       +'<div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>'
@@ -362,11 +363,38 @@ function renderClientTickets(){
       +'</div>'
       +schedInfo
       +workerInfo
-      +(t.issues?'<div style="font-size:0.75rem;color:var(--gray600);margin-top:0.35rem;white-space:pre-wrap;">'+esc(t.issues.slice(0,100))+(t.issues.length>100?'...':'')+'</div>':'')
-      +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.3rem;">'+fmtDate(t.createdAt)+'</div>'
+      +(t.issues?'<div style="font-size:0.72rem;color:var(--gray600);margin-top:0.3rem;white-space:pre-wrap;">'+esc(t.issues.slice(0,80))+(t.issues.length>80?'...':'')+'</div>':'')
+      +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.25rem;">'+fmtDate(t.createdAt)+'</div>'
       +'</div>';
   }).join('');
 }
+
+function showClientTicketDetail(tid,ttype){
+  var t=null;
+  if(ttype==='internal'){t=cpJobs.find(function(x){return x.id===tid;});}
+  else{t=cpFieldTickets.find(function(x){return x.id===tid;});}
+  if(!t)return;
+  var detail=document.getElementById('cp_ticketDetail');
+  if(!detail)return;
+  var workers=(t.assignees||[]).map(function(a){return'<span style="display:inline-flex;align-items:center;gap:0.25rem;background:#e8f1fb;color:var(--primary);border-radius:20px;padding:0.15rem 0.5rem;font-size:0.7rem;font-weight:700;">👷 '+esc(a.name)+'</span>';}).join('');
+  var media=(t.issueMedia||[]).filter(function(m){return m&&(m.url||m.link);}).map(function(m){
+    return'<a href="'+esc(m.url||m.link)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;text-decoration:none;padding:0.25rem 0.5rem;border:1.5px solid #b3d0f0;border-radius:6px;background:#e8f1fb;">📎 '+esc(m.label||m.name||'View')+'</a>';
+  }).join('');
+  detail.style.display='block';
+  detail.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">'
+    +'<div><div style="font-size:0.62rem;color:var(--gray400);font-weight:700;margin-bottom:0.2rem;">'+esc(t.ticketNumber||t.id.slice(0,8).toUpperCase())+'</div>'
+    +'<div style="font-size:0.95rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div>'
+    +'<div style="font-size:0.7rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>'
+    +'<button onclick="document.getElementById(\'cp_ticketDetail\').style.display=\'none\'" style="background:none;border:none;cursor:pointer;font-size:1rem;color:var(--gray400);">✕</button>'
+    +'</div>'
+    +(t.schedDate?'<div style="padding:0.4rem 0.65rem;background:#eff6ff;border-radius:7px;border:1.5px solid #bfdbfe;margin-bottom:0.5rem;font-size:0.75rem;font-weight:700;color:#1d4ed8;">📅 Scheduled: '+fmtDate(t.schedDate)+(t.schedTime?' at '+fmtTime(t.schedTime):'')+'</div>':'')
+    +(workers?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Workers</div><div style="display:flex;flex-wrap:wrap;gap:0.3rem;">'+workers+'</div></div>':'')
+    +(t.issues?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Field Issues</div><div style="font-size:0.8rem;color:var(--text);white-space:pre-wrap;">'+esc(t.issues)+'</div></div>':'')
+    +(t.notes?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Notes</div><div style="font-size:0.8rem;color:var(--text);">'+esc(t.notes)+'</div></div>':'')
+    +(media?'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Attachments</div><div style="display:flex;flex-wrap:wrap;gap:0.35rem;">'+media+'</div></div>':'');
+  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
 
 
 function renderClientPMS(){
@@ -585,21 +613,53 @@ function renderClientCalendar(){
   document.getElementById('cp_calLabel').textContent=new Date(cpCalYear,cpCalMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
   var grid=document.getElementById('cp_calGrid');
   var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var html=days.map(function(d){return'<div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-align:center;padding:0.3rem 0;text-transform:uppercase;">'+d+'</div>';}).join('');
+  var html=days.map(function(d){return'<div style="font-size:0.65rem;font-weight:800;color:var(--gray500);text-align:center;padding:0.4rem 0;text-transform:uppercase;">'+d+'</div>';}).join('');
   var firstDay=new Date(cpCalYear,cpCalMonth,1).getDay();
   var daysInMonth=new Date(cpCalYear,cpCalMonth+1,0).getDate();
   var today=new Date().toISOString().split('T')[0];
-  for(var i=0;i<firstDay;i++)html+='<div style="min-height:130px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
+  for(var i=0;i<firstDay;i++)html+='<div style="min-height:150px;background:var(--gray50);border-radius:6px;opacity:0.3;"></div>';
   for(var d=1;d<=daysInMonth;d++){
     var ds=cpCalYear+'-'+String(cpCalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var isToday=ds===today;
     var events='';
-    cpProjects.forEach(function(p){if(p.startDate&&ds>=p.startDate&&ds<=(p.endDate||p.startDate))events+='<div style="font-size:0.55rem;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📋 '+esc(p.name.slice(0,12))+'</div>';});
-    cpStores.forEach(function(s){if(s.schedDate===ds)events+='<div style="font-size:0.55rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:1px 4px;margin-bottom:1px;">🔧 PMS: '+esc(s.name.slice(0,10))+'</div>';});
-    html+='<div style="min-height:130px;border-radius:6px;padding:0.45rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';"><div style="font-size:0.7rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.2rem;">'+d+'</div>'+events+'</div>';
+    // Projects
+    cpProjects.forEach(function(p){
+      var pStart=p.startDate||'';
+      var pEnd=p.endDate||p.startDate||'';
+      if(p.schedulesByType){
+        var firstType=p.types&&p.types.length>0?p.types[0]:p.type;
+        var sched=p.schedulesByType[firstType];
+        if(sched&&sched.startDate){pStart=sched.startDate;pEnd=sched.endDate||sched.startDate;}
+      }
+      if(pStart&&ds>=pStart&&ds<=(pEnd||pStart)){
+        events+='<div style="font-size:0.58rem;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:2px 5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;">📋 '+esc(p.name.slice(0,14))+'</div>';
+      }
+    });
+    // Tickets (internal jobs with schedDate)
+    cpJobs.forEach(function(j){
+      if(j.schedDate===ds){
+        events+='<div style="font-size:0.58rem;background:#f1f5f9;color:#374151;border-radius:3px;padding:2px 5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;">🎫 '+esc((j.scope||'Ticket').slice(0,14))+'</div>';
+      }
+    });
+    // Field tickets with schedDate
+    cpFieldTickets.forEach(function(t){
+      if(t.schedDate===ds){
+        events+='<div style="font-size:0.58rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:2px 5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;">🎫 '+esc((t.scope||'Ticket').slice(0,14))+'</div>';
+      }
+    });
+    // PMS
+    cpStores.forEach(function(s){
+      if(s.schedDate===ds){
+        events+='<div style="font-size:0.58rem;background:#fff3ee;color:var(--orange);border-radius:3px;padding:2px 5px;margin-bottom:2px;font-weight:700;">🔧 PMS: '+esc(s.name.slice(0,10))+'</div>';
+      }
+    });
+    html+='<div style="min-height:150px;border-radius:6px;padding:0.45rem;border:1.5px solid '+(isToday?'#1a6bb5':'var(--gray200)')+';background:'+(isToday?'#eff6ff':'#fff')+';">'
+      +'<div style="font-size:0.75rem;font-weight:800;color:'+(isToday?'#1a6bb5':'var(--text)')+';margin-bottom:0.3rem;">'+d+'</div>'
+      +events+'</div>';
   }
   grid.innerHTML=html;
 }
+
 
 function cpPrevMonth(){cpCalMonth--;if(cpCalMonth<0){cpCalMonth=11;cpCalYear--;}renderClientCalendar();}
 function cpNextMonth(){cpCalMonth++;if(cpCalMonth>11){cpCalMonth=0;cpCalYear++;}renderClientCalendar();}
