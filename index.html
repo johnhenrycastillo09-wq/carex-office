@@ -3760,19 +3760,30 @@ function renderJobDetail(j){
   var pc={open:'var(--orange)','in-progress':'var(--warning)',resolved:'var(--success)',closed:'var(--gray500)'};
   var pb={critical:'#fee2e2',high:'#ffedd5',medium:'#fef9c3',low:'#dcfce7'};
   var pt={critical:'#dc2626',high:'#ea580c',medium:'#ca8a04',low:'#16a34a'};
+
+  // Build worker chips
   var workerChips=(j.assignees||[]).map(function(a){
-    return'<span style="display:inline-flex;align-items:center;gap:0.28rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.18rem 0.5rem;font-size:0.7rem;font-weight:700;">'
+    return '<span style="display:inline-flex;align-items:center;gap:0.28rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.18rem 0.5rem;font-size:0.7rem;font-weight:700;">'
       +'<span style="width:15px;height:15px;border-radius:50%;background:var(--primary);color:#fff;font-size:0.45rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
       +esc(a.name)+'</span>';
   }).join('');
-  var driveLinks=(j.driveLinks||[]).map(function(l){
-    return'<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border:1.5px solid var(--gray200);border-radius:7px;background:var(--gray50);margin-bottom:0.28rem;">'
-      +'<span style="font-size:0.75rem;">📎</span>'
-      +'<span style="flex:1;font-size:0.75rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(l.name||l.url)+'</span>'
+
+  // Build drive links
+  var driveLinksHtml=(j.driveLinks||[]).map(function(l){
+    return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;border:1.5px solid var(--gray200);border-radius:7px;background:var(--gray50);margin-bottom:0.25rem;">'
+      +'<span>📎</span><span style="flex:1;font-size:0.75rem;font-weight:700;">'+esc(l.name||l.url)+'</span>'
       +'<a href="'+esc(l.url)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;">Open</a>'
       +'</div>';
   }).join('');
+
+  // Worker options for dropdown
+  var assignedIds=(j.assignees||[]).map(function(a){return a.id;});
+  var workerOpts=workers.filter(function(w){return assignedIds.indexOf(w.id)===-1;}).map(function(w){
+    return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
+  }).join('');
+
   panel.innerHTML='<div style="padding:1rem;">'
+    // Header
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">'
     +'<div>'
     +'<div style="font-size:0.62rem;color:var(--gray500);font-weight:700;letter-spacing:0.06em;margin-bottom:0.25rem;">'+esc(j.ticketNumber||j.id.slice(0,8).toUpperCase())+' <span style="background:#f0fdf4;color:#15803d;padding:0.08rem 0.35rem;border-radius:4px;font-size:0.58rem;font-weight:800;">INTERNAL</span></div>'
@@ -3781,30 +3792,84 @@ function renderJobDetail(j){
     +'<span style="font-size:0.65rem;font-weight:800;padding:0.18rem 0.55rem;border-radius:5px;background:'+(pb[j.priority]||'#fef9c3')+';color:'+(pt[j.priority]||'#ca8a04')+';">'+esc(j.priority||'medium')+'</span>'
     +'<span style="font-size:0.65rem;font-weight:700;padding:0.18rem 0.55rem;border-radius:5px;background:#f1f5f9;color:'+(pc[j.progress]||'var(--gray600)')+';">'+(j.progress||'open').replace('-',' ')+'</span>'
     +'</div></div>'
-    +'<div style="display:flex;gap:0.3rem;">'
-    +'<button class="btn btn-secondary btn-xs" data-jid="'+j.id+'" onclick="openEditJobModal(this.dataset.jid)">Edit</button>'
-    +'<button class="btn btn-danger btn-xs" data-djid=\"'+j.id+'\" onclick=\"deleteJob(this.dataset.djid)\">Delete</button>'
-    +'</div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.85rem;">'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Location</div><div style="font-size:0.82rem;font-weight:700;">'+esc(j.location||'--')+'</div></div>'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Merchant</div><div style="font-size:0.82rem;font-weight:700;">'+esc(j.merchant||'--')+'</div></div>'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Scheduled</div><div style="font-size:0.82rem;font-weight:700;">'+fmtDate(j.schedDate)+(j.schedTime?' at '+fmtTime(j.schedTime):'')+'</div></div>'
-    +'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.18rem;">Created</div><div style="font-size:0.82rem;font-weight:700;">'+fmtDate(j.createdAt)+'</div></div>'
+    +'<button class="btn btn-danger btn-xs" data-djid="'+j.id+'" onclick="deleteJob(this.dataset.djid)">Delete</button>'
     +'</div>'
-    +(j.issues?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Field Issues</div><div style="font-size:0.82rem;color:var(--text);white-space:pre-wrap;">'+esc(j.issues)+'</div></div>':'')
-    +(j.notes?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Notes</div><div style="font-size:0.82rem;color:var(--text);white-space:pre-wrap;">'+esc(j.notes)+'</div></div>':'')
-    +((j.assignees||[]).length?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Assigned Workers</div><div style="display:flex;flex-wrap:wrap;gap:0.3rem;">'+workerChips+'</div></div>':'')
-    +(driveLinks?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Reference Files</div>'+driveLinks+'</div>':'')
-    +'<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;">'
-    +'<select onchange="updateJobStatus(\''+j.id+'\',this.value)" style="padding:0.35rem 0.6rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;">'
+
+    // INLINE EDIT FORM
+    +'<div style="background:var(--gray50);border:1.5px solid var(--gray200);border-radius:10px;padding:0.85rem;margin-bottom:0.75rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">✏️ Edit Ticket</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scope/Title</label><input id="je_scope" value="'+esc(j.scope||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Store/Merchant</label><input id="je_merchant" value="'+esc(j.merchant||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Location</label><input id="je_location" value="'+esc(j.location||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Priority</label>'
+    +'<select id="je_priority" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;">'
+    +'<option value="low"'+(j.priority==='low'?' selected':'')+'>Low</option>'
+    +'<option value="medium"'+(j.priority==='medium'?' selected':'')+'>Medium</option>'
+    +'<option value="high"'+(j.priority==='high'?' selected':'')+'>High</option>'
+    +'<option value="critical"'+(j.priority==='critical'?' selected':'')+'>Critical</option>'
+    +'</select></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Status</label>'
+    +'<select id="je_progress" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;">'
     +'<option value="open"'+(j.progress==='open'?' selected':'')+'>Open</option>'
     +'<option value="in-progress"'+(j.progress==='in-progress'?' selected':'')+'>In Progress</option>'
     +'<option value="resolved"'+(j.progress==='resolved'?' selected':'')+'>Resolved</option>'
     +'<option value="closed"'+(j.progress==='closed'?' selected':'')+'>Closed</option>'
+    +'</select></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scheduled Date</label><input id="je_schedDate" type="date" value="'+(j.schedDate||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Scheduled Time</label><input id="je_schedTime" type="time" value="'+(j.schedTime||'')+'" style="width:100%;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;"/></div>'
+    +'</div>'
+    // Workers
+    +'<div style="margin-bottom:0.5rem;">'
+    +'<label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.3rem;">Assigned Workers</label>'
+    +'<div id="je_workerChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;min-height:20px;">'+workerChips+'</div>'
+    +'<select id="je_workerSelect" onchange="addWorkerToJobInline(\''+j.id+'\')" style="font-size:0.78rem;padding:0.3rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-family:inherit;outline:none;background:#fff;">'
+    +'<option value="">+ Add worker</option>'+workerOpts
     +'</select>'
     +'</div>'
+    // Issues & Notes
+    +'<div style="margin-bottom:0.5rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Field Issues</label>'
+    +'<textarea id="je_issues" style="width:100%;min-height:55px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(j.issues||'')+'</textarea></div>'
+    +'<div style="margin-bottom:0.65rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.2rem;">Notes</label>'
+    +'<textarea id="je_notes" style="width:100%;min-height:45px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(j.notes||'')+'</textarea></div>'
+    +'<button class="btn btn-primary btn-sm" data-jid="'+j.id+'" onclick="saveJobInline(this.dataset.jid)">💾 Save Changes</button>'
+    +'</div>'
+    // Drive links
+    +(driveLinksHtml?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Reference Files</div>'+driveLinksHtml+'</div>':'')
     +'</div>';
 }
+
+function saveJobInline(id){
+  var j=jobs.find(function(x){return x.id===id;});if(!j)return;
+  j.scope=document.getElementById('je_scope').value.trim();
+  j.merchant=document.getElementById('je_merchant').value.trim();
+  j.location=document.getElementById('je_location').value.trim();
+  j.priority=document.getElementById('je_priority').value;
+  j.progress=document.getElementById('je_progress').value;
+  j.schedDate=document.getElementById('je_schedDate').value;
+  j.schedTime=document.getElementById('je_schedTime').value;
+  j.issues=document.getElementById('je_issues').value.trim();
+  j.notes=document.getElementById('je_notes').value.trim();
+  j.updatedAt=new Date().toISOString();
+  save('cesv2_jobs',jobs);
+  renderJobList();
+  renderDashboard();
+  renderJobDetail(j);
+  showToast('Ticket updated! ✅');
+}
+
+function addWorkerToJobInline(jid){
+  var sel=document.getElementById('je_workerSelect');
+  var wid=sel.value;if(!wid)return;
+  var j=jobs.find(function(x){return x.id===jid;});if(!j)return;
+  var worker=workers.find(function(w){return w.id===wid;});if(!worker)return;
+  if(!j.assignees)j.assignees=[];
+  if(j.assignees.find(function(a){return a.id===wid;})){sel.value='';return;}
+  j.assignees.push({id:worker.id,name:worker.name});
+  sel.value='';
+  renderJobDetail(j);
+}
+
 
 function updateJobStatus(id,status){
   var j=jobs.find(function(x){return x.id===id;});if(!j)return;
