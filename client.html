@@ -63,6 +63,7 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
   <button class="nav-btn" onclick="showClientPage('projects',this)">📋 Projects</button>
   <button class="nav-btn" onclick="showClientPage('tickets',this)">🎫 Tickets</button>
   <button class="nav-btn" onclick="showClientPage('pms',this)">🔧 PMS</button>
+  <button class="nav-btn" onclick="showClientPage('equipment',this)">🔩 Equipment</button>
   <button class="nav-btn" onclick="showClientPage('calendar',this)">📅 Calendar</button>
 </div>
 
@@ -137,6 +138,14 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
     </div>
   </div>
 
+  <!-- EQUIPMENT -->
+  <div class="page" id="cp-equipment">
+    <div class="card">
+      <div class="card-title">🔩 Tools & Equipment</div>
+      <div id="cp_equipmentList"><div class="empty-state"><div class="empty-icon">🔩</div><div class="empty-title">Loading...</div></div></div>
+    </div>
+  </div>
+
   <!-- CALENDAR -->
   <div class="page" id="cp-calendar">
     <div class="card">
@@ -158,7 +167,7 @@ const CP_FB_KEY='AIzaSyBkfHCMSBAMkFpMGGe5q8PBbMDHBFnBnKA';
 const CP_FT_BASE='https://firestore.googleapis.com/v1/projects/carex-office/databases/(default)/documents';
 
 var cpSession=null;
-var cpProjects=[];var cpJobs=[];var cpStores=[];var cpFieldTickets=[];
+var cpProjects=[];var cpJobs=[];var cpStores=[];var cpFieldTickets=[];var cpEquipment=[];
 var cpCalYear,cpCalMonth;
 
 // Auth check
@@ -181,6 +190,7 @@ function showClientPage(page,btn){
   document.getElementById('cp-'+page).classList.add('active');
   if(btn)btn.classList.add('active');
   if(page==='calendar')renderClientCalendar();
+  if(page==='equipment')renderClientEquipment();
 }
 
 function fromFBValue(v){
@@ -231,7 +241,14 @@ async function loadClientData(){
     if(r.ok){var doc=await r.json();var arr=fromFBValue(doc.fields&&doc.fields.data);if(Array.isArray(arr))cpStores=arr.filter(function(s){return isMyClient(s.name);});}
     // Load field tickets
     r=await fetch(CP_FT_BASE+'/tickets?pageSize=100&key='+CP_FB_KEY);
-    if(r.ok){var doc=await r.json();var docs=doc.documents||[];cpFieldTickets=docs.map(function(d){var f=d.fields||{};function gv(k){var v=f[k];if(!v)return'';if(v.stringValue!==undefined)return v.stringValue;return'';}return{id:d.name.split('/').pop(),ticketNumber:gv('ticketNumber'),scope:gv('scope'),merchant:gv('merchant'),location:gv('location'),progress:gv('progress'),priority:gv('priority'),issues:gv('issues'),notes:gv('notes'),createdAt:gv('createdAt'),submittedBy:gv('submittedBy')};}).filter(function(t){return isMyClient(t.merchant);});}
+    if(r.ok){var doc=await r.json();var docs=doc.documents||[];// Load equipment
+    var cpEquipment=[];
+    try{
+      var eqR=await fetch(CP_FB_BASE+'/ces_equipment/main?key='+CP_FB_KEY);
+      if(eqR.ok){var eqDoc=await eqR.json();var eqArr=fromFBValue(eqDoc.fields&&eqDoc.fields.data);if(Array.isArray(eqArr))cpEquipment=eqArr;}
+    }catch(e){}
+
+    cpFieldTickets=docs.map(function(d){var f=d.fields||{};function gv(k){var v=f[k];if(!v)return'';if(v.stringValue!==undefined)return v.stringValue;return'';}return{id:d.name.split('/').pop(),ticketNumber:gv('ticketNumber'),scope:gv('scope'),merchant:gv('merchant'),location:gv('location'),progress:gv('progress'),priority:gv('priority'),issues:gv('issues'),notes:gv('notes'),createdAt:gv('createdAt'),submittedBy:gv('submittedBy')};}).filter(function(t){return isMyClient(t.merchant);});}
   }catch(e){console.warn('Load error:',e);}
   renderClientDashboard();
   renderClientProjects();
@@ -274,8 +291,26 @@ function renderClientProjects(){
     var cs=(p.steps||[]).filter(function(s){return s.status==='completed';}).length;
     var ts=(p.steps||[]).length;
     var pct=ts>0?Math.round(cs/ts*100):0;
-    var workers=(p.assignees||[]).map(function(a){return a.name;}).join(', ');
-    var certs=(p.steps||[]).filter(function(s){return s.driveLink&&['ducttest','hydrotesting','handover','result'].some(function(id){return s.id.endsWith(id);});});
+    var workers=(p.assignees||[]).map(function(a){return esc(a.name);}).join(', ');
+    // Get scheduled date
+    var schedDate=p.startDate||'';
+    var schedTime=p.startTime||'';
+    if(p.schedulesByType){
+      var firstType=p.types&&p.types.length>0?p.types[0]:p.type;
+      var sched=p.schedulesByType[firstType];
+      if(sched&&sched.startDate){schedDate=sched.startDate;schedTime=sched.startTime||'';}
+    }
+    var schedInfo=schedDate?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.4rem;padding:0.35rem 0.6rem;background:#eff6ff;border-radius:7px;border:1.5px solid #bfdbfe;">'
+      +'<span style="font-size:0.72rem;">📅</span>'
+      +'<span style="font-size:0.72rem;font-weight:700;color:#1d4ed8;">Scheduled: '+fmtDate(schedDate)+(schedTime?' at '+fmtTime(schedTime):'')+'</span>'
+      +'</div>':'';
+    var workerInfo=workers?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;">'
+      +'<span style="font-size:0.72rem;">👷</span>'
+      +'<span style="font-size:0.72rem;color:var(--gray600);">'+workers+'</span>'
+      +'</div>':'';
+    // Certificates
+    var certs=(p.steps||[]).filter(function(s){return s.driveLink&&['ducttest','hydrotesting','handover','result','asbuilt'].some(function(id){return s.id.endsWith(id);});});
+    var certHtml=certs.length?'<div style="margin-top:0.4rem;">'+certs.map(function(s){return'<a href="'+esc(s.driveLink)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;margin-right:0.5rem;">📎 '+esc(s.title)+'</a>';}).join('')+'</div>':'';
     return'<div class="project-item">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem;">'
       +'<div><div style="font-size:0.88rem;font-weight:800;">'+esc(p.name)+'</div>'
@@ -283,12 +318,14 @@ function renderClientProjects(){
       +'<span class="badge badge-'+(p.status==='completed'?'done':p.status==='active'?'progress':'pending')+'">'+esc(p.status||'active')+'</span>'
       +'</div>'
       +'<div class="progress-wrap"><div class="progress-fill" style="width:'+pct+'%"></div></div>'
-      +'<div style="font-size:0.65rem;color:var(--gray500);margin-bottom:0.4rem;">'+pct+'% complete ('+cs+'/'+ts+' steps)</div>'
-      +(workers?'<div style="font-size:0.68rem;color:var(--gray600);">👷 '+esc(workers)+'</div>':'')
-      +(certs.length?'<div style="margin-top:0.4rem;">'+certs.map(function(s){return'<a href="'+esc(s.driveLink)+'" target="_blank" style="font-size:0.68rem;color:var(--primary);font-weight:700;text-decoration:none;margin-right:0.5rem;">📎 '+esc(s.title)+'</a>';}).join('')+'</div>':'')
+      +'<div style="font-size:0.65rem;color:var(--gray500);margin-bottom:0.3rem;">'+pct+'% complete ('+cs+'/'+ts+' steps)</div>'
+      +schedInfo
+      +workerInfo
+      +certHtml
       +'</div>';
   }).join('');
 }
+
 
 function renderClientTickets(){
   var el=document.getElementById('cp_ticketsList');
@@ -297,18 +334,29 @@ function renderClientTickets(){
   if(!allTickets.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🎫</div><div class="empty-title">No tickets yet</div></div>';return;}
   var pc={open:'var(--orange)','in-progress':'var(--warning)',resolved:'var(--success)',closed:'var(--gray500)'};
   el.innerHTML=allTickets.map(function(t){
+    var workers=(t.assignees||[]).map(function(a){return esc(a.name);}).join(', ');
+    var schedInfo=t.schedDate?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.35rem;padding:0.35rem 0.6rem;background:#eff6ff;border-radius:7px;border:1.5px solid #bfdbfe;">'
+      +'<span style="font-size:0.72rem;">📅</span>'
+      +'<span style="font-size:0.72rem;font-weight:700;color:#1d4ed8;">Scheduled: '+fmtDate(t.schedDate)+(t.schedTime?' at '+fmtTime(t.schedTime):'')+'</span>'
+      +'</div>':'';
+    var workerInfo=workers?'<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;">'
+      +'<span style="font-size:0.72rem;">👷</span>'
+      +'<span style="font-size:0.72rem;color:var(--gray600);">'+workers+'</span>'
+      +'</div>':'';
     return'<div class="project-item">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
       +'<div><div style="font-size:0.82rem;font-weight:800;">'+esc(t.scope||'Ticket')+'</div>'
       +'<div style="font-size:0.68rem;color:var(--gray500);">'+esc(t.location||t.merchant||'')+'</div></div>'
       +'<span style="font-size:0.6rem;font-weight:700;padding:0.16rem 0.48rem;border-radius:5px;background:#f1f5f9;color:'+(pc[t.progress]||'var(--gray600)')+';">'+(t.progress||'open').replace('-',' ')+'</span>'
       +'</div>'
+      +schedInfo
+      +workerInfo
       +(t.issues?'<div style="font-size:0.75rem;color:var(--gray600);margin-top:0.35rem;white-space:pre-wrap;">'+esc(t.issues.slice(0,100))+(t.issues.length>100?'...':'')+'</div>':'')
       +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.3rem;">'+fmtDate(t.createdAt)+'</div>'
-      +'<div style="margin-top:0.4rem;"><button class="btn btn-secondary btn-sm" data-tid="'+t.id+'" data-ttype="'+(t._type||'client')+'" onclick="openEditTicket(this.dataset.tid,this.dataset.ttype)">✏️ Edit</button></div>'
       +'</div>';
   }).join('');
 }
+
 
 function renderClientPMS(){
   var el=document.getElementById('cp_pmsList');
@@ -489,6 +537,38 @@ async function submitCleaningRequest(){
 // Calendar
 var cpCalYear=new Date().getFullYear();
 var cpCalMonth=new Date().getMonth();
+
+function renderClientEquipment(){
+  var el=document.getElementById('cp_equipmentList');if(!el)return;
+  var myEquip=(cpEquipment||[]).filter(function(e){
+    // Show equipment linked to client's projects
+    var myProjectIds=cpProjects.map(function(p){return p.id;});
+    return myProjectIds.indexOf(e.projectId)!==-1;
+  });
+  if(!myEquip.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">🔩</div><div class="empty-title">No equipment deployed</div></div>';
+    return;
+  }
+  var condColors={working:'#dcfce7',defective:'#fef9c3',notworking:'#fee2e2'};
+  var condText={working:'Working',defective:'Defective','not-working':'Not Working',na:'N/A'};
+  el.innerHTML=myEquip.map(function(e){
+    var proj=cpProjects.find(function(p){return p.id===e.projectId;});
+    return'<div class="project-item">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+      +'<div>'
+      +'<div style="font-size:0.85rem;font-weight:800;">'+esc(e.name||'Equipment')+'</div>'
+      +(e.brand||e.type?'<div style="font-size:0.68rem;color:var(--gray500);">'+(e.brand?esc(e.brand)+' ':'')+(e.type?'('+esc(e.type)+')':'')+'</div>':'')
+      +(e.serial?'<div style="font-size:0.65rem;color:var(--gray400);">S/N: '+esc(e.serial)+'</div>':'')
+      +'</div>'
+      +'<span style="font-size:0.65rem;font-weight:800;padding:0.15rem 0.5rem;border-radius:8px;background:'+(condColors[e.condition]||'#f1f5f9')+';color:var(--text);">'+(condText[e.condition]||'N/A')+'</span>'
+      +'</div>'
+      +(proj?'<div style="font-size:0.68rem;color:var(--primary);margin-top:0.3rem;font-weight:700;">📋 '+esc(proj.name)+'</div>':'')
+      +(e.description?'<div style="font-size:0.72rem;color:var(--gray600);margin-top:0.25rem;">'+esc(e.description)+'</div>':'')
+      +(e.conditionNotes?'<div style="font-size:0.68rem;color:var(--danger);margin-top:0.2rem;">⚠️ '+esc(e.conditionNotes)+'</div>':'')
+      +'<div style="font-size:0.62rem;color:var(--gray400);margin-top:0.3rem;">Deployed: '+fmtDate(e.deployDate)+(e.returnDate?' → Return: '+fmtDate(e.returnDate):'')+'</div>'
+      +'</div>';
+  }).join('');
+}
 
 function renderClientCalendar(){
   document.getElementById('cp_calLabel').textContent=new Date(cpCalYear,cpCalMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
