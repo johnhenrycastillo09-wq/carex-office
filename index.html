@@ -3453,8 +3453,8 @@ async function saveFtInline(id){
     var t2=fieldTickets.find(function(x){return x.id===id;});
     var currentAssignees=t2?t2.assignees||[]:[]; 
     var fields={scope:{stringValue:scope},merchant:{stringValue:merchant},location:{stringValue:location},priority:{stringValue:priority},progress:{stringValue:progress},schedDate:{stringValue:schedDate},schedTime:{stringValue:schedTime},issues:{stringValue:issues},notes:{stringValue:notes},assignees:{arrayValue:{values:currentAssignees.map(function(a){return{mapValue:{fields:{id:{stringValue:a.id},name:{stringValue:a.name}}}};})}}};
-    var mask='updateMask.fieldPaths=scope&updateMask.fieldPaths=merchant&updateMask.fieldPaths=location&updateMask.fieldPaths=priority&updateMask.fieldPaths=progress&updateMask.fieldPaths=schedDate&updateMask.fieldPaths=schedTime&updateMask.fieldPaths=issues&updateMask.fieldPaths=notes&updateMask.fieldPaths=assignees';
-    var r=await fetch(FS_BASE_FT+'/tickets/'+id+'?'+mask+'&key='+API_KEY_FT,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    // No mask = update all provided fields (simpler and more reliable)
+    var r=await fetch(FS_BASE_FT+'/tickets/'+id+'?key='+API_KEY_FT,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
     if(!r.ok){var errText=await r.text();throw new Error('HTTP '+r.status+': '+errText.slice(0,100));}
     // Update local fieldTickets array
     var t=fieldTickets.find(function(x){return x.id===id;});

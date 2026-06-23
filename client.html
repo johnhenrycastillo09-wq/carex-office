@@ -191,6 +191,7 @@ function showClientPage(page,btn){
   if(btn)btn.classList.add('active');
   if(page==='calendar')renderClientCalendar();
   if(page==='equipment')renderClientEquipment();
+  try{sessionStorage.setItem('cp_lastPage',page);}catch(e){}
 }
 
 function fromFBValue(v){
@@ -255,6 +256,16 @@ async function loadClientData(){
   renderClientTickets();
   renderClientPMS();
   checkClientNotifications();
+  // Restore last visited page
+  try{
+    var lastPage=sessionStorage.getItem('cp_lastPage');
+    if(lastPage&&lastPage!=='dashboard'){
+      var navBtns=document.querySelectorAll('.nav-btn');
+      var pages=['dashboard','projects','tickets','pms','equipment','calendar'];
+      var pageIdx=pages.indexOf(lastPage);
+      if(pageIdx>-1&&navBtns[pageIdx])showClientPage(lastPage,navBtns[pageIdx]);
+    }
+  }catch(e){}
 }
 
 function goToTicket(el){
