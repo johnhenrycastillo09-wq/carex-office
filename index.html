@@ -3856,8 +3856,58 @@ function renderJobDetail(j){
     +'<button class="btn btn-primary btn-sm" data-jid="'+j.id+'" onclick="saveJobInline(this.dataset.jid)">💾 Save Changes</button>'
     +'</div>'
     // Drive links
+    +'<div style=\"margin-bottom:0.75rem;\"><div style=\"font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;\">🔧 Tools & Equipment Used</div>'+'<div id=\"je_equipList_'+j.id+'\" style=\"margin-bottom:0.35rem;\">'+renderJobEquipList(j)+'</div>'+'<div style=\"display:flex;gap:0.35rem;flex-wrap:wrap;\">'+'<select id=\"je_equipSelect_'+j.id+'\" style=\"flex:1;min-width:150px;padding:0.35rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;\"><option value=\"\">+ Add from Stocks</option>'+stocks.map(function(s){return'<option value=\"'+s.id+'\">'+esc(s.name)+(s.size?' ('+esc(s.size)+')':'')+' ['+s.qty+' '+(s.unit||'pcs')+']</option>';}).join('')+'</select>'+'<input id=\"je_equipQty_'+j.id+'\" type=\"number\" min=\"1\" value=\"1\" placeholder=\"Qty\" style=\"width:60px;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;\"/>'+'<button class=\"btn btn-secondary btn-xs\" data-jid=\"'+j.id+'\" onclick=\"addEquipToJob(this.dataset.jid)\">+ Add</button>'+'</div></div>'
     +(driveLinksHtml?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Reference Files</div>'+driveLinksHtml+'</div>':'')
     +'</div>';
+}
+
+function renderJobEquipList(j){
+  var equip=j.equipment||[];
+  if(!equip.length)return'<div style="font-size:0.72rem;color:var(--gray400);">No tools/equipment added yet.</div>';
+  return equip.map(function(e,i){
+    return'<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;border:1.5px solid var(--gray200);border-radius:7px;background:var(--gray50);margin-bottom:0.25rem;">'
+      +'<span style="font-size:0.75rem;">🔧</span>'
+      +'<span style="flex:1;font-size:0.75rem;font-weight:700;">'+esc(e.name)+'</span>'
+      +'<span style="font-size:0.72rem;color:var(--gray500);">x'+e.qty+' '+esc(e.unit||'pcs')+'</span>'
+      +'<button data-jid="'+j.id+'" data-eidx="'+i+'" onclick="removeEquipFromJob(this.dataset.jid,parseInt(this.dataset.eidx))" style="background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:0.1rem 0.35rem;font-size:0.65rem;cursor:pointer;">x</button>'
+      +'</div>';
+  }).join('');
+}
+
+function addEquipToJob(jid){
+  var j=jobs.find(function(x){return x.id===jid;});if(!j)return;
+  var sel=document.getElementById('je_equipSelect_'+jid);
+  var qtyEl=document.getElementById('je_equipQty_'+jid);
+  var stockId=sel.value;if(!stockId){alert('Please select an item from stocks.');return;}
+  var qty=parseInt(qtyEl.value)||1;
+  var stock=stocks.find(function(s){return s.id===stockId;});if(!stock)return;
+  if(Number(stock.qty)<qty){alert('Not enough stock! Available: '+stock.qty+' '+esc(stock.unit||'pcs'));return;}
+  if(!j.equipment)j.equipment=[];
+  // Check if already added
+  var existing=j.equipment.find(function(e){return e.stockId===stockId;});
+  if(existing){existing.qty+=qty;}
+  else{j.equipment.push({stockId:stockId,name:stock.name,qty:qty,unit:stock.unit||'pcs',size:stock.size||''});}
+  // Deduct from stocks
+  stock.qty=Math.max(0,Number(stock.qty)-qty);
+  save('cesv2_stocks',stocks);
+  save('cesv2_jobs',jobs);
+  sel.value='';qtyEl.value='1';
+  renderJobDetail(j);
+  showToast('Added '+qty+'x '+stock.name+' — Stock deducted ✅');
+}
+
+function removeEquipFromJob(jid,idx){
+  var j=jobs.find(function(x){return x.id===jid;});if(!j||!j.equipment)return;
+  var item=j.equipment[idx];
+  if(item){
+    // Return to stock
+    var stock=stocks.find(function(s){return s.id===item.stockId;});
+    if(stock){stock.qty=Number(stock.qty)+item.qty;save('cesv2_stocks',stocks);}
+  }
+  j.equipment.splice(idx,1);
+  save('cesv2_jobs',jobs);
+  renderJobDetail(j);
+  showToast('Item removed — Stock returned ✅');
 }
 
 function saveJobInline(id){

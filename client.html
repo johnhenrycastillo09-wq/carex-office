@@ -73,7 +73,6 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
   <button class="nav-btn" onclick="showClientPage('projects',this)">📋 Projects</button>
   <button class="nav-btn" onclick="showClientPage('tickets',this)">🎫 Tickets</button>
   <button class="nav-btn" onclick="showClientPage('pms',this)">🔧 PMS</button>
-  <button class="nav-btn" onclick="showClientPage('equipment',this)">🔩 Equipment</button>
   <button class="nav-btn" onclick="showClientPage('calendar',this)">📅 Calendar</button>
 </div>
 
@@ -149,16 +148,10 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
     </div>
   </div>
 
-  <!-- EQUIPMENT -->
-  <div class="page" id="cp-equipment">
-    <div class="card">
-      <div class="card-title">🔩 Tools & Equipment</div>
-      <div id="cp_equipmentList"><div class="empty-state"><div class="empty-icon">🔩</div><div class="empty-title">Loading...</div></div></div>
-    </div>
-  </div>
+  
 
   <!-- CALENDAR -->
-  <div class="page" id="cp-calendar">
+  <div class="page" id="cp-calendar" style="max-width:none;">
     <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:0.85rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
         <div style="font-size:0.88rem;font-weight:800;color:#1e293b;" id="cp_calLabel"></div>
@@ -688,7 +681,7 @@ function renderClientCalendar(){
         if(sched&&sched.startDate){pStart=sched.startDate;pEnd=sched.endDate||sched.startDate;}
       }
       if(pStart&&ds>=pStart&&ds<=(pEnd||pStart)){
-        events+='<div class="cp-cal-event" style="background:#dbeafe;color:#1d4ed8;">📋 '+esc(p.name.slice(0,14))+'</div>';
+        events+='<div class="cp-cal-event" style="background:#dbeafe;color:#1d4ed8;cursor:pointer;" title="'+esc(p.name)+(p.startDate?' | '+fmtDate(p.startDate):'')+(p.assignees&&p.assignees.length?' | 👷 '+p.assignees.map(function(a){return a.name;}).join(', '):'')+'" >📋 '+esc(p.name.slice(0,14))+'</div>';
       }
     });
     // Jobs (internal tickets with schedDate)
@@ -700,7 +693,7 @@ function renderClientCalendar(){
     // Field tickets with schedDate
     cpFieldTickets.forEach(function(t){
       if(t.schedDate===ds){
-        events+='<div class="cp-cal-event" style="background:#fff3ee;color:#f97316;">🎫 '+esc((t.scope||'Ticket').slice(0,14))+'</div>';
+        events+='<div class="cp-cal-event" style="background:#fff3ee;color:#f97316;cursor:pointer;" title="'+esc(t.scope||'Ticket')+(t.schedTime?' at '+fmtTime(t.schedTime):'')+(t.assignees&&t.assignees.length?' | 👷 '+t.assignees.map(function(a){return a.name;}).join(', '):'')+'" >🎫 '+esc((t.scope||'Ticket').slice(0,14))+'</div>';
       }
     });
     // PMS
