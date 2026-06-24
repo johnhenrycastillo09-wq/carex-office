@@ -578,7 +578,19 @@ async function submitClientTicket(){
       }
       var r=await fetch(CP_FT_BASE+'/tickets?key='+CP_FB_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
       if(!r.ok)throw new Error('Failed to create');
-      alert('Ticket submitted! Ticket #: '+ticketNum);
+      // Auto-create Site Delivery record in Firebase
+      try{
+        var delId=uid();
+        var delData={id:{stringValue:delId},title:{stringValue:'Delivery - '+scope},jobId:{stringValue:ticketNum},merchant:{stringValue:cpSession.clientName||cpSession.username},location:{stringValue:location},status:{stringValue:'pending'},expectedDate:{stringValue:''},notes:{stringValue:'Auto-created for ticket: '+ticketNum},createdAt:{timestampValue:now.toISOString()}};
+        // Load existing deliveries, add new one, save back
+        var delR=await fetch(CP_FB_BASE+'/ces_deliveries/main?key='+CP_FB_KEY);
+        var existingDels=[];
+        if(delR.ok){var delDoc=await delR.json();var delArr=fromFBValue(delDoc.fields&&delDoc.fields.data);if(Array.isArray(delArr))existingDels=delArr;}
+        existingDels.push({id:delId,title:'Delivery - '+scope,jobId:ticketNum,merchant:cpSession.clientName||cpSession.username,location:location,status:'pending',expectedDate:'',items:[],notes:'Auto-created for ticket: '+ticketNum,createdAt:now.toISOString()});
+        var delFields={data:toFBValue(existingDels),updatedAt:{timestampValue:now.toISOString()}};
+        await fetch(CP_FB_BASE+'/ces_deliveries/main?key='+CP_FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:delFields})});
+      }catch(delErr){console.warn('Delivery auto-create failed:',delErr);}
+      alert('Ticket submitted! Ticket #: '+ticketNum+'\nSite Delivery record created automatically ✅');
     }
     // Reset form
     document.getElementById('ct_scope').value='';
