@@ -250,7 +250,13 @@ async function loadClientData(){
       if(eqR.ok){var eqDoc=await eqR.json();var eqArr=fromFBValue(eqDoc.fields&&eqDoc.fields.data);if(Array.isArray(eqArr))cpEquipment=eqArr;}
     }catch(e){}
 
-    cpFieldTickets=docs.map(function(d){var f=d.fields||{};function gv(k){var v=f[k];if(!v)return'';if(v.stringValue!==undefined)return v.stringValue;return'';}return{id:d.name.split('/').pop(),ticketNumber:gv('ticketNumber'),scope:gv('scope'),merchant:gv('merchant'),location:gv('location'),progress:gv('progress'),priority:gv('priority'),issues:gv('issues'),notes:gv('notes'),createdAt:gv('createdAt'),submittedBy:gv('submittedBy')};}).filter(function(t){return isMyClient(t.merchant);});}
+    cpFieldTickets=docs.map(function(d){
+  var f=d.fields||{};
+  function gv(k){var v=f[k];if(!v)return'';if(v.stringValue!==undefined)return v.stringValue;if(v.integerValue!==undefined)return String(v.integerValue);return'';}
+  function ga(k){var v=f[k];if(!v||!v.arrayValue)return[];return(v.arrayValue.values||[]).map(function(x){if(x.mapValue&&x.mapValue.fields){var mf=x.mapValue.fields;return{id:mf.id?mf.id.stringValue:'',name:mf.name?mf.name.stringValue:'',url:mf.url?mf.url.stringValue:'',label:mf.label?mf.label.stringValue:'',link:mf.link?mf.link.stringValue:''};} return x.stringValue||'';}).filter(function(x){return x;});}
+  return{id:d.name.split('/').pop(),ticketNumber:gv('ticketNumber'),scope:gv('scope'),merchant:gv('merchant'),location:gv('location'),progress:gv('progress'),priority:gv('priority'),issues:gv('issues'),notes:gv('notes'),schedDate:gv('schedDate'),schedTime:gv('schedTime'),createdAt:gv('createdAt'),submittedBy:gv('submittedBy'),assignees:ga('assignees'),issueMedia:ga('issueMedia')};
+}).filter(function(t){return isMyClient(t.merchant);});
+}
   }catch(e){console.warn('Load error:',e);}
   renderClientDashboard();
   renderClientProjects();
@@ -376,10 +382,28 @@ function showClientTicketDetail(tid,ttype){
   if(!t)return;
   var detail=document.getElementById('cp_ticketDetail');
   if(!detail)return;
-  var workers=(t.assignees||[]).map(function(a){return'<span style="display:inline-flex;align-items:center;gap:0.25rem;background:#e8f1fb;color:var(--primary);border-radius:20px;padding:0.15rem 0.5rem;font-size:0.7rem;font-weight:700;">👷 '+esc(a.name)+'</span>';}).join('');
+  var workers=(t.assignees||[]).map(function(a){
+    return'<span style="display:inline-flex;align-items:center;gap:0.25rem;background:#e8f1fb;color:var(--primary);border-radius:20px;padding:0.15rem 0.5rem;font-size:0.7rem;font-weight:700;">👷 '+esc(a.name)+'</span>';
+  }).join('');
   var media=(t.issueMedia||[]).filter(function(m){return m&&(m.url||m.link);}).map(function(m){
     return'<a href="'+esc(m.url||m.link)+'" target="_blank" style="font-size:0.7rem;color:var(--primary);font-weight:700;text-decoration:none;padding:0.25rem 0.5rem;border:1.5px solid #b3d0f0;border-radius:6px;background:#e8f1fb;">📎 '+esc(m.label||m.name||'View')+'</a>';
   }).join('');
+
+  // Client can edit their own tickets (field tickets only)
+  var canEdit=ttype==='client';
+  var editForm=canEdit?'<div style="border-top:1.5px solid var(--gray200);margin-top:0.75rem;padding-top:0.75rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">✏️ Edit Your Ticket</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.4rem;">'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.15rem;">Scope/Title</label><input id="cte_scope" value="'+esc(t.scope||'')+'" style="width:100%;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;"/></div>'
+    +'<div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.15rem;">Location</label><input id="cte_location" value="'+esc(t.location||'')+'" style="width:100%;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;"/></div>'
+    +'</div>'
+    +'<div style="margin-bottom:0.4rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.15rem;">Details / Issues</label>'
+    +'<textarea id="cte_issues" style="width:100%;min-height:55px;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;resize:vertical;">'+esc(t.issues||'')+'</textarea></div>'
+    +'<div style="margin-bottom:0.5rem;"><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;display:block;margin-bottom:0.15rem;">Additional Notes</label>'
+    +'<textarea id="cte_notes" style="width:100%;min-height:40px;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;resize:vertical;">'+esc(t.notes||'')+'</textarea></div>'
+    +'<button class="btn btn-primary btn-sm" data-ctid="'+t.id+'" onclick="saveClientTicketEdit(this.dataset.ctid)">💾 Save Changes</button>'
+    +'</div>':'';
+
   detail.style.display='block';
   detail.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">'
     +'<div><div style="font-size:0.62rem;color:var(--gray400);font-weight:700;margin-bottom:0.2rem;">'+esc(t.ticketNumber||t.id.slice(0,8).toUpperCase())+'</div>'
@@ -391,9 +415,31 @@ function showClientTicketDetail(tid,ttype){
     +(workers?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Workers</div><div style="display:flex;flex-wrap:wrap;gap:0.3rem;">'+workers+'</div></div>':'')
     +(t.issues?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Field Issues</div><div style="font-size:0.8rem;color:var(--text);white-space:pre-wrap;">'+esc(t.issues)+'</div></div>':'')
     +(t.notes?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Notes</div><div style="font-size:0.8rem;color:var(--text);">'+esc(t.notes)+'</div></div>':'')
-    +(media?'<div><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Attachments</div><div style="display:flex;flex-wrap:wrap;gap:0.35rem;">'+media+'</div></div>':'');
+    +(media?'<div style="margin-bottom:0.5rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.3rem;">Attachments</div><div style="display:flex;flex-wrap:wrap;gap:0.35rem;">'+media+'</div></div>':'')
+    +editForm;
   detail.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+
+async function saveClientTicketEdit(id){
+  var scope=document.getElementById('cte_scope').value.trim();
+  var location=document.getElementById('cte_location').value.trim();
+  var issues=document.getElementById('cte_issues').value.trim();
+  var notes=document.getElementById('cte_notes').value.trim();
+  try{
+    var fields={scope:{stringValue:scope},location:{stringValue:location},issues:{stringValue:issues},notes:{stringValue:notes}};
+    var r=await fetch(CP_FT_BASE+'/tickets/'+id+'?key='+CP_FB_KEY,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    // Update local array
+    var t=cpFieldTickets.find(function(x){return x.id===id;});
+    if(t){t.scope=scope;t.location=location;t.issues=issues;t.notes=notes;}
+    renderClientTickets();
+    document.getElementById('cp_ticketDetail').style.display='none';
+    alert('Ticket updated successfully! ✅');
+  }catch(e){alert('Failed to save: '+e.message);}
+}
+
+function fmtTime(t){if(!t)return'';try{var parts=t.split(':');if(parts.length<2)return t;var d=new Date();d.setHours(+parts[0],+parts[1]);return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}catch(e){return t;}}
+
 
 
 
