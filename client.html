@@ -681,7 +681,7 @@ function renderClientCalendar(){
         if(sched&&sched.startDate){pStart=sched.startDate;pEnd=sched.endDate||sched.startDate;}
       }
       if(pStart&&ds>=pStart&&ds<=(pEnd||pStart)){
-        events+='<div class="cp-cal-event" style="background:#dbeafe;color:#1d4ed8;cursor:pointer;" title="'+esc(p.name)+(p.startDate?' | '+fmtDate(p.startDate):'')+(p.assignees&&p.assignees.length?' | 👷 '+p.assignees.map(function(a){return a.name;}).join(', '):'')+'" >📋 '+esc(p.name.slice(0,14))+'</div>';
+        var pWorkers=p.assignees&&p.assignees.length?'👷 '+p.assignees.map(function(a){return a.name;}).join(', '):'No workers assigned';var pTitle=esc(p.name)+'\n📅 '+fmtDate(p.startDate||'')+(p.startTime?' at '+fmtTime(p.startTime):'')+'\n'+pWorkers;events+='<div class="cp-cal-event" style="background:#dbeafe;color:#1d4ed8;cursor:pointer;" title="'+pTitle+'" >📋 '+esc(p.name.slice(0,14))+'</div>';
       }
     });
     // Jobs (internal tickets with schedDate)
@@ -693,7 +693,7 @@ function renderClientCalendar(){
     // Field tickets with schedDate
     cpFieldTickets.forEach(function(t){
       if(t.schedDate===ds){
-        events+='<div class="cp-cal-event" style="background:#fff3ee;color:#f97316;cursor:pointer;" title="'+esc(t.scope||'Ticket')+(t.schedTime?' at '+fmtTime(t.schedTime):'')+(t.assignees&&t.assignees.length?' | 👷 '+t.assignees.map(function(a){return a.name;}).join(', '):'')+'" >🎫 '+esc((t.scope||'Ticket').slice(0,14))+'</div>';
+        var tWorkers=t.assignees&&t.assignees.length?'👷 '+t.assignees.map(function(a){return a.name;}).join(', '):'No workers assigned';var tTitle=esc(t.scope||'Ticket')+'\n📅 '+fmtDate(t.schedDate||'')+(t.schedTime?' at '+fmtTime(t.schedTime):'')+'\n'+tWorkers;events+='<div class="cp-cal-event" style="background:#fff3ee;color:#f97316;cursor:pointer;" title="'+tTitle+'" >🎫 '+esc((t.scope||'Ticket').slice(0,14))+'</div>';
       }
     });
     // PMS
