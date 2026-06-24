@@ -3782,14 +3782,12 @@ function renderJobDetail(j){
   var pb={critical:'#fee2e2',high:'#ffedd5',medium:'#fef9c3',low:'#dcfce7'};
   var pt={critical:'#dc2626',high:'#ea580c',medium:'#ca8a04',low:'#16a34a'};
 
-  // Build worker chips
   var workerChips=(j.assignees||[]).map(function(a){
     return '<span style="display:inline-flex;align-items:center;gap:0.28rem;background:var(--primary-light);color:var(--primary);border:1.5px solid #b3d0f0;border-radius:20px;padding:0.18rem 0.5rem;font-size:0.7rem;font-weight:700;">'
       +'<span style="width:15px;height:15px;border-radius:50%;background:var(--primary);color:#fff;font-size:0.45rem;font-weight:800;display:flex;align-items:center;justify-content:center;">'+initials(a.name)+'</span>'
       +esc(a.name)+'</span>';
   }).join('');
 
-  // Build drive links
   var driveLinksHtml=(j.driveLinks||[]).map(function(l){
     return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;border:1.5px solid var(--gray200);border-radius:7px;background:var(--gray50);margin-bottom:0.25rem;">'
       +'<span>📎</span><span style="flex:1;font-size:0.75rem;font-weight:700;">'+esc(l.name||l.url)+'</span>'
@@ -3797,11 +3795,10 @@ function renderJobDetail(j){
       +'</div>';
   }).join('');
 
-  // Worker options for dropdown
-  var assignedIds=(j.assignees||[]).map(function(a){return a.id;});
-  var workerOpts=workers.filter(function(w){return assignedIds.indexOf(w.id)===-1;}).map(function(w){
-    return '<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';
-  }).join('');
+  // Equipment section
+  var equipHtml=renderJobEquipList(j);
+  var workerOpts=workers.filter(function(w){var aids=(j.assignees||[]).map(function(a){return a.id;});return aids.indexOf(w.id)===-1;}).map(function(w){return'<option value="'+w.id+'">'+esc(w.name)+' ('+(w.type==='regular'?'Regular':'Sub-con')+')</option>';}).join('');
+  var stockOpts=stocks.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+(s.size?' ('+esc(s.size)+')':'')+' ['+s.qty+' '+(s.unit||'pcs')+']</option>';}).join('');
 
   panel.innerHTML='<div style="padding:1rem;">'
     // Header
@@ -3855,11 +3852,25 @@ function renderJobDetail(j){
     +'<textarea id="je_notes" style="width:100%;min-height:45px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(j.notes||'')+'</textarea></div>'
     +'<button class="btn btn-primary btn-sm" data-jid="'+j.id+'" onclick="saveJobInline(this.dataset.jid)">💾 Save Changes</button>'
     +'</div>'
+
+    // TOOLS & EQUIPMENT SECTION
+    +'<div style="background:#fefce8;border:1.5px solid #fde68a;border-radius:10px;padding:0.85rem;margin-bottom:0.75rem;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">🔧 Tools & Equipment Used</div>'
+    +'<div id="je_equipList_'+j.id+'" style="margin-bottom:0.5rem;">'+equipHtml+'</div>'
+    +'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">'
+    +'<select id="je_equipSelect_'+j.id+'" style="flex:1;min-width:150px;padding:0.35rem 0.55rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;background:#fff;">'
+    +'<option value="">+ Add from Stocks</option>'+stockOpts
+    +'</select>'
+    +'<input id="je_equipQty_'+j.id+'" type="number" min="1" value="1" placeholder="Qty" style="width:60px;padding:0.35rem 0.5rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;"/>'
+    +'<button class="btn btn-secondary btn-xs" data-jid="'+j.id+'" onclick="addEquipToJob(this.dataset.jid)" style="background:#fef9c3;border-color:#fde68a;color:#92400e;">+ Add</button>'
+    +'</div>'
+    +'</div>'
+
     // Drive links
-    +'<div style=\"margin-bottom:0.75rem;\"><div style=\"font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.4rem;\">🔧 Tools & Equipment Used</div>'+'<div id=\"je_equipList_'+j.id+'\" style=\"margin-bottom:0.35rem;\">'+renderJobEquipList(j)+'</div>'+'<div style=\"display:flex;gap:0.35rem;flex-wrap:wrap;\">'+'<select id=\"je_equipSelect_'+j.id+'\" style=\"flex:1;min-width:150px;padding:0.35rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;\"><option value=\"\">+ Add from Stocks</option>'+stocks.map(function(s){return'<option value=\"'+s.id+'\">'+esc(s.name)+(s.size?' ('+esc(s.size)+')':'')+' ['+s.qty+' '+(s.unit||'pcs')+']</option>';}).join('')+'</select>'+'<input id=\"je_equipQty_'+j.id+'\" type=\"number\" min=\"1\" value=\"1\" placeholder=\"Qty\" style=\"width:60px;padding:0.35rem 0.5rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;\"/>'+'<button class=\"btn btn-secondary btn-xs\" data-jid=\"'+j.id+'\" onclick=\"addEquipToJob(this.dataset.jid)\">+ Add</button>'+'</div></div>'
     +(driveLinksHtml?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Reference Files</div>'+driveLinksHtml+'</div>':'')
     +'</div>';
 }
+
 
 function renderJobEquipList(j){
   var equip=j.equipment||[];
