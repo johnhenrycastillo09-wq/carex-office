@@ -1041,7 +1041,7 @@ function updateInMemory(key,arr){
 }
 
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-function fmtDate(d){if(!d||d==='undefined'||d==='null')return'--';try{const r=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return r.includes('NaN')?'--':r;}catch(e){return'--';}}
+function fmtDate(d){if(!d||d==='undefined'||d==='null'||d==='Invalid Date')return'--';try{const r=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});return r.includes('NaN')?'--':r;}catch(e){return'--';}}
 function fmtDateTime(d){if(!d)return'--';try{return new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return'--';}}
 function fmtTime(t){if(!t||t==='NaN:NaN'||t==='undefined')return'';try{const parts=t.split(':');if(parts.length<2||isNaN(+parts[0])||isNaN(+parts[1]))return'';const d=new Date();d.setHours(+parts[0],+parts[1]);const r=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});return r.includes('NaN')?'':r;}catch(e){return''}}
 function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
@@ -2746,8 +2746,8 @@ function renderPmsTable(){
   var prevLoc='';
   tbody.innerHTML=list.map(function(s){
     const ps=getPmsStatus(s);const ys=getYstrainerStatus(s);
-    const nd=s.lastCleaned?addMonths(s.lastCleaned,3):'--';
-    const ny=s.lastYstrainer?addMonths(s.lastYstrainer,12):'--';
+    const nd=s.lastCleaned&&s.lastCleaned!=='Invalid Date'?addMonths(s.lastCleaned,3):'--';
+    const ny=s.lastYstrainer&&s.lastYstrainer!=='Invalid Date'?addMonths(s.lastYstrainer,12):'--';
     var loc=(s.location||'').toLowerCase().trim();
     var locSeparator='';
     if(loc&&loc!==prevLoc&&prevLoc!==''){
@@ -4558,6 +4558,24 @@ function populateDeliveryStockSelect(){
   }).join('');
 }
 
+function highlightPmsStore(storeId){
+  var rows=document.querySelectorAll('#pmsTableBody tr');
+  rows.forEach(function(row){row.style.background='';});
+  var targetRow=null;
+  rows.forEach(function(row){
+    if(row.innerHTML.indexOf(storeId)!==-1)targetRow=row;
+  });
+  if(targetRow){
+    targetRow.scrollIntoView({behavior:'smooth',block:'center'});
+    var count=0;
+    var flash=setInterval(function(){
+      targetRow.style.background=count%2===0?'#fde68a':'#fef9c3';
+      count++;
+      if(count>6){clearInterval(flash);targetRow.style.background='#fef9c3';setTimeout(function(){targetRow.style.background='';},2000);}
+    },300);
+  }
+}
+
 function checkScheduleReminders(){
   var notifEl=document.getElementById('scheduleNotif');
   if(!notifEl)return;
@@ -4622,7 +4640,7 @@ function checkScheduleReminders(){
     stores.forEach(function(s){
       if(s.schedDate===tomorrowStr){
         reminders.push(makeItem('🔧','PMS: '+esc(s.name),s.schedDate,s.schedTime,
-          "showPage('pms',document.querySelector('[onclick*=pms]'));",
+          "showPage('pms',document.querySelector('[onclick*=pms]'));setTimeout(function(){highlightPmsStore('"+s.id+"');},400);",
           '#f97316'));
       }
     });
