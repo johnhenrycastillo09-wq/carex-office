@@ -253,7 +253,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <main class="main-content">
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
+<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div><div class="page-actions"><button class="btn btn-secondary btn-xs" onclick="syncAllToFirebase()" style="background:#f97316;color:#fff;border-color:#f97316;">☁️ Sync All to Cloud</button></div></div>
 <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
 <div id="scheduleNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1d4ed8;font-weight:600;"></div>
 <div class="stats-grid">
@@ -370,7 +370,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="card">
 <div class="card-header"><div class="card-title">Store List</div><input id="pmsSearch" oninput="renderPmsTable()" placeholder="Search stores..." style="padding:0.32rem 0.65rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;outline:none;font-family:inherit;width:190px;" type="text"/></div>
 <div id="pmsSameLocNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.75rem;"></div>
-<div style="overflow-x:auto;"><table class="pms-table"><thead><tr><th>Store Name</th><th>Location</th><th>FCU Units</th><th>FCU Type</th><th>Last Cleaned</th><th>Next Due</th><th>Scheduled</th><th>Y-Strainer</th><th>Safety Officer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pmsTableBody"></tbody></table></div>
+<div style="overflow-x:auto;"><table class="pms-table"><thead><tr><th>Store Name</th><th>Location</th><th>FCU Units</th><th>FCU Type</th><th>Last Cleaned</th><th>Next Due</th><th>Scheduled</th><th>Y-Strainer Due</th><th>Last Y-Cleaned</th><th>Safety Officer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="pmsTableBody"></tbody></table></div>
 </div>
 </div>
 <!-- STOCKS -->
@@ -429,6 +429,52 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Enter values to calculate</div></div>
 </div>
 </div>
+</div>
+</div>
+
+<!-- ADDITIONAL CALCULATORS -->
+<div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+<!-- TAPPING FROM MALL / BRANCH DUCT -->
+<div class="card">
+<div class="card-header"><div class="card-title">🏢 Tapping from Mall AHU</div></div>
+<div class="form-grid" style="padding:0.5rem;">
+<div class="fg"><label>Mall Supply CFM (from AHU)</label><input id="tap_mallCFM" type="number" placeholder="e.g. 5000" min="0" oninput="calcTapping()"/></div>
+<div class="fg"><label>Your Required CFM</label><input id="tap_reqCFM" type="number" placeholder="e.g. 800" min="0" oninput="calcTapping()"/></div>
+<div class="fg"><label>Tap Velocity (FPM)</label><input id="tap_vel" type="number" placeholder="e.g. 600" value="600" min="100" oninput="calcTapping()"/></div>
+<div class="fg"><label>Branch Velocity (FPM)</label><input id="tap_branchVel" type="number" placeholder="e.g. 500" value="500" min="100" oninput="calcTapping()"/></div>
+<div class="fg"><label>Duct Shape</label>
+<select id="tap_shape" onchange="calcTapping()">
+<option value="rect">Rectangular</option>
+<option value="round">Round</option>
+</select></div>
+<div class="fg"><label>Aspect Ratio</label>
+<select id="tap_aspect" onchange="calcTapping()">
+<option value="2">Max 2:1</option>
+<option value="3" selected>Max 3:1</option>
+<option value="4">Max 4:1</option>
+</select></div>
+</div>
+<div id="tap_results" style="padding:0.75rem;"><div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">Enter values to calculate</div></div></div>
+</div>
+
+<!-- AREA & AIRFLOW ESTIMATOR -->
+<div class="card">
+<div class="card-header"><div class="card-title">📐 Area & Airflow Estimator</div></div>
+<div class="form-grid" style="padding:0.5rem;">
+<div class="fg full"><label>Calculation Type</label>
+<select id="est_type" onchange="calcEstimator()">
+<option value="cfm_from_area">CFM from Room Area</option>
+<option value="area_from_cfm">Room Area from CFM</option>
+<option value="tr_from_area">TR from Room Area</option>
+<option value="grille_size">Grille/Diffuser Size</option>
+<option value="static_pressure">Static Pressure Drop</option>
+</select></div>
+<div class="fg"><label id="est_input1_label">Room Area (sqm)</label><input id="est_input1" type="number" placeholder="e.g. 50" min="0" oninput="calcEstimator()"/></div>
+<div class="fg"><label id="est_input2_label">Ceiling Height (m)</label><input id="est_input2" type="number" placeholder="e.g. 3" value="3" min="1" oninput="calcEstimator()"/></div>
+<div class="fg"><label id="est_input3_label">ACH (Air Changes/Hour)</label><input id="est_input3" type="number" placeholder="e.g. 6" value="6" min="1" oninput="calcEstimator()"/></div>
+<div class="fg"><label id="est_input4_label">CFM per sqm</label><input id="est_input4" type="number" placeholder="e.g. 1.5" value="1.5" step="0.1" min="0.1" oninput="calcEstimator()"/></div>
+</div>
+<div id="est_results" style="padding:0.75rem;"><div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Select type and enter values</div></div></div>
 </div>
 </div>
 
@@ -635,6 +681,8 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="fg"><label>Type</label><select id="w_type"><option value="regular">Regular Worker</option><option value="subcon">Sub-contractor</option></select></div>
 <div class="fg"><label>Contact Number</label><input id="w_contact" placeholder="09XX XXX XXXX" type="text"/></div>
 <div class="fg"><label>Specialty</label><input id="w_specialty" placeholder="e.g. Ducting, Sprinkler, FCU" type="text"/></div>
+<div class="fg"><label>Availability Status</label><select id="w_availability" onchange="toggleUnavailReason(this.value)"><option value="available">✅ Available</option><option value="on-leave">🏖 On Leave</option><option value="on-hold">⏸ On Hold</option><option value="unavailable">❌ Unavailable</option></select></div>
+<div class="fg full" id="w_unavailReasonDiv" style="display:none;"><label>Reason / Notes</label><input id="w_unavailReason" placeholder="e.g. Medical leave until July 5" type="text"/></div>
 </div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addWorkerModal')">Cancel</button><button class="btn btn-primary" onclick="saveWorker()">Save Worker</button></div>
@@ -1278,7 +1326,7 @@ function renderCalendar(){
 
     ev+=dj.map(j=>{
       const workers=(j.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
-      return'<div class="cal-event job" '
+      return'<div class="cal-event job" style="cursor:pointer;" data-jid="'+j.id+'" onclick="calOpenJob(this.dataset.jid)" '
         +'data-title="'+esc(j.scope||'Job')+'" '
         +'data-client="'+esc(j.merchant||'')+'" '
         +'data-location="'+esc(j.location||'')+'" '
@@ -1293,7 +1341,7 @@ function renderCalendar(){
     }).join('');
 
     ev+=dpms.map(s=>{
-      return'<div class="cal-event pms" '
+      return'<div class="cal-event pms" style="cursor:pointer;" data-sid="'+s.id+'" onclick="openEditStoreModal(this.dataset.sid)" '
         +'data-title="PMS: '+esc(s.name)+'" '
         +'data-client="'+esc(s.name)+'" '
         +'data-location="'+esc(s.location||'')+'" '
@@ -1317,6 +1365,12 @@ function renderCalendar(){
   updateCalClientFilters();
 }
 
+
+function calOpenJob(jid){
+  var j=jobs.find(function(x){return x.id===jid;});if(!j)return;
+  showPage('jobs',document.querySelector('[onclick*=jobs]'));
+  setTimeout(function(){selectJob(jid);},300);
+}
 
 function showCalTooltipEl(event,el){
   var t=document.getElementById('calTooltip');
@@ -1540,13 +1594,18 @@ function renderWorkers(filter='all'){
     const asgn=projects.filter(p=>(p.assignees||[]).some(a=>a.id===w.id)&&p.status!=='completed');
     const ajobs=jobs.filter(j=>(j.assignees||[]).some(a=>a.id===w.id)&&j.progress!=='closed'&&j.progress!=='resolved');
     const all=[...asgn,...ajobs];
-    return`<div class="worker-card"><div class="worker-avatar">${initials(w.name)}</div><div class="worker-name">${esc(w.name)}</div><div class="worker-role">${esc(w.role||'--')}</div><span class="worker-type ${w.type}">${w.type==='regular'?'Regular':'Sub-con'}</span>${w.contact?`<div style="font-size:0.67rem;color:var(--gray500);margin-top:0.3rem;">${esc(w.contact)}</div>`:''}<div style="margin-top:0.55rem;padding-top:0.55rem;border-top:1px solid var(--gray100);">${all.length?all.slice(0,2).map(x=>`<div style="font-size:0.63rem;color:var(--text);margin-bottom:0.18rem;">${esc((x.name||x.scope||'').slice(0,22))}</div>`).join(''):'<div style="font-size:0.63rem;color:var(--success);">Available</div>'}</div><div style="display:flex;gap:0.3rem;margin-top:0.55rem;"><button class="btn btn-secondary btn-xs" onclick="openEditWorkerModal('${w.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteWorker('${w.id}')">Delete</button></div></div>`;
+    return`<div class="worker-card"><div class="worker-avatar">${initials(w.name)}</div><div class="worker-name">${esc(w.name)}</div><div class="worker-role">${esc(w.role||'--')}</div><span class="worker-type ${w.type}">${w.type==='regular'?'Regular':'Sub-con'}</span><span style="font-size:0.6rem;font-weight:800;padding:0.1rem 0.4rem;border-radius:10px;background:${!w.availability||w.availability==='available'?'#dcfce7':w.availability==='on-leave'?'#fef9c3':w.availability==='on-hold'?'#ffedd5':'#fee2e2'};color:var(--text);margin-left:0.3rem;">${!w.availability||w.availability==='available'?'Available':w.availability==='on-leave'?'On Leave':w.availability==='on-hold'?'On Hold':'Unavailable'}</span>${w.contact?`<div style="font-size:0.67rem;color:var(--gray500);margin-top:0.3rem;">${esc(w.contact)}</div>`:''}<div style="margin-top:0.55rem;padding-top:0.55rem;border-top:1px solid var(--gray100);">${all.length?all.slice(0,2).map(x=>`<div style="font-size:0.63rem;color:var(--text);margin-bottom:0.18rem;">${esc((x.name||x.scope||'').slice(0,22))}</div>`).join(''):'<div style="font-size:0.63rem;color:var(--success);">Available</div>'}</div><div style="display:flex;gap:0.3rem;margin-top:0.55rem;"><button class="btn btn-secondary btn-xs" onclick="openEditWorkerModal('${w.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteWorker('${w.id}')">Delete</button></div></div>`;
   }).join('');
 }
 function filterWorkers(f,el){document.querySelectorAll('#page-workers .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderWorkers(f);}
 function openAddWorkerModal(){editingWorkerId=null;['w_name','w_role','w_contact','w_specialty'].forEach(i=>document.getElementById(i).value='');document.getElementById('w_type').value='regular';document.getElementById('workerModalTitle').textContent='Add Worker';openModal('addWorkerModal');}
-function openEditWorkerModal(id){const w=workers.find(x=>x.id===id);if(!w)return;editingWorkerId=id;document.getElementById('w_name').value=w.name||'';document.getElementById('w_role').value=w.role||'';document.getElementById('w_type').value=w.type||'regular';document.getElementById('w_contact').value=w.contact||'';document.getElementById('w_specialty').value=w.specialty||'';document.getElementById('workerModalTitle').textContent='Edit Worker';openModal('addWorkerModal');}
-function saveWorker(){const name=document.getElementById('w_name').value.trim();if(!name){alert('Please enter a name.');return;}const data={name,role:document.getElementById('w_role').value.trim(),type:document.getElementById('w_type').value,contact:document.getElementById('w_contact').value.trim(),specialty:document.getElementById('w_specialty').value.trim()};if(editingWorkerId){Object.assign(workers.find(w=>w.id===editingWorkerId),data);showToast('Worker updated!');}else{workers.push({id:uid(),...data});showToast('Worker added!');}save('cesv2_workers',workers);closeModal('addWorkerModal');renderWorkers();renderDashboard();}
+function openEditWorkerModal(id){const w=workers.find(x=>x.id===id);if(!w)return;editingWorkerId=id;document.getElementById('w_name').value=w.name||'';document.getElementById('w_role').value=w.role||'';document.getElementById('w_type').value=w.type||'regular';document.getElementById('w_contact').value=w.contact||'';document.getElementById('w_specialty').value=w.specialty||'';if(document.getElementById('w_availability'))document.getElementById('w_availability').value=w.availability||'available';if(document.getElementById('w_unavailReason'))document.getElementById('w_unavailReason').value=w.unavailReason||'';toggleUnavailReason(w.availability||'available');document.getElementById('workerModalTitle').textContent='Edit Worker';openModal('addWorkerModal');}
+function toggleUnavailReason(val){
+  var div=document.getElementById('w_unavailReasonDiv');
+  if(div)div.style.display=(val!=='available')?'block':'none';
+}
+
+function saveWorker(){const name=document.getElementById('w_name').value.trim();if(!name){alert('Please enter a name.');return;}const data={name,role:document.getElementById('w_role').value.trim(),type:document.getElementById('w_type').value,contact:document.getElementById('w_contact').value.trim(),specialty:document.getElementById('w_specialty').value.trim(),availability:document.getElementById('w_availability')?document.getElementById('w_availability').value:'available',unavailReason:document.getElementById('w_unavailReason')?document.getElementById('w_unavailReason').value.trim():''};if(editingWorkerId){Object.assign(workers.find(w=>w.id===editingWorkerId),data);showToast('Worker updated!');}else{workers.push({id:uid(),...data});showToast('Worker added!');}save('cesv2_workers',workers);closeModal('addWorkerModal');renderWorkers();renderDashboard();}
 function deleteWorker(id){if(!confirm('Remove this worker?'))return;workers=workers.filter(w=>w.id!==id);save('cesv2_workers',workers);renderWorkers();renderDashboard();showToast('Worker removed.');}
 
 function projectItemHtml(p){
@@ -2675,7 +2734,7 @@ function renderPmsTable(){
       locSeparator='<tr><td colspan="11" style="height:4px;background:var(--gray100);padding:0;"></td></tr>';
     }
     prevLoc=loc;
-    return locSeparator+`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td>${s.schedDate?fmtDate(s.schedDate)+(s.schedTime?' at '+fmtTime(s.schedTime):''):'<span style="color:var(--gray400);font-size:0.75rem;">Not set</span>'}</td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span>${s.ystrainerNeed==='yes'?'<span style="margin-left:4px;font-size:0.6rem;background:#fee2e2;color:#dc2626;padding:0.1rem 0.35rem;border-radius:4px;font-weight:800;">NEEDS CLEANING</span>':''}</td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
+    return locSeparator+`<tr ondblclick="openEditStoreModal('${s.id}')" title="Double-click to edit" style="cursor:pointer;"><td><div style="font-weight:800;">${esc(s.name)}</div>${s.notes?`<div style="font-size:0.68rem;color:var(--danger);">${esc(s.notes.slice(0,40))}</div>`:''}</td><td>${esc(s.location||'--')}</td><td style="text-align:center;font-weight:800;">${s.fcuCount||'--'}</td><td><div style="font-size:0.75rem;">${FT[s.fcuType]||'--'}</div><div style="font-size:0.68rem;color:var(--gray500);">${FC[s.fcuConfig]||''}</div></td><td>${fmtDate(s.lastCleaned)}</td><td><span style="font-weight:700;color:${ps==='overdue'?'var(--danger)':ps==='due'?'var(--warning)':'var(--success)'};">${fmtDate(nd)}</span></td><td>${s.schedDate?fmtDate(s.schedDate)+(s.schedTime?' at '+fmtTime(s.schedTime):''):'<span style="color:var(--gray400);font-size:0.75rem;">Not set</span>'}</td><td><span style="font-size:0.75rem;font-weight:700;color:${ys==='overdue'?'var(--danger)':ys==='due'?'var(--warning)':'var(--success)'};">${fmtDate(ny)}</span></td><td><span style=\"font-size:0.75rem;font-weight:700;\">${s.lastYstrainer?fmtDate(s.lastYstrainer):'<span style=\"color:var(--gray400)\">Never</span>'}</span>${s.ystrainerNeed==='yes'?'<span style="margin-left:4px;font-size:0.6rem;background:#fee2e2;color:#dc2626;padding:0.1rem 0.35rem;border-radius:4px;font-weight:800;">NEEDS CLEANING</span>':''}</td><td style="text-align:center;">${s.safetyOfficer==='yes'?'<span style="color:var(--danger);font-weight:800;">Yes</span>':'No'}</td><td><span class="badge badge-${ps==='overdue'?'overdue':ps==='due'?'progress':'done'}">${ps==='overdue'?'Overdue':ps==='due'?'Due Soon':'Up to Date'}</span></td><td><div style="display:flex;gap:0.3rem;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="markPmsCleaned('${s.id}')">Cleaned</button><button class="btn btn-secondary btn-xs" onclick="openEditStoreModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteStore('${s.id}')">Delete</button></div></td></tr>`;
   }).join('');
   updatePmsStats();
 }
@@ -4263,6 +4322,182 @@ async function initAdminAccount(){
     await saveUsers();
     console.log('Admin account initialized');
   }
+}
+
+async function syncAllToFirebase(){
+  var btn=document.querySelector('[onclick="syncAllToFirebase()"]');
+  if(btn){btn.textContent='☁️ Syncing...';btn.disabled=true;}
+  setSyncStatus('Syncing all data...','rgba(255,200,100,0.8)');
+  var collections={
+    'cesv2_projects':projects,'cesv2_workers':workers,'cesv2_stores':stores,
+    'cesv2_stocks':stocks,'cesv2_orders':orders,'cesv2_jobs':jobs,
+    'cesv2_clients':clients,
+    'cesv2_billing':typeof billing!=='undefined'?billing:[],
+    'cesv2_serviceReports':typeof serviceReports!=='undefined'?serviceReports:[],
+    'cesv2_ptws':typeof ptws!=='undefined'?ptws:[],
+    'cesv2_deliveries':typeof deliveries!=='undefined'?deliveries:[],
+    'cesv2_equipment':typeof equipment!=='undefined'?equipment:[],
+    'cesv2_toolboxTalks':typeof toolboxTalks!=='undefined'?toolboxTalks:[],
+    'cesv2_grilles':typeof grilles!=='undefined'?grilles:[]
+  };
+  var success=0;var failed=0;
+  for(var key in collections){
+    try{await syncToFirebase(key,collections[key]);success++;}
+    catch(e){failed++;console.warn('Failed:',key,e);}
+  }
+  if(btn){btn.textContent=failed>0?'⚠️ Partial':'✅ Synced!';setTimeout(function(){btn.textContent='☁️ Sync All to Cloud';btn.disabled=false;},3000);}
+  setSyncStatus(failed>0?'⚠ '+failed+' failed':'✓ All synced!','rgba(100,255,150,0.7)');
+  setTimeout(function(){setSyncStatus('','');},3000);
+  showToast(failed>0?'Synced '+success+' ('+failed+' failed)':'All data synced to cloud! ✅');
+}
+
+// ══ TAPPING FROM MALL CALCULATOR ══
+function calcTapping(){
+  var mallCFM=parseFloat(document.getElementById('tap_mallCFM').value)||0;
+  var reqCFM=parseFloat(document.getElementById('tap_reqCFM').value)||0;
+  var tapVel=parseFloat(document.getElementById('tap_vel').value)||600;
+  var branchVel=parseFloat(document.getElementById('tap_branchVel').value)||500;
+  var shape=document.getElementById('tap_shape').value;
+  var maxAR=parseInt(document.getElementById('tap_aspect').value)||3;
+  var el=document.getElementById('tap_results');
+  if(!reqCFM){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">Enter values to calculate</div></div>';return;}
+
+  function sqftToSqmm(sqft){return sqft*92903;}
+  function getRectDims(areaSqft,maxAR){
+    var areaSqmm=sqftToSqmm(areaSqft);
+    for(var ar=1;ar<=maxAR;ar++){
+      var h=Math.sqrt(areaSqmm/ar);var w=h*ar;
+      h=Math.ceil(h/50)*50;w=Math.ceil(w/50)*50;
+      if(w/h<=maxAR)return{w:w,h:h,ar:(w/h).toFixed(1)};
+    }
+    var h=Math.ceil(Math.sqrt(areaSqmm/maxAR)/50)*50;
+    var w=Math.ceil((areaSqmm/h)/50)*50;
+    return{w:w,h:h,ar:(w/h).toFixed(1)};
+  }
+  function getRoundDiam(areaSqft){
+    var areaSqmm=sqftToSqmm(areaSqft);
+    return Math.ceil(Math.sqrt(areaSqmm*4/Math.PI)/25)*25;
+  }
+
+  var tapArea=reqCFM/tapVel;
+  var branchArea=reqCFM/branchVel;
+  var pct=mallCFM>0?Math.round(reqCFM/mallCFM*100):0;
+
+  var html='<div style="margin-bottom:0.75rem;padding:0.6rem;background:#eff6ff;border-radius:8px;border:1.5px solid #bfdbfe;">'
+    +'<div style="font-size:0.65rem;font-weight:800;color:var(--gray500);text-transform:uppercase;margin-bottom:0.35rem;">Summary</div>'
+    +'<div style="font-size:0.78rem;font-weight:700;">Your CFM: '+Math.round(reqCFM)+' / Mall CFM: '+Math.round(mallCFM)+(mallCFM>0?' ('+pct+'% of mall supply)':'')+'</div>'
+    +'</div>';
+
+  if(shape==='rect'){
+    var tap=getRectDims(tapArea,maxAR);
+    var branch=getRectDims(branchArea,maxAR);
+    html+='<div style="margin-bottom:0.5rem;padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;">'
+      +'<div style="font-size:0.68rem;font-weight:800;color:var(--primary);margin-bottom:0.3rem;">🔵 Tap Size (at Mall Duct)</div>'
+      +'<div style="font-size:0.88rem;font-weight:800;">'+tap.w+' × '+tap.h+' mm</div>'
+      +'<div style="font-size:0.65rem;color:var(--gray500);">AR: '+tap.ar+':1 | Vel: '+Math.round(tapVel)+' FPM</div>'
+      +'</div>'
+      +'<div style="padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;">'
+      +'<div style="font-size:0.68rem;font-weight:800;color:#15803d;margin-bottom:0.3rem;">🟢 Branch Duct Size</div>'
+      +'<div style="font-size:0.88rem;font-weight:800;">'+branch.w+' × '+branch.h+' mm</div>'
+      +'<div style="font-size:0.65rem;color:var(--gray500);">AR: '+branch.ar+':1 | Vel: '+Math.round(branchVel)+' FPM</div>'
+      +'</div>';
+  } else {
+    var tapD=getRoundDiam(tapArea);
+    var branchD=getRoundDiam(branchArea);
+    html+='<div style="margin-bottom:0.5rem;padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;">'
+      +'<div style="font-size:0.68rem;font-weight:800;color:var(--primary);margin-bottom:0.3rem;">🔵 Tap Size (Round)</div>'
+      +'<div style="font-size:0.88rem;font-weight:800;">Ø '+tapD+' mm</div>'
+      +'</div>'
+      +'<div style="padding:0.6rem;border:1.5px solid var(--gray200);border-radius:8px;">'
+      +'<div style="font-size:0.68rem;font-weight:800;color:#15803d;margin-bottom:0.3rem;">🟢 Branch Duct (Round)</div>'
+      +'<div style="font-size:0.88rem;font-weight:800;">Ø '+branchD+' mm</div>'
+      +'</div>';
+  }
+  el.innerHTML=html;
+}
+
+// ══ AREA & AIRFLOW ESTIMATOR ══
+function calcEstimator(){
+  var type=document.getElementById('est_type').value;
+  var v1=parseFloat(document.getElementById('est_input1').value)||0;
+  var v2=parseFloat(document.getElementById('est_input2').value)||3;
+  var v3=parseFloat(document.getElementById('est_input3').value)||6;
+  var v4=parseFloat(document.getElementById('est_input4').value)||1.5;
+  var el=document.getElementById('est_results');
+
+  // Update labels based on type
+  var labels={
+    cfm_from_area:['Room Area (sqm)','Ceiling Height (m)','ACH (Air Changes/Hour)','CFM per sqm (override)'],
+    area_from_cfm:['Required CFM','Ceiling Height (m)','ACH (Air Changes/Hour)','CFM per sqm'],
+    tr_from_area:['Room Area (sqm)','Ceiling Height (m)','W/sqm (heat load)','Safety Factor'],
+    grille_size:['CFM per grille','Face Velocity (FPM)','Aspect Ratio',''],
+    static_pressure:['Duct Length (m)','CFM','Duct Width (mm)','Duct Height (mm)']
+  };
+  var lbs=labels[type]||['Input 1','Input 2','Input 3','Input 4'];
+  document.getElementById('est_input1_label').textContent=lbs[0];
+  document.getElementById('est_input2_label').textContent=lbs[1];
+  document.getElementById('est_input3_label').textContent=lbs[2];
+  document.getElementById('est_input4_label').textContent=lbs[3];
+
+  if(!v1){el.innerHTML='<div class="empty-state"><div class="empty-icon">📐</div><div class="empty-title">Enter values to calculate</div></div>';return;}
+
+  var html='';
+  if(type==='cfm_from_area'){
+    var vol=v1*v2; // cubic meters
+    var volCFT=vol*35.315; // cubic feet
+    var cfmACH=volCFT*v3/60;
+    var cfmPerSqm=v1*v4;
+    var cfmTR=v1*0.4; // rough estimate: 400 CFM per TR, ~1 TR per 25sqm
+    html='<div style="display:grid;gap:0.5rem;">'
+      +'<div style="padding:0.6rem;background:#dcfce7;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#15803d;margin-bottom:0.2rem;">Method 1: ACH Method</div><div style="font-size:1rem;font-weight:900;">'+Math.round(cfmACH)+' CFM</div><div style="font-size:0.65rem;color:var(--gray500);">'+v3+' ACH × '+vol.toFixed(1)+'m³ room volume</div></div>'
+      +'<div style="padding:0.6rem;background:#dbeafe;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#1d4ed8;margin-bottom:0.2rem;">Method 2: CFM/sqm</div><div style="font-size:1rem;font-weight:900;">'+Math.round(cfmPerSqm)+' CFM</div><div style="font-size:0.65rem;color:var(--gray500);">'+v4+' CFM/sqm × '+v1+'sqm</div></div>'
+      +'<div style="padding:0.6rem;background:#fef9c3;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#92400e;margin-bottom:0.2rem;">Estimated TR Required</div><div style="font-size:1rem;font-weight:900;">'+(v1/25).toFixed(1)+' – '+(v1/20).toFixed(1)+' TR</div><div style="font-size:0.65rem;color:var(--gray500);">Based on 20-25 sqm per TR</div></div>'
+      +'</div>';
+  } else if(type==='area_from_cfm'){
+    var areaACH=v1/(v2*v3/60*35.315);
+    var areaPerSqm=v1/v4;
+    html='<div style="display:grid;gap:0.5rem;">'
+      +'<div style="padding:0.6rem;background:#dcfce7;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#15803d;margin-bottom:0.2rem;">Area (ACH Method)</div><div style="font-size:1rem;font-weight:900;">'+areaACH.toFixed(1)+' sqm</div></div>'
+      +'<div style="padding:0.6rem;background:#dbeafe;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#1d4ed8;margin-bottom:0.2rem;">Area (CFM/sqm Method)</div><div style="font-size:1rem;font-weight:900;">'+areaPerSqm.toFixed(1)+' sqm</div></div>'
+      +'</div>';
+  } else if(type==='tr_from_area'){
+    var wPerSqm=v2||150; // default 150 W/sqm
+    var sf=v3||1.2;
+    var totalW=v1*wPerSqm*sf;
+    var tr=totalW/3517;
+    html='<div style="display:grid;gap:0.5rem;">'
+      +'<div style="padding:0.6rem;background:#fef9c3;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#92400e;margin-bottom:0.2rem;">Estimated TR Required</div><div style="font-size:1.2rem;font-weight:900;">'+tr.toFixed(2)+' TR</div><div style="font-size:0.65rem;color:var(--gray500);">'+v1+'sqm × '+wPerSqm+'W/sqm × '+sf+' SF = '+Math.round(totalW)+'W</div></div>'
+      +'<div style="padding:0.6rem;background:#dbeafe;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#1d4ed8;margin-bottom:0.2rem;">Recommended CFM</div><div style="font-size:1rem;font-weight:900;">'+Math.round(tr*400)+' CFM</div></div>'
+      +'</div>';
+  } else if(type==='grille_size'){
+    var cfmPerGrille=v1;
+    var faceVel=v2||500;
+    var ar=v3||1.5;
+    var areaSqft=cfmPerGrille/faceVel;
+    var areaSqmm=areaSqft*92903;
+    var h=Math.sqrt(areaSqmm/ar);
+    var w=h*ar;
+    h=Math.ceil(h/25)*25;w=Math.ceil(w/25)*25;
+    html='<div style="padding:0.6rem;background:#dcfce7;border-radius:8px;">'
+      +'<div style="font-size:0.65rem;font-weight:800;color:#15803d;margin-bottom:0.2rem;">Grille/Diffuser Size</div>'
+      +'<div style="font-size:1.2rem;font-weight:900;">'+w+' × '+h+' mm</div>'
+      +'<div style="font-size:0.65rem;color:var(--gray500);">Face velocity: '+faceVel+' FPM | CFM: '+cfmPerGrille+'</div>'
+      +'</div>';
+  } else if(type==='static_pressure'){
+    var length=v1;var cfm=v2;var width=v3||300;var height=v4||200;
+    var areaSqft=(width*height)/(1000*1000)*10.764;
+    var vel=cfm/areaSqft;
+    var dh=2*(width*height)/(width+height); // hydraulic diameter in mm
+    var dhFt=dh/304.8;
+    var spPer100ft=0.109*(Math.pow(vel/1000,1.82)/Math.pow(dhFt,1.22));
+    var lengthFt=length*3.281;
+    var totalSP=spPer100ft*lengthFt/100;
+    html='<div style="display:grid;gap:0.5rem;">'
+      +'<div style="padding:0.6rem;background:#fef9c3;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#92400e;margin-bottom:0.2rem;">Static Pressure Drop</div><div style="font-size:1.2rem;font-weight:900;">'+totalSP.toFixed(3)+' in.wg</div><div style="font-size:0.65rem;color:var(--gray500);">'+(totalSP*249.09).toFixed(1)+' Pa | '+length+'m duct</div></div>'
+      +'<div style="padding:0.6rem;background:#dbeafe;border-radius:8px;"><div style="font-size:0.65rem;font-weight:800;color:#1d4ed8;margin-bottom:0.2rem;">Duct Velocity</div><div style="font-size:1rem;font-weight:900;">'+Math.round(vel)+' FPM</div></div>'
+      +'</div>';
+  }
+  el.innerHTML=html;
 }
 
 function checkScheduleReminders(){
