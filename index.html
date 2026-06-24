@@ -538,6 +538,21 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="page-header"><div><div class="page-title">Site Delivery</div><div class="page-subtitle">Track materials and equipment delivered to each project site</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewDeliveryModal()">+ New Delivery</button></div></div>
 <div class="tab-bar"><button class="tab-btn active" onclick="filterDelivery('all',this)">All</button><button class="tab-btn" onclick="filterDelivery('pending',this)">Pending</button><button class="tab-btn" onclick="filterDelivery('partial',this)">Partial</button><button class="tab-btn" onclick="filterDelivery('complete',this)">Complete</button></div>
 <div class="project-list" id="deliveryList"></div>
+<div style="margin-top:1rem;">
+<div class="card-header" style="margin-bottom:0.5rem;"><div class="card-title">🔧 Materials & Tools Used</div><div style="font-size:0.72rem;color:var(--gray500);">Add materials/tools from Stocks — automatically deducted from inventory</div></div>
+<div id="deliveryEquipSection" style="background:#fefce8;border:1.5px solid #fde68a;border-radius:10px;padding:0.85rem;">
+<div id="deliveryEquipList" style="margin-bottom:0.5rem;"><div style="font-size:0.72rem;color:var(--gray400);">No materials added yet. Select a delivery record first, then add materials.</div></div>
+<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+<select id="deliv_stockSelect" style="flex:1;min-width:150px;padding:0.35rem 0.55rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;background:#fff;">
+<option value="">+ Select from Stocks</option>
+</select>
+<input id="deliv_qty" type="number" min="1" value="1" placeholder="Qty" style="width:60px;padding:0.35rem 0.5rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;"/>
+<button class="btn btn-secondary btn-xs" onclick="addDeliveryMaterial()" style="background:#fef9c3;border-color:#fde68a;color:#92400e;">+ Add</button>
+</div>
+<div style="font-size:0.65rem;color:var(--gray500);">💡 Adding a material deducts it from your Stocks inventory automatically.</div>
+</div>
+</div>
+
 </div>
 <!-- EQUIPMENT PAGE -->
 <div class="page" id="page-equipment">
@@ -1105,7 +1120,7 @@ function showPage(pageId,navEl){
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
   if(pageId==='ptw'){if(typeof populatePtwSelects==='function')populatePtwSelects();if(typeof renderPtw==='function')renderPtw();if(typeof updatePtwBadge==='function')updatePtwBadge();}
-  if(pageId==='delivery'){if(typeof populateDeliverySelects==='function')populateDeliverySelects();if(typeof renderDelivery==='function')renderDelivery();}
+  if(pageId==='delivery'){if(typeof populateDeliverySelects==='function')populateDeliverySelects();if(typeof renderDelivery==='function')renderDelivery();if(typeof populateDeliveryStockSelect==='function')populateDeliveryStockSelect();}
   if(pageId==='equipment'){if(typeof populateEquipmentSelects==='function')populateEquipmentSelects();if(typeof renderEquipment==='function')renderEquipment();}
   if(pageId==='grilles'){if(typeof populateGrilleSelects==='function')populateGrilleSelects();if(typeof renderGrilles==='function')renderGrilles();}
   if(pageId==='toolboxtalk'){if(typeof populateToolboxSelects==='function')populateToolboxSelects();if(typeof renderToolbox==='function')renderToolbox();}
@@ -3911,20 +3926,6 @@ function renderJobDetail(j){
     +'<textarea id="je_notes" style="width:100%;min-height:45px;padding:0.38rem 0.55rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.78rem;font-family:inherit;outline:none;resize:vertical;">'+esc(j.notes||'')+'</textarea></div>'
     +'<button class="btn btn-primary btn-sm" data-jid="'+j.id+'" onclick="saveJobInline(this.dataset.jid)">💾 Save Changes</button>'
     +'</div>'
-
-    // TOOLS & EQUIPMENT SECTION
-    +'<div style="background:#fefce8;border:1.5px solid #fde68a;border-radius:10px;padding:0.85rem;margin-bottom:0.75rem;">'
-    +'<div style="font-size:0.65rem;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;">🔧 Tools & Equipment Used</div>'
-    +'<div id="je_equipList_'+j.id+'" style="margin-bottom:0.5rem;">'+equipHtml+'</div>'
-    +'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">'
-    +'<select id="je_equipSelect_'+j.id+'" style="flex:1;min-width:150px;padding:0.35rem 0.55rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;background:#fff;">'
-    +'<option value="">+ Add from Stocks</option>'+stockOpts
-    +'</select>'
-    +'<input id="je_equipQty_'+j.id+'" type="number" min="1" value="1" placeholder="Qty" style="width:60px;padding:0.35rem 0.5rem;border:1.5px solid #fde68a;border-radius:7px;font-size:0.75rem;font-family:inherit;outline:none;"/>'
-    +'<button class="btn btn-secondary btn-xs" data-jid="'+j.id+'" onclick="addEquipToJob(this.dataset.jid)" style="background:#fef9c3;border-color:#fde68a;color:#92400e;">+ Add</button>'
-    +'</div>'
-    +'</div>'
-
     // Drive links
     +(driveLinksHtml?'<div style="margin-bottom:0.75rem;"><div style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.3rem;">Reference Files</div>'+driveLinksHtml+'</div>':'')
     +'</div>';
@@ -4498,6 +4499,58 @@ function calcEstimator(){
       +'</div>';
   }
   el.innerHTML=html;
+}
+
+function addDeliveryMaterial(){
+  var sel=document.getElementById('deliv_stockSelect');
+  var qtyEl=document.getElementById('deliv_qty');
+  var stockId=sel.value;if(!stockId){alert('Please select an item from stocks.');return;}
+  var qty=parseInt(qtyEl.value)||1;
+  var stock=stocks.find(function(s){return s.id===stockId;});if(!stock)return;
+  if(Number(stock.qty)<qty){alert('Not enough stock! Available: '+stock.qty+' '+(stock.unit||'pcs'));return;}
+  // Deduct from stocks
+  stock.qty=Math.max(0,Number(stock.qty)-qty);
+  save('cesv2_stocks',stocks);
+  // Add to delivery materials log
+  if(!window.deliveryMaterials)window.deliveryMaterials=[];
+  window.deliveryMaterials.push({stockId:stockId,name:stock.name,qty:qty,unit:stock.unit||'pcs',size:stock.size||'',date:new Date().toISOString().split('T')[0]});
+  renderDeliveryEquipList();
+  sel.value='';qtyEl.value='1';
+  showToast('Added '+qty+'x '+stock.name+' — Stock deducted ✅');
+}
+
+function renderDeliveryEquipList(){
+  var el=document.getElementById('deliveryEquipList');if(!el)return;
+  var mats=window.deliveryMaterials||[];
+  if(!mats.length){el.innerHTML='<div style="font-size:0.72rem;color:var(--gray400);">No materials added yet.</div>';return;}
+  el.innerHTML=mats.map(function(m,i){
+    return'<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.6rem;border:1.5px solid #fde68a;border-radius:7px;background:#fff;margin-bottom:0.25rem;">'
+      +'<span>🔧</span>'
+      +'<span style="flex:1;font-size:0.75rem;font-weight:700;">'+esc(m.name)+(m.size?' ('+esc(m.size)+')':'')+'</span>'
+      +'<span style="font-size:0.72rem;color:var(--gray500);">x'+m.qty+' '+esc(m.unit)+'</span>'
+      +'<span style="font-size:0.65rem;color:var(--gray400);">'+fmtDate(m.date)+'</span>'
+      +'<button data-idx="'+i+'" onclick="removeDeliveryMaterial(parseInt(this.dataset.idx))" style="background:#fee2e2;color:#dc2626;border:none;border-radius:4px;padding:0.1rem 0.35rem;font-size:0.65rem;cursor:pointer;">x</button>'
+      +'</div>';
+  }).join('');
+}
+
+function removeDeliveryMaterial(idx){
+  var mats=window.deliveryMaterials||[];
+  var item=mats[idx];
+  if(item){
+    var stock=stocks.find(function(s){return s.id===item.stockId;});
+    if(stock){stock.qty=Number(stock.qty)+item.qty;save('cesv2_stocks',stocks);}
+  }
+  mats.splice(idx,1);
+  renderDeliveryEquipList();
+  showToast('Item removed — Stock returned ✅');
+}
+
+function populateDeliveryStockSelect(){
+  var sel=document.getElementById('deliv_stockSelect');if(!sel)return;
+  sel.innerHTML='<option value="">+ Select from Stocks</option>'+stocks.map(function(s){
+    return'<option value="'+s.id+'">'+esc(s.name)+(s.size?' ('+esc(s.size)+')':'')+' ['+s.qty+' '+(s.unit||'pcs')+']</option>';
+  }).join('');
 }
 
 function checkScheduleReminders(){
