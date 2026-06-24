@@ -1096,7 +1096,7 @@ function showPage(pageId,navEl){
   const page=document.getElementById('page-'+pageId);
   if(page)page.classList.add('active');
   if(navEl)navEl.classList.add('active');
-  if(pageId==='calendar')renderCalendar();
+  if(pageId==='calendar'){if(typeof loadFieldTickets==='function')loadFieldTickets().then(function(){renderCalendar();});else renderCalendar();}
   if(pageId==='workers')renderWorkers();
   if(pageId==='fieldtickets'){showPage('jobs',document.querySelector('[onclick*=jobs]'));return;}
   if(pageId==='tools'){if(typeof initDuctCalc==='function')initDuctCalc();}
@@ -1116,7 +1116,7 @@ function showPage(pageId,navEl){
   if(pageId==='stocks')renderStocks();
   if(pageId==='orders')renderOrders();
 
-  if(pageId==='jobs'){renderJobList();if(typeof loadFieldTickets==='function')loadFieldTickets().then(function(){renderJobList();});}
+  if(pageId==='jobs'){renderJobList();if(typeof loadFieldTickets==='function')loadFieldTickets().then(function(){renderJobList();var calPage=document.getElementById('page-calendar');if(calPage&&calPage.classList.contains('active'))renderCalendar();});}
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
@@ -1326,7 +1326,7 @@ function renderCalendar(){
 
     ev+=dj.map(j=>{
       const workers=(j.assignees||[]).map(a=>a.name).join(', ')||'No workers assigned';
-      return'<div class="cal-event job" style="cursor:pointer;" data-jid="'+j.id+'" onclick="calOpenJob(this.dataset.jid)" '
+      return'<div class="cal-event job" style="cursor:pointer;" data-jid="'+j.id+'" onclick="calOpenJob(this.dataset.jid)"  ondblclick=\"calOpenJob(this.dataset.jid)\" '
         +'data-title="'+esc(j.scope||'Job')+'" '
         +'data-client="'+esc(j.merchant||'')+'" '
         +'data-location="'+esc(j.location||'')+'" '
