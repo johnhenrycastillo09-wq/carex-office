@@ -4571,20 +4571,38 @@ function checkScheduleReminders(){
   var reminders=[];
   var warnings=[];
 
-  // Tomorrow's schedules (projects, jobs, PMS)
+  // Helper: make clickable item with date
+  function makeItem(icon,title,date,time,onclick,color){
+    color=color||'#1d4ed8';
+    var dateStr=date?fmtDate(date)+(time?' at '+fmtTime(time):''):'';
+    return'<div onclick="'+onclick+'" style="display:flex;align-items:flex-start;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;cursor:pointer;transition:background 0.15s;margin-bottom:0.25rem;background:rgba(255,255,255,0.5);" onmouseover="this.style.background=\'rgba(255,255,255,0.9)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.5)\'">'
+      +'<span style="font-size:0.85rem;flex-shrink:0;">'+icon+'</span>'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:0.78rem;font-weight:800;color:'+color+';">'+title+'</div>'
+      +(dateStr?'<div style="font-size:0.68rem;color:#64748b;margin-top:0.1rem;">📅 '+dateStr+'</div>':'')
+      +'</div>'
+      +'<span style="font-size:0.65rem;color:#94a3b8;align-self:center;">→</span>'
+      +'</div>';
+  }
+
+  // Tomorrow's schedules
   projects.forEach(function(p){
     if(p.status==='completed')return;
     var allTypes=p.types&&p.types.length>0?p.types:[p.type];
+    var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
     if(p.schedulesByType&&Object.keys(p.schedulesByType).length>0){
       allTypes.forEach(function(t){
         var sched=p.schedulesByType[t];
         if(sched&&sched.startDate===tomorrowStr){
-          var labels={ducting:'Ducting Works',sprinkler:'Sprinkler System',airbalancing:'Air Balancing',fcuinstall:'FCU Installation',fcudismantling:'FCU Dismantling'};
-          reminders.push('📋 <strong>'+esc(p.name)+'</strong> — '+(labels[t]||t)+(sched.startTime?' at '+fmtTime(sched.startTime):''));
+          reminders.push(makeItem('📋',esc(p.name)+' — '+(labels[t]||t),sched.startDate,sched.startTime,
+            "showPage('projects',document.querySelector('[onclick*=projects]'));setTimeout(function(){openProjectDetail('"+p.id+"');},300);",
+            '#1d4ed8'));
         }
       });
     } else if(p.startDate===tomorrowStr){
-      reminders.push('📋 <strong>'+esc(p.name)+'</strong>'+(p.startTime?' at '+fmtTime(p.startTime):''));
+      reminders.push(makeItem('📋',esc(p.name),p.startDate,p.startTime,
+        "showPage('projects',document.querySelector('[onclick*=projects]'));setTimeout(function(){openProjectDetail('"+p.id+"');},300);",
+        '#1d4ed8'));
     }
   });
 
@@ -4592,123 +4610,103 @@ function checkScheduleReminders(){
     jobs.forEach(function(j){
       if(j.status==='resolved'||j.status==='closed')return;
       if(j.schedDate===tomorrowStr){
-        reminders.push('🎫 <strong>'+esc(j.scope||'Job')+'</strong> — '+esc(j.merchant||'')+(j.schedTime?' at '+fmtTime(j.schedTime):''));
+        reminders.push(makeItem('🎫',esc(j.scope||'Job')+' — '+esc(j.merchant||''),j.schedDate,j.schedTime,
+          "showPage('jobs',document.querySelector('[onclick*=jobs]'));setTimeout(function(){selectJob('"+j.id+"');},300);",
+          '#374151'));
       }
     });
   }
 
-  // ══ SMART PMS NOTIFICATIONS — grouped by client company ══
   if(typeof stores!=='undefined'&&typeof clients!=='undefined'){
     // Tomorrow's PMS
     stores.forEach(function(s){
       if(s.schedDate===tomorrowStr){
-        reminders.push('🔧 <strong>PMS: '+esc(s.name)+'</strong>'+(s.schedTime?' at '+fmtTime(s.schedTime):''));
+        reminders.push(makeItem('🔧','PMS: '+esc(s.name),s.schedDate,s.schedTime,
+          "showPage('pms',document.querySelector('[onclick*=pms]'));",
+          '#f97316'));
       }
     });
 
-    // 7-day PMS warning — grouped by client company
-    var pmsIn7Days=stores.filter(function(s){
-      return s.schedDate&&s.schedDate>todayStr&&s.schedDate<=in7Str;
-    });
-
+    // 7-day PMS warning grouped by client
+    var pmsIn7Days=stores.filter(function(s){return s.schedDate&&s.schedDate>todayStr&&s.schedDate<=in7Str;});
     if(pmsIn7Days.length>0){
-      // Group by client company
-      var clientGroups={};
-      var ungrouped=[];
-
+      var clientGroups={};var ungrouped=[];
       pmsIn7Days.forEach(function(s){
-        // Find which client this store belongs to
         var matchedClient=null;
         clients.forEach(function(c){
           var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
-          if(allNames.some(function(n){return n===s.name.toLowerCase();})){
-            matchedClient=c;
-          }
+          if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;
         });
-        if(matchedClient){
-          if(!clientGroups[matchedClient.name])clientGroups[matchedClient.name]={client:matchedClient,stores:[]};
-          clientGroups[matchedClient.name].stores.push(s);
-        } else {
-          ungrouped.push(s);
-        }
+        if(matchedClient){if(!clientGroups[matchedClient.name])clientGroups[matchedClient.name]={client:matchedClient,stores:[]};clientGroups[matchedClient.name].stores.push(s);}
+        else{ungrouped.push(s);}
       });
-
-      // Build grouped notification
       Object.keys(clientGroups).forEach(function(clientName){
         var group=clientGroups[clientName];
         var storeList=group.stores;
-        // Group stores by location
         var byLocation={};
-        storeList.forEach(function(s){
-          var loc=s.location||'Unknown Location';
-          if(!byLocation[loc])byLocation[loc]=[];
-          byLocation[loc].push(s);
-        });
+        storeList.forEach(function(s){var loc=s.location||'Unknown';if(!byLocation[loc])byLocation[loc]=[];byLocation[loc].push(s);});
         var locationLines=Object.keys(byLocation).map(function(loc){
           return '&nbsp;&nbsp;📍 '+esc(loc)+' → '+byLocation[loc].map(function(s){return esc(s.name)+(s.schedDate?' ('+fmtDate(s.schedDate)+')':'');}).join(', ');
         }).join('<br>');
-        warnings.push('🔧 <strong>PMS Due in 7 days — '+esc(clientName)+'</strong> ('+storeList.length+' store'+(storeList.length>1?'s':'')+')<br>'+locationLines);
+        warnings.push('<div onclick="showPage(\'pms\',document.querySelector(\'[onclick*=pms]\'))" style="cursor:pointer;padding:0.4rem 0.6rem;border-radius:7px;background:rgba(255,255,255,0.5);margin-bottom:0.25rem;" onmouseover="this.style.background=\'rgba(255,255,255,0.9)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.5)\'">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:#dc2626;">🔧 PMS Due in 7 days — '+esc(clientName)+' ('+storeList.length+' store'+(storeList.length>1?'s':'')+')</div>'
+          +'<div style="font-size:0.68rem;color:#64748b;margin-top:0.15rem;">'+locationLines+'</div>'
+          +'<div style="font-size:0.65rem;color:#94a3b8;margin-top:0.1rem;">Click to go to PMS Tracker →</div>'
+          +'</div>');
       });
-
-      // Ungrouped stores
       if(ungrouped.length>0){
-        warnings.push('🔧 <strong>PMS Due in 7 days:</strong> '+ungrouped.map(function(s){return esc(s.name)+(s.schedDate?' ('+fmtDate(s.schedDate)+')':'');}).join(', '));
+        warnings.push('<div onclick="showPage(\'pms\',document.querySelector(\'[onclick*=pms]\'))" style="cursor:pointer;padding:0.4rem 0.6rem;border-radius:7px;background:rgba(255,255,255,0.5);margin-bottom:0.25rem;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:#dc2626;">🔧 PMS Due in 7 days: '+ungrouped.map(function(s){return esc(s.name)+(s.schedDate?' ('+fmtDate(s.schedDate)+')':'');}).join(', ')+'</div>'
+          +'</div>');
       }
     }
 
-    // Overdue PMS (no schedule set, overdue)
+    // Overdue PMS
     var overdueByClient={};
     stores.forEach(function(s){
       if(s.schedDate)return;
-      if(!s.lastCleaned){
-        var matchedClient=null;
-        clients.forEach(function(c){
-          var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
-          if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;
-        });
-        var key=matchedClient?matchedClient.name:'Other';
-        if(!overdueByClient[key])overdueByClient[key]=[];
-        overdueByClient[key].push(s.name);
-        return;
-      }
-      var nextDue=addMonths(s.lastCleaned,3);
-      if(nextDue<=todayStr){
-        var matchedClient=null;
-        clients.forEach(function(c){
-          var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));
-          if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;
-        });
-        var key=matchedClient?matchedClient.name:'Other';
-        if(!overdueByClient[key])overdueByClient[key]=[];
-        overdueByClient[key].push(s.name+' (overdue since '+fmtDate(nextDue)+')');
-      }
+      var matchedClient=null;
+      clients.forEach(function(c){var allNames=[(c.name||'').toLowerCase()].concat((c.branches||[]).map(function(b){return b.toLowerCase();}));if(allNames.some(function(n){return n===s.name.toLowerCase();}))matchedClient=c;});
+      var key=matchedClient?matchedClient.name:'Other';
+      if(!overdueByClient[key])overdueByClient[key]=[];
+      if(!s.lastCleaned){overdueByClient[key].push(s.name+' (never cleaned)');}
+      else{var nextDue=addMonths(s.lastCleaned,3);if(nextDue<=todayStr)overdueByClient[key].push(s.name+' (overdue since '+fmtDate(nextDue)+')');}
     });
     Object.keys(overdueByClient).forEach(function(clientName){
-      warnings.push('⚠️ <strong>PMS Overdue — '+esc(clientName)+':</strong> '+overdueByClient[clientName].join(', ')+'. Please schedule.');
+      if(overdueByClient[clientName].length>0){
+        warnings.push('<div onclick="showPage(\'pms\',document.querySelector(\'[onclick*=pms]\'))" style="cursor:pointer;padding:0.4rem 0.6rem;border-radius:7px;background:rgba(255,255,255,0.5);margin-bottom:0.25rem;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:#dc2626;">⚠️ PMS Overdue — '+esc(clientName)+'</div>'
+          +'<div style="font-size:0.68rem;color:#64748b;">'+overdueByClient[clientName].join(', ')+'</div>'
+          +'</div>');
+      }
     });
 
     // Y-Strainer warnings
     stores.forEach(function(s){
       if(s.ystrainerNeed==='yes'){
-        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Marked as needs cleaning.');
+        warnings.push('<div onclick="showPage(\'pms\',document.querySelector(\'[onclick*=pms]\'))" style="cursor:pointer;padding:0.4rem 0.6rem;border-radius:7px;background:rgba(255,255,255,0.5);margin-bottom:0.25rem;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:#dc2626;">🔩 Y-Strainer: '+esc(s.name)+' — Needs cleaning</div>'
+          +'</div>');
         return;
       }
       if(!s.lastYstrainer)return;
       var nextYdue=addMonths(s.lastYstrainer,12);
       if(nextYdue<=todayStr){
-        warnings.push('🔩 <strong>Y-Strainer: '+esc(s.name)+'</strong> — Due since '+fmtDate(nextYdue)+'. Please schedule.');
+        warnings.push('<div onclick="showPage(\'pms\',document.querySelector(\'[onclick*=pms]\'))" style="cursor:pointer;padding:0.4rem 0.6rem;border-radius:7px;background:rgba(255,255,255,0.5);margin-bottom:0.25rem;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:#dc2626;">🔩 Y-Strainer: '+esc(s.name)+' — Due since '+fmtDate(nextYdue)+'</div>'
+          +'</div>');
       }
     });
   }
 
   var html='';
   if(reminders.length>0){
-    html+='🔔 <strong>'+reminders.length+' schedule(s) tomorrow ('+fmtDate(tomorrowStr)+'):</strong><br>'
-      +reminders.map(function(r){return'&nbsp;&nbsp;• '+r;}).join('<br>');
+    html+='<div style="font-size:0.72rem;font-weight:800;color:#1d4ed8;margin-bottom:0.4rem;">🔔 '+reminders.length+' schedule(s) tomorrow ('+fmtDate(tomorrowStr)+') — click to view:</div>'
+      +reminders.join('');
   }
   if(warnings.length>0){
-    if(html)html+='<br><br>';
-    html+='<span style="color:#dc2626;">'+warnings.join('<br><br>')+'</span>';
+    if(html)html+='<div style="border-top:1px solid #bfdbfe;margin:0.5rem 0;"></div>';
+    html+=warnings.join('');
   }
 
   if(html){
@@ -4718,6 +4716,7 @@ function checkScheduleReminders(){
     notifEl.style.display='none';
   }
 }
+
 
 
 
