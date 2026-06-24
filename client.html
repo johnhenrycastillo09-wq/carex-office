@@ -271,10 +271,14 @@ async function loadClientData(){
     var lastPage=sessionStorage.getItem('cp_lastPage');
     if(lastPage&&lastPage!=='dashboard'){
       var navBtns=document.querySelectorAll('.nav-btn');
-      var pages=['dashboard','projects','tickets','pms','equipment','calendar'];
+      var pages=['dashboard','projects','tickets','pms','calendar'];
       var pageIdx=pages.indexOf(lastPage);
       if(pageIdx>-1&&navBtns[pageIdx])showClientPage(lastPage,navBtns[pageIdx]);
+    } else {
+      renderClientDashboard();
     }
+    // Always re-render calendar if it was active
+    if(sessionStorage.getItem('cp_lastPage')==='calendar')renderClientCalendar();
   }catch(e){}
 }
 
