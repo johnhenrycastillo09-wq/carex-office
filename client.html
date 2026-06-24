@@ -47,6 +47,7 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
 .cp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
 .cp-cal-header{font-size:0.72rem;font-weight:800;color:#64748b;text-align:center;padding:0.5rem 0;text-transform:uppercase;}
 .cp-cal-day{min-height:110px;border-radius:7px;padding:0.45rem;border:1.5px solid #e2e8f0;background:#fff;transition:all 0.15s;}
+.cp-cal-day:hover{border-color:#1a6bb5;background:#eff6ff;}
 .cp-cal-day.today{border-color:#1a6bb5;background:#eff6ff;}
 .cp-cal-day.other-month{background:#f8fafc;opacity:0.5;}
 .cp-cal-day-num{font-size:0.82rem;font-weight:800;color:#1e293b;margin-bottom:0.3rem;}
@@ -158,9 +159,9 @@ label{font-size:0.7rem;font-weight:700;color:var(--gray600);display:block;margin
 
   <!-- CALENDAR -->
   <div class="page" id="cp-calendar">
-    <div class="card">
+    <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:0.85rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-        <div class="card-title" style="margin:0;" id="cp_calLabel"></div>
+        <div style="font-size:0.88rem;font-weight:800;color:#1e293b;" id="cp_calLabel"></div>
         <div style="display:flex;gap:0.4rem;">
           <button class="btn btn-secondary btn-sm" onclick="cpPrevMonth()">Prev</button>
           <button class="btn btn-secondary btn-sm" onclick="cpNextMonth()">Next</button>
