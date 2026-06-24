@@ -2666,7 +2666,13 @@ function saveJob(){
     updatedAt:new Date().toISOString(),
   };
   jobs.push(j);save('cesv2_jobs',jobs);
-  closeModal('newJobModal');showToast('Ticket created!');
+  // Auto-create Site Delivery record for this ticket
+  if(typeof deliveries!=='undefined'){
+    var newDel={id:uid(),title:'Delivery - '+j.scope,jobId:j.id,merchant:j.merchant||'',location:j.location||'',status:'pending',expectedDate:j.schedDate||'',actualDate:'',items:[],notes:'Auto-created for ticket: '+j.jobNumber,createdAt:new Date().toISOString()};
+    deliveries.push(newDel);
+    save('cesv2_deliveries',deliveries);
+  }
+  closeModal('newJobModal');showToast('Ticket created! Site Delivery record auto-created ✅');
   renderJobList();renderDashboard();
   currentJobId=j.id;
   renderJobList();
