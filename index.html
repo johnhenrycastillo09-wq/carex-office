@@ -253,7 +253,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <main class="main-content">
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div><div class="page-actions"><button class="btn btn-secondary btn-xs" onclick="syncAllToFirebase()" style="background:#f97316;color:#fff;border-color:#f97316;">☁️ Sync All to Cloud</button></div></div>
+<div class="page-header"><div><div class="page-title" id="dashGreeting">Good morning!</div><div class="page-subtitle">Here's what's happening at Carex Engineering today.</div></div></div>
 <div id="deliveryNotif" style="display:none;background:#fff3ee;border:1.5px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--orange);font-weight:600;"></div>
 <div id="scheduleNotif" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#1d4ed8;font-weight:600;"></div>
 <div class="stats-grid">
@@ -1195,11 +1195,11 @@ function renderDashboard(){
 
   const pdue=stores.filter(s=>getPmsStatus(s)!=='ok').slice(0,5);
   const dp=document.getElementById('dashPmsDue');
-  dp.innerHTML=pdue.length?pdue.map(s=>`<div class="stock-item"><div><div class="stock-name">${esc(s.name)}</div><div class="stock-cat">${esc(s.location||'')}</div></div><span class="badge badge-${getPmsStatus(s)==='overdue'?'overdue':'progress'}">${getPmsStatus(s)==='overdue'?'Overdue':'Due Soon'}</span></div>`).join(''):'<div class="empty-state"><div class="empty-icon">&#9989;</div><div class="empty-title">All PMS up to date</div></div>';
+  dp.innerHTML=pdue.length?pdue.map(s=>`<div class="stock-item" style="cursor:pointer" onclick="showPage('pms');setTimeout(()=>{if(typeof highlightPmsStore==='function')highlightPmsStore('${s.id}');},400)" onmouseover="this.style.background='#e8f0fe'" onmouseout="this.style.background=''" ><div><div class="stock-name">${esc(s.name)}</div><div class="stock-cat">${esc(s.location||'')}</div></div><span class="badge badge-${getPmsStatus(s)==='overdue'?'overdue':'progress'}">${getPmsStatus(s)==='overdue'?'Overdue':'Due Soon'}</span></div>`).join(''):'<div class="empty-state"><div class="empty-icon">&#9989;</div><div class="empty-title">All PMS up to date</div></div>';
 
   const ls=stocks.filter(s=>Number(s.qty)<=Number(s.minQty)).slice(0,5);
   const dl=document.getElementById('dashLowStocks');
-  dl.innerHTML=ls.length?ls.map(s=>`<div class="stock-item"><div><div class="stock-name">${esc(s.name)}</div><div class="stock-cat">${s.category}</div></div><span class="qty-num qty-low">${s.qty} ${s.unit||'pcs'}</span></div>`).join(''):'<div class="empty-state"><div class="empty-icon">&#9989;</div><div class="empty-title">Stocks are sufficient</div></div>';
+  dl.innerHTML=ls.length?ls.map(s=>`<div class="stock-item" style="cursor:pointer" onclick="showPage('stocks')" onmouseover="this.style.background='#e8f0fe'" onmouseout="this.style.background=''" ><div><div class="stock-name">${esc(s.name)}</div><div class="stock-cat">${s.category}</div></div><span class="qty-num qty-low">${s.qty} ${s.unit||'pcs'}</span></div>`).join(''):'<div class="empty-state"><div class="empty-icon">&#9989;</div><div class="empty-title">Stocks are sufficient</div></div>';
 }
 
 function renderCalendar(){
@@ -5361,24 +5361,7 @@ function autoCreateProjectRecords(p){
 }
 
 // ══ DELIVERY REMINDER CHECK ══
-function checkDeliveryReminders(){
-  if(typeof deliveries==='undefined')return;
-  var tomorrow=new Date();
-  tomorrow.setDate(tomorrow.getDate()+1);
-  var tomorrowStr=tomorrow.toISOString().split('T')[0];
-  var dueDeliveries=(deliveries||[]).filter(function(d){
-    return d.expectedDate===tomorrowStr&&d.status!=='complete';
-  });
-  var notifEl=document.getElementById('deliveryNotif');
-  if(notifEl){
-    if(dueDeliveries.length>0){
-      notifEl.style.display='block';
-      notifEl.innerHTML='&#128666; <strong>'+dueDeliveries.length+' delivery expected tomorrow!</strong> '+dueDeliveries.map(function(d){return esc(d.title);}).join(', ')+' - Please follow up with your supplier.';
-    } else {
-      notifEl.style.display='none';
-    }
-  }
-}
+
 
 // ══ GRILLE CLIENT SEARCH ══
 function searchGrilleClient(){
