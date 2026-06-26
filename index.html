@@ -4728,8 +4728,18 @@ function checkScheduleReminders(){
   }
 
   if(html){
-    notifEl.style.display='block';
-    notifEl.innerHTML=html;
+      notifEl.style.display='block';
+      var deliveryHtml='<div style="font-size:0.72rem;font-weight:800;color:var(--orange);margin-bottom:0.4rem;">🚛 '+dueDeliveries.length+' delivery/deliveries expected tomorrow! Click to view:</div>';
+      dueDeliveries.forEach(function(d){
+        deliveryHtml+='<div class="deliv-notif-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border-radius:7px;cursor:pointer;margin-bottom:0.25rem;background:rgba(255,255,255,0.5);" onmouseover="this.style.background=\'rgba(255,255,255,0.9)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.5)\'" onclick="showPage(\'delivery\',document.querySelector(\'[onclick*=delivery]\'))">'
+          +'<span>🚛</span>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:var(--orange);">'+esc(d.title)+'</div>'
+          +(d.supplier?'<div style="font-size:0.68rem;color:#92400e;">Supplier: '+esc(d.supplier)+'</div>':'')
+          +'<div style="font-size:0.65rem;color:#94a3b8;">📅 Expected: '+fmtDate(d.expectedDate)+' — Click to go to Site Delivery →</div>'
+          +'</div></div>';
+      });
+      notifEl.innerHTML=deliveryHtml;
   } else {
     notifEl.style.display='none';
   }
@@ -4751,9 +4761,17 @@ function checkDeliveryReminders(){
     const notifEl=document.getElementById('deliveryNotif');
     if(notifEl){
       notifEl.style.display='block';
-      notifEl.innerHTML='&#128666; <strong>'+dueDeliveries.length+' delivery/deliveries expected tomorrow!</strong> '
-        +dueDeliveries.map(function(d){return esc(d.title);}).join(', ')
-        +' - Please follow up with your supplier.';
+      var deliveryHtml='<div style="font-size:0.72rem;font-weight:800;color:var(--orange);margin-bottom:0.4rem;">🚛 '+dueDeliveries.length+' delivery/deliveries expected tomorrow! Click to view:</div>';
+      dueDeliveries.forEach(function(d){
+        deliveryHtml+='<div class="deliv-notif-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.6rem;border-radius:7px;cursor:pointer;margin-bottom:0.25rem;background:rgba(255,255,255,0.5);" onmouseover="this.style.background=\'rgba(255,255,255,0.9)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.5)\'" onclick="showPage(\'delivery\',document.querySelector(\'[onclick*=delivery]\'))">'
+          +'<span>🚛</span>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:0.78rem;font-weight:800;color:var(--orange);">'+esc(d.title)+'</div>'
+          +(d.supplier?'<div style="font-size:0.68rem;color:#92400e;">Supplier: '+esc(d.supplier)+'</div>':'')
+          +'<div style="font-size:0.65rem;color:#94a3b8;">📅 Expected: '+fmtDate(d.expectedDate)+' — Click to go to Site Delivery →</div>'
+          +'</div></div>';
+      });
+      notifEl.innerHTML=deliveryHtml;
     }
   }
 }
