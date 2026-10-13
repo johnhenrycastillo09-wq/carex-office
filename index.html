@@ -239,7 +239,9 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="nav-item" onclick="showPage('tools',this)"><span class="nav-icon">📐</span> Duct Calculator</div>
 <div class="nav-section-label">Business</div>
 <div class="nav-item" onclick="showPage('clients',this)"><span class="nav-icon">🏪</span> Clients</div>
+<div class="nav-item" onclick="showPage('quotation',this)"><span class="nav-icon">📄</span> Quotations</div>
 <div class="nav-item" onclick="showPage('billing',this)"><span class="nav-icon">💰</span> Billing and Quotes</div>
+<div class="nav-item" onclick="showPage('expenses',this)"><span class="nav-icon">💸</span> Expense Tracker</div>
 <div class="nav-item" onclick="showPage('servicereports',this)"><span class="nav-icon">📋</span> Service Reports</div>
 <div class="nav-item" onclick="showPage('ptw',this)"><span class="nav-icon">📜</span> Permit to Work <span class="nav-badge" id="ptwExpiringCount">0</span></div>
 <div class="nav-item" onclick="showPage('delivery',this)"><span class="nav-icon">🚛</span> Site Delivery</div>
@@ -515,12 +517,54 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div id="clientsList"></div>
 </div>
 <!-- BILLING PAGE -->
+<!-- QUOTATION PAGE -->
+<div class="page" id="page-quotation">
+<div class="page-header">
+  <div><div class="page-title">Quotations</div><div class="page-subtitle">Create and manage quotation letters per project and work type</div></div>
+  <div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewQuotationModal()">+ New Quotation</button></div>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="filterQuotations('all',this)">All</button>
+  <button class="tab-btn" onclick="filterQuotations('draft',this)">Draft</button>
+  <button class="tab-btn" onclick="filterQuotations('sent',this)">Sent</button>
+  <button class="tab-btn" onclick="filterQuotations('approved',this)">Approved ✅</button>
+  <button class="tab-btn" onclick="filterQuotations('rejected',this)">Rejected</button>
+</div>
+<div class="project-list" id="quotationList"></div>
+</div>
+
 <div class="page" id="page-billing">
 <div class="page-header"><div><div class="page-title">Billing and Quotations</div><div class="page-subtitle">Track quotes, payment schedules and retention per project</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewBillingModal()">+ New Quote / Billing</button></div></div>
 <div class="tab-bar"><button class="tab-btn active" onclick="filterBilling('all',this)">All</button><button class="tab-btn" onclick="filterBilling('draft',this)">Draft</button><button class="tab-btn" onclick="filterBilling('sent',this)">Sent</button><button class="tab-btn" onclick="filterBilling('approved',this)">Approved</button><button class="tab-btn" onclick="filterBilling('invoiced',this)">Invoiced</button><button class="tab-btn" onclick="filterBilling('paid',this)">Paid</button><button class="tab-btn" onclick="filterBilling('retention',this)">Retention</button></div>
 <div id="billingRetentionNotif" style="display:none;background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;"></div>
 <div class="project-list" id="billingList"></div>
 </div>
+<!-- EXPENSE TRACKER PAGE -->
+<div class="page" id="page-expenses">
+<div class="page-header">
+  <div><div class="page-title">Expense Tracker</div><div class="page-subtitle">Track project costs, materials, labor and compare supplier prices</div></div>
+  <div class="page-actions">
+    <button class="btn btn-secondary btn-sm" onclick="showExpensePriceComparison()">📊 Price Comparison</button>
+    <button class="btn btn-primary btn-sm" onclick="openNewExpenseModal()">+ Add Expense</button>
+  </div>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="filterExpenses('all',this)">All</button>
+  <button class="tab-btn" onclick="filterExpenses('materials',this)">🧱 Materials</button>
+  <button class="tab-btn" onclick="filterExpenses('labor',this)">👷 Labor/Sub-con</button>
+  <button class="tab-btn" onclick="filterExpenses('other',this)">📦 Other</button>
+  <button class="tab-btn" onclick="filterExpenses('summary',this)">📊 Profit Summary</button>
+</div>
+<div id="expensePriceComparisonPanel" style="display:none;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+  <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+    <input id="expenseSearchItem" placeholder="Search item (e.g. GI Sheet, Pipe...)" style="flex:1;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.82rem;" type="text" oninput="renderPriceComparison()"/>
+    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('expensePriceComparisonPanel').style.display='none'">✕ Close</button>
+  </div>
+  <div id="priceComparisonResults"></div>
+</div>
+<div id="expenseList"></div>
+</div>
+
 <!-- SERVICE REPORTS PAGE -->
 <div class="page" id="page-servicereports">
 <div class="page-header"><div><div class="page-title">Service Reports</div><div class="page-subtitle">Generate and track service reports for completed jobs</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewServiceReportModal()">+ New Report</button></div></div>
@@ -698,6 +742,12 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="fg"><label>Specialty</label><input id="w_specialty" placeholder="e.g. Ducting, Sprinkler, FCU" type="text"/></div>
 <div class="fg"><label>Availability Status</label><select id="w_availability" onchange="toggleUnavailReason(this.value)"><option value="available">✅ Available</option><option value="on-leave">🏖 On Leave</option><option value="on-hold">⏸ On Hold</option><option value="unavailable">❌ Unavailable</option></select></div>
 <div class="fg full" id="w_unavailReasonDiv" style="display:none;"><label>Reason / Notes</label><input id="w_unavailReason" placeholder="e.g. Medical leave until July 5" type="text"/></div>
+<div class="fg full"><label>Location / Address</label><input id="w_location" placeholder="e.g. Marikina City, Metro Manila" type="text"/></div>
+<div class="fg full"><label>Comment / Priority Notes</label><textarea id="w_comment" placeholder="e.g. Priority contact for ducting works. Available on weekends. Sub-con for sprinkler only." style="min-height:70px;"></textarea></div>
+<div class="fg"><label>Has Staff Portal Access?</label><select id="w_portalAccess" onchange="toggleWorkerPortalFields(this.value)"><option value="no">No Access</option><option value="yes">Has Access</option></select></div>
+<div class="fg" id="w_roleDiv" style="display:none;"><label>Staff Role</label><select id="w_portalRole"><option value="field">👷 Field Staff</option><option value="accounting">📊 Accounting</option><option value="office">🏢 Office Staff</option><option value="admin">👑 Admin</option></select></div>
+<div class="fg" id="w_loginDiv" style="display:none;"><label>Staff Username</label><input id="w_username" placeholder="e.g. juan.delacruz" type="text"/></div>
+<div class="fg" id="w_passDiv" style="display:none;"><label>Staff Password</label><input id="w_password" placeholder="Set login password" type="password"/></div>
 </div>
 </div>
 <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addWorkerModal')">Cancel</button><button class="btn btn-primary" onclick="saveWorker()">Save Worker</button></div>
@@ -1031,6 +1081,8 @@ function updateInMemory(key,arr){
     case 'cesv2_jobs': jobs=arr; break;
     case 'cesv2_clients': clients=arr; break;
     case 'cesv2_billing': billing=arr; break;
+    case 'cesv2_quotations': quotations=arr; break;
+    case 'cesv2_expenses': expenses=arr; break;
     case 'cesv2_serviceReports': serviceReports=arr; break;
     case 'cesv2_ptws': ptws=arr; break;
     case 'cesv2_deliveries': deliveries=arr; break;
@@ -1119,7 +1171,9 @@ function showPage(pageId,navEl){
   if(pageId==='tools'){if(typeof initDuctCalc==='function')initDuctCalc();}
   if(pageId==='users'){if(typeof renderUsers==='function')renderUsers();}
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
-  if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();}
+  if(pageId==='quotation'){if(typeof populateQuotationSelects==='function')populateQuotationSelects();if(typeof renderQuotations==='function')renderQuotations();}
+  if(pageId==='expenses'){if(typeof renderExpenses==='function')renderExpenses();}
+  if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();if(typeof checkBillingRetentionNotifs==='function')checkBillingRetentionNotifs();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
   if(pageId==='ptw'){if(typeof populatePtwSelects==='function')populatePtwSelects();if(typeof renderPtw==='function')renderPtw();if(typeof updatePtwBadge==='function')updatePtwBadge();}
   if(pageId==='delivery'){if(typeof populateDeliverySelects==='function')populateDeliverySelects();if(typeof renderDelivery==='function')renderDelivery();if(typeof populateDeliveryStockSelect==='function')populateDeliveryStockSelect();}
@@ -1608,22 +1662,105 @@ function renderWorkers(filter='all'){
   const grid=document.getElementById('workersGrid');
   let list=filter==='regular'?workers.filter(w=>w.type==='regular'):filter==='subcon'?workers.filter(w=>w.type==='subcon'):workers;
   if(!list.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">&#128119;</div><div class="empty-title">No workers yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openAddWorkerModal()">+ Add Worker</button></div>';return;}
+  const availColor={available:'#dcfce7','on-leave':'#fef9c3','on-hold':'#ffedd5',unavailable:'#fee2e2'};
+  const availLabel={available:'✅ Available','on-leave':'🏖 On Leave','on-hold':'⏸ On Hold',unavailable:'❌ Unavailable'};
   grid.innerHTML=list.map(w=>{
     const asgn=projects.filter(p=>(p.assignees||[]).some(a=>a.id===w.id)&&p.status!=='completed');
     const ajobs=jobs.filter(j=>(j.assignees||[]).some(a=>a.id===w.id)&&j.progress!=='closed'&&j.progress!=='resolved');
     const all=[...asgn,...ajobs];
-    return`<div class="worker-card"><div class="worker-avatar">${initials(w.name)}</div><div class="worker-name">${esc(w.name)}</div><div class="worker-role">${esc(w.role||'--')}</div><span class="worker-type ${w.type}">${w.type==='regular'?'Regular':'Sub-con'}</span><span style="font-size:0.6rem;font-weight:800;padding:0.1rem 0.4rem;border-radius:10px;background:${!w.availability||w.availability==='available'?'#dcfce7':w.availability==='on-leave'?'#fef9c3':w.availability==='on-hold'?'#ffedd5':'#fee2e2'};color:var(--text);margin-left:0.3rem;">${!w.availability||w.availability==='available'?'Available':w.availability==='on-leave'?'On Leave':w.availability==='on-hold'?'On Hold':'Unavailable'}</span>${w.contact?`<div style="font-size:0.67rem;color:var(--gray500);margin-top:0.3rem;">${esc(w.contact)}</div>`:''}<div style="margin-top:0.55rem;padding-top:0.55rem;border-top:1px solid var(--gray100);">${all.length?all.slice(0,2).map(x=>`<div style="font-size:0.63rem;color:var(--text);margin-bottom:0.18rem;">${esc((x.name||x.scope||'').slice(0,22))}</div>`).join(''):'<div style="font-size:0.63rem;color:var(--success);">Available</div>'}</div><div style="display:flex;gap:0.3rem;margin-top:0.55rem;"><button class="btn btn-secondary btn-xs" onclick="openEditWorkerModal('${w.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteWorker('${w.id}')">Delete</button></div></div>`;
+    const avail=w.availability||'available';
+    const portalBadge=w.portalAccess==='yes'?`<span style="font-size:0.6rem;font-weight:800;padding:0.1rem 0.4rem;border-radius:10px;background:#e0f2fe;color:#0369a1;margin-left:0.3rem;">${{field:'👷 Field',accounting:'📊 Acctg',office:'🏢 Office',admin:'👑 Admin'}[w.portalRole]||'Staff'}</span>`:'';
+    return`<div class="worker-card" ondblclick="openEditWorkerModal('${w.id}')">
+      <div class="worker-avatar">${initials(w.name)}</div>
+      <div class="worker-name">${esc(w.name)}</div>
+      <div class="worker-role">${esc(w.role||'--')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.2rem;margin-top:0.2rem;">
+        <span class="worker-type ${w.type}">${w.type==='regular'?'Regular':'Sub-con'}</span>
+        <span style="font-size:0.6rem;font-weight:800;padding:0.1rem 0.4rem;border-radius:10px;background:${availColor[avail]||'#dcfce7'};color:var(--text);">${availLabel[avail]||'Available'}</span>
+        ${portalBadge}
+      </div>
+      ${w.location?`<div style="font-size:0.67rem;color:var(--gray500);margin-top:0.3rem;">📍 ${esc(w.location)}</div>`:''}
+      ${w.contact?`<div style="font-size:0.67rem;color:var(--gray500);">📞 ${esc(w.contact)}</div>`:''}
+      ${w.specialty?`<div style="font-size:0.67rem;color:var(--primary);margin-top:0.15rem;">🔧 ${esc(w.specialty)}</div>`:''}
+      ${w.comment?`<div style="font-size:0.67rem;color:#92400e;background:#fef3c7;border-radius:5px;padding:0.2rem 0.4rem;margin-top:0.3rem;">💬 ${esc(w.comment)}</div>`:''}
+      ${w.unavailReason&&avail!=='available'?`<div style="font-size:0.65rem;color:var(--danger);margin-top:0.2rem;">⚠️ ${esc(w.unavailReason)}</div>`:''}
+      <div style="margin-top:0.55rem;padding-top:0.55rem;border-top:1px solid var(--gray100);">
+        ${all.length?all.slice(0,2).map(x=>`<div style="font-size:0.63rem;color:var(--text);margin-bottom:0.18rem;">📋 ${esc((x.name||x.scope||'').slice(0,22))}</div>`).join(''):'<div style="font-size:0.63rem;color:var(--success);">No active assignments</div>'}
+      </div>
+      <div style="display:flex;gap:0.3rem;margin-top:0.55rem;">
+        <button class="btn btn-secondary btn-xs" onclick="openEditWorkerModal('${w.id}')">Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteWorker('${w.id}')">Delete</button>
+      </div>
+    </div>`;
   }).join('');
 }
+
 function filterWorkers(f,el){document.querySelectorAll('#page-workers .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderWorkers(f);}
 function openAddWorkerModal(){editingWorkerId=null;['w_name','w_role','w_contact','w_specialty'].forEach(i=>document.getElementById(i).value='');document.getElementById('w_type').value='regular';document.getElementById('workerModalTitle').textContent='Add Worker';openModal('addWorkerModal');}
-function openEditWorkerModal(id){const w=workers.find(x=>x.id===id);if(!w)return;editingWorkerId=id;document.getElementById('w_name').value=w.name||'';document.getElementById('w_role').value=w.role||'';document.getElementById('w_type').value=w.type||'regular';document.getElementById('w_contact').value=w.contact||'';document.getElementById('w_specialty').value=w.specialty||'';if(document.getElementById('w_availability'))document.getElementById('w_availability').value=w.availability||'available';if(document.getElementById('w_unavailReason'))document.getElementById('w_unavailReason').value=w.unavailReason||'';toggleUnavailReason(w.availability||'available');document.getElementById('workerModalTitle').textContent='Edit Worker';openModal('addWorkerModal');}
+function openEditWorkerModal(id){
+  const w=workers.find(x=>x.id===id);if(!w)return;
+  editingWorkerId=id;
+  document.getElementById('w_name').value=w.name||'';
+  document.getElementById('w_role').value=w.role||'';
+  document.getElementById('w_type').value=w.type||'regular';
+  document.getElementById('w_contact').value=w.contact||'';
+  document.getElementById('w_specialty').value=w.specialty||'';
+  document.getElementById('w_availability').value=w.availability||'available';
+  document.getElementById('w_unavailReason').value=w.unavailReason||'';
+  document.getElementById('w_location').value=w.location||'';
+  document.getElementById('w_comment').value=w.comment||'';
+  document.getElementById('w_portalAccess').value=w.portalAccess||'no';
+  document.getElementById('w_portalRole').value=w.portalRole||'field';
+  document.getElementById('w_username').value=w.username||'';
+  document.getElementById('w_password').value='';
+  toggleUnavailReason(w.availability||'available');
+  toggleWorkerPortalFields(w.portalAccess||'no');
+  document.getElementById('workerModalTitle').textContent='Edit Worker';
+  openModal('addWorkerModal');
+}
+
 function toggleUnavailReason(val){
   var div=document.getElementById('w_unavailReasonDiv');
   if(div)div.style.display=(val!=='available')?'block':'none';
 }
 
-function saveWorker(){const name=document.getElementById('w_name').value.trim();if(!name){alert('Please enter a name.');return;}const data={name,role:document.getElementById('w_role').value.trim(),type:document.getElementById('w_type').value,contact:document.getElementById('w_contact').value.trim(),specialty:document.getElementById('w_specialty').value.trim(),availability:document.getElementById('w_availability')?document.getElementById('w_availability').value:'available',unavailReason:document.getElementById('w_unavailReason')?document.getElementById('w_unavailReason').value.trim():''};if(editingWorkerId){Object.assign(workers.find(w=>w.id===editingWorkerId),data);showToast('Worker updated!');}else{workers.push({id:uid(),...data});showToast('Worker added!');}save('cesv2_workers',workers);closeModal('addWorkerModal');renderWorkers();renderDashboard();}
+function toggleWorkerPortalFields(val){
+  const show=val==='yes';
+  ['w_roleDiv','w_loginDiv','w_passDiv'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=show?'':'none';
+  });
+}
+
+function saveWorker(){
+  const name=document.getElementById('w_name').value.trim();
+  if(!name){alert('Please enter a name.');return;}
+  const portalAccess=document.getElementById('w_portalAccess').value;
+  const data={
+    name,
+    role:document.getElementById('w_role').value.trim(),
+    type:document.getElementById('w_type').value,
+    contact:document.getElementById('w_contact').value.trim(),
+    specialty:document.getElementById('w_specialty').value.trim(),
+    availability:document.getElementById('w_availability').value,
+    unavailReason:document.getElementById('w_unavailReason').value.trim(),
+    location:document.getElementById('w_location').value.trim(),
+    comment:document.getElementById('w_comment').value.trim(),
+    portalAccess,
+    portalRole:portalAccess==='yes'?document.getElementById('w_portalRole').value:'',
+    username:portalAccess==='yes'?document.getElementById('w_username').value.trim():'',
+    password:portalAccess==='yes'?document.getElementById('w_password').value:''
+  };
+  if(editingWorkerId){
+    const w=workers.find(w=>w.id===editingWorkerId);
+    if(data.password===''&&w.password)data.password=w.password; // keep old password if blank
+    Object.assign(w,data);showToast('Worker updated!');
+  } else {
+    workers.push({id:uid(),...data});showToast('Worker added!');
+  }
+  save('cesv2_workers',workers);closeModal('addWorkerModal');renderWorkers();
+}
+
 function deleteWorker(id){if(!confirm('Remove this worker?'))return;workers=workers.filter(w=>w.id!==id);save('cesv2_workers',workers);renderWorkers();renderDashboard();showToast('Worker removed.');}
 
 function projectItemHtml(p){
@@ -3011,6 +3148,585 @@ function populateBillingSelects(){
   const cs=document.getElementById('b_client');if(cs)cs.innerHTML='<option value="">Select client...</option>'+clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const ps=document.getElementById('b_project');if(ps)ps.innerHTML='<option value="">None</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
+// ============ EXPENSE TRACKER FUNCTIONS ============
+var expenses = JSON.parse(localStorage.getItem('cesv2_expenses')||'[]');
+var expenseMaterialItems = [];
+var editingExpenseId = null;
+
+function toggleExpenseFields(type){
+  document.getElementById('exp_materialsSection').style.display=type==='materials'?'block':'none';
+  document.getElementById('exp_laborSection').style.display=type==='labor'?'block':'none';
+  document.getElementById('exp_otherSection').style.display=type==='other'?'block':'none';
+}
+
+function recalcLaborBalance(){
+  const agreed=Number(document.getElementById('exp_laborAgreed').value)||0;
+  const paid=Number(document.getElementById('exp_laborPaid').value)||0;
+  const bal=agreed-paid;
+  document.getElementById('exp_laborBalance').value='PHP '+bal.toLocaleString('en-PH',{minimumFractionDigits:2});
+}
+
+function addExpenseMaterialItem(){
+  const desc=document.getElementById('exp_matDesc').value.trim();
+  const qty=Number(document.getElementById('exp_matQty').value)||1;
+  const unit=document.getElementById('exp_matUnit').value.trim();
+  const price=Number(document.getElementById('exp_matPrice').value)||0;
+  if(!desc){alert('Please enter item name.');return;}
+  expenseMaterialItems.push({desc,qty,unit,price,total:qty*price});
+  ['exp_matDesc','exp_matQty','exp_matUnit','exp_matPrice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderExpenseMaterialItems();
+}
+
+function removeExpenseMaterialItem(i){
+  expenseMaterialItems.splice(i,1);
+  renderExpenseMaterialItems();
+}
+
+function renderExpenseMaterialItems(){
+  const el=document.getElementById('exp_materialItems');
+  if(!el)return;
+  const total=expenseMaterialItems.reduce((s,i)=>s+i.total,0);
+  document.getElementById('exp_matTotal').textContent='PHP '+total.toLocaleString('en-PH',{minimumFractionDigits:2});
+  if(!expenseMaterialItems.length){el.innerHTML='';return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-bottom:0.5rem;">
+    <thead><tr style="background:var(--gray50);">
+      <th style="padding:0.3rem 0.4rem;text-align:left;border-bottom:1px solid var(--gray200);">Item</th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:50px;">Qty</th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:50px;">Unit</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:90px;">Price</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:90px;">Total</th>
+      <th style="padding:0.3rem;width:25px;border-bottom:1px solid var(--gray200);"></th>
+    </tr></thead>
+    <tbody>${expenseMaterialItems.map((item,i)=>`<tr>
+      <td style="padding:0.3rem 0.4rem;border-bottom:1px solid var(--gray100);">${esc(item.desc)}</td>
+      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);">${item.qty}</td>
+      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);">${esc(item.unit||'')}</td>
+      <td style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray100);">${Number(item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray100);font-weight:700;">${Number(item.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);"><button onclick="removeExpenseMaterialItem(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;">✕</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function openNewExpenseModal(){
+  editingExpenseId=null;expenseMaterialItems=[];
+  ['exp_supplier','exp_supplierLocation','exp_laborName','exp_laborScope','exp_laborAgreed',
+   'exp_laborPaid','exp_laborPaidDate','exp_laborBalance','exp_otherDesc','exp_otherAmount',
+   'exp_otherSupplier','exp_notes','exp_driveLink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('exp_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('exp_type').value='materials';
+  document.getElementById('exp_status').value='pending';
+  toggleExpenseFields('materials');
+  renderExpenseMaterialItems();
+  // Populate project select
+  const ps=document.getElementById('exp_project');
+  if(ps)ps.innerHTML='<option value="">None / General</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('expenseModalTitle').textContent='Add Expense';
+  openModal('newExpenseModal');
+}
+
+function openEditExpenseModal(id){
+  const e=expenses.find(x=>x.id===id);if(!e)return;
+  editingExpenseId=id;
+  expenseMaterialItems=JSON.parse(JSON.stringify(e.materialItems||[]));
+  document.getElementById('exp_type').value=e.type||'materials';
+  document.getElementById('exp_date').value=e.date||'';
+  document.getElementById('exp_status').value=e.status||'pending';
+  document.getElementById('exp_supplier').value=e.supplier||'';
+  document.getElementById('exp_supplierLocation').value=e.supplierLocation||'';
+  document.getElementById('exp_laborName').value=e.laborName||'';
+  document.getElementById('exp_laborScope').value=e.laborScope||'';
+  document.getElementById('exp_laborAgreed').value=e.laborAgreed||'';
+  document.getElementById('exp_laborPaid').value=e.laborPaid||'';
+  document.getElementById('exp_laborPaidDate').value=e.laborPaidDate||'';
+  document.getElementById('exp_otherDesc').value=e.otherDesc||'';
+  document.getElementById('exp_otherAmount').value=e.otherAmount||'';
+  document.getElementById('exp_otherSupplier').value=e.otherSupplier||'';
+  document.getElementById('exp_notes').value=e.notes||'';
+  document.getElementById('exp_driveLink').value=e.driveLink||'';
+  toggleExpenseFields(e.type||'materials');
+  recalcLaborBalance();
+  renderExpenseMaterialItems();
+  const ps=document.getElementById('exp_project');
+  if(ps){ps.innerHTML='<option value="">None / General</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');ps.value=e.projectId||'';}
+  document.getElementById('expenseModalTitle').textContent='Edit Expense';
+  openModal('newExpenseModal');
+}
+
+function saveExpense(){
+  const type=document.getElementById('exp_type').value;
+  let amount=0;
+  if(type==='materials') amount=expenseMaterialItems.reduce((s,i)=>s+i.total,0);
+  else if(type==='labor') amount=Number(document.getElementById('exp_laborAgreed').value)||0;
+  else amount=Number(document.getElementById('exp_otherAmount').value)||0;
+  const data={
+    type,date:document.getElementById('exp_date').value,
+    projectId:document.getElementById('exp_project').value,
+    status:document.getElementById('exp_status').value,
+    amount,
+    // Materials
+    materialItems:JSON.parse(JSON.stringify(expenseMaterialItems)),
+    supplier:document.getElementById('exp_supplier').value.trim(),
+    supplierLocation:document.getElementById('exp_supplierLocation').value.trim(),
+    // Labor
+    laborName:document.getElementById('exp_laborName').value.trim(),
+    laborScope:document.getElementById('exp_laborScope').value.trim(),
+    laborAgreed:Number(document.getElementById('exp_laborAgreed').value)||0,
+    laborPaid:Number(document.getElementById('exp_laborPaid').value)||0,
+    laborPaidDate:document.getElementById('exp_laborPaidDate').value,
+    // Other
+    otherDesc:document.getElementById('exp_otherDesc').value.trim(),
+    otherAmount:Number(document.getElementById('exp_otherAmount').value)||0,
+    otherSupplier:document.getElementById('exp_otherSupplier').value.trim(),
+    notes:document.getElementById('exp_notes').value.trim(),
+    driveLink:document.getElementById('exp_driveLink').value.trim()
+  };
+  if(editingExpenseId){Object.assign(expenses.find(e=>e.id===editingExpenseId),data);showToast('Expense updated!');}
+  else{expenses.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Expense added!');}
+  save('cesv2_expenses',expenses);
+  closeModal('newExpenseModal');renderExpenses();
+}
+
+function deleteExpense(id){
+  if(!confirm('Delete this expense?'))return;
+  expenses=expenses.filter(e=>e.id!==id);
+  save('cesv2_expenses',expenses);renderExpenses();showToast('Deleted.');
+}
+
+function filterExpenses(f,el){
+  document.querySelectorAll('#page-expenses .tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');renderExpenses(f);
+}
+
+function renderExpenses(filter='all'){
+  const el=document.getElementById('expenseList');
+  if(!el)return;
+  if(filter==='summary'){renderExpenseSummary();return;}
+  let list=filter==='all'?expenses:expenses.filter(e=>e.type===filter);
+  list.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No expenses yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewExpenseModal()">+ Add Expense</button></div>';return;}
+  const typeIcon={materials:'🧱',labor:'👷',other:'📦'};
+  const typeLabel={materials:'Materials',labor:'Labor/Sub-con',other:'Other'};
+  el.innerHTML=list.map(e=>{
+    const proj=projects.find(p=>p.id===e.projectId);
+    let detail='';
+    if(e.type==='materials'){
+      detail=`<div style="font-size:0.72rem;color:var(--gray500);">🏪 ${esc(e.supplier||'No supplier')} ${e.supplierLocation?'— '+esc(e.supplierLocation):''}</div>`;
+      if(e.materialItems&&e.materialItems.length)detail+=`<div style="font-size:0.7rem;color:var(--gray400);">${e.materialItems.slice(0,2).map(i=>esc(i.desc)).join(', ')}${e.materialItems.length>2?' +more':''}</div>`;
+    } else if(e.type==='labor'){
+      const bal=e.laborAgreed-e.laborPaid;
+      detail=`<div style="font-size:0.72rem;color:var(--gray500);">👷 ${esc(e.laborName||'')} — ${esc(e.laborScope||'')}</div>`;
+      detail+=`<div style="font-size:0.7rem;">${bal>0?`<span style="color:var(--danger);">Balance: PHP ${bal.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`:'<span style="color:var(--success);">✅ Fully Paid</span>'}</div>`;
+    } else {
+      detail=`<div style="font-size:0.72rem;color:var(--gray500);">📦 ${esc(e.otherDesc||'')} ${e.otherSupplier?'— '+esc(e.otherSupplier):''}</div>`;
+    }
+    return`<div class="project-item" ondblclick="openEditExpenseModal('${e.id}')">
+      <div class="project-type-badge" style="background:#fef9c3;">${typeIcon[e.type]||'💸'}</div>
+      <div class="project-info">
+        <div class="project-name">${typeLabel[e.type]||'Expense'} ${proj?'— '+esc(proj.name):''}</div>
+        <div class="project-meta">${fmtDate(e.date)}</div>
+        ${detail}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+        <span style="font-size:0.9rem;font-weight:800;color:var(--danger);">PHP ${Number(e.amount||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+        <span class="badge" style="background:${e.status==='paid'?'var(--success)':'var(--warning)'};color:#fff;">${e.status||'pending'}</span>
+        <div style="display:flex;gap:0.25rem;">
+          <button class="btn btn-secondary btn-xs" onclick="openEditExpenseModal('${e.id}')">Edit</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteExpense('${e.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderExpenseSummary(){
+  const el=document.getElementById('expenseList');
+  if(!el)return;
+  // Group by project
+  const projectMap={};
+  expenses.forEach(e=>{
+    const key=e.projectId||'__general__';
+    if(!projectMap[key])projectMap[key]={projectId:key,totalExpense:0,materials:0,labor:0,other:0};
+    projectMap[key].totalExpense+=e.amount||0;
+    if(e.type==='materials')projectMap[key].materials+=e.amount||0;
+    else if(e.type==='labor')projectMap[key].labor+=e.amount||0;
+    else projectMap[key].other+=e.amount||0;
+  });
+  const rows=Object.values(projectMap).map(pm=>{
+    const proj=projects.find(p=>p.id===pm.projectId);
+    const projName=proj?proj.name:'General / No Project';
+    // Find billing for this project
+    const bill=billing.filter(b=>b.projectId===pm.projectId);
+    const totalBilled=bill.reduce((s,b)=>s+(b.total||0),0);
+    const profit=totalBilled-pm.totalExpense;
+    return`<div style="background:#fff;border:1.5px solid var(--gray200);border-radius:10px;padding:1rem;margin-bottom:0.75rem;">
+      <div style="font-weight:800;font-size:0.9rem;margin-bottom:0.5rem;">📋 ${esc(projName)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.5rem;font-size:0.78rem;">
+        <div style="background:#fef9c3;padding:0.5rem;border-radius:7px;"><div style="color:var(--gray500);">🧱 Materials</div><div style="font-weight:800;">PHP ${pm.materials.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+        <div style="background:#fce7f3;padding:0.5rem;border-radius:7px;"><div style="color:var(--gray500);">👷 Labor</div><div style="font-weight:800;">PHP ${pm.labor.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+        <div style="background:#f3f4f6;padding:0.5rem;border-radius:7px;"><div style="color:var(--gray500);">📦 Other</div><div style="font-weight:800;">PHP ${pm.other.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+        <div style="background:#fee2e2;padding:0.5rem;border-radius:7px;"><div style="color:var(--gray500);">💸 Total Expense</div><div style="font-weight:800;color:var(--danger);">PHP ${pm.totalExpense.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+        <div style="background:#dcfce7;padding:0.5rem;border-radius:7px;"><div style="color:var(--gray500);">💰 Total Billed</div><div style="font-weight:800;color:var(--success);">PHP ${totalBilled.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+        <div style="background:${profit>=0?'#d1fae5':'#fee2e2'};padding:0.5rem;border-radius:7px;border:2px solid ${profit>=0?'var(--success)':'var(--danger)'};"><div style="color:var(--gray500);">📊 Net Profit</div><div style="font-weight:900;color:${profit>=0?'var(--success)':'var(--danger)'};">PHP ${profit.toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=rows.length?rows.join(''):'<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No expense data yet</div></div>';
+}
+
+function showExpensePriceComparison(){
+  const panel=document.getElementById('expensePriceComparisonPanel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+  if(panel.style.display==='block')renderPriceComparison();
+}
+
+function renderPriceComparison(){
+  const search=(document.getElementById('expenseSearchItem')?.value||'').toLowerCase().trim();
+  const el=document.getElementById('priceComparisonResults');
+  if(!el)return;
+  // Collect all material items across all expenses
+  const allItems=[];
+  expenses.forEach(e=>{
+    if(e.type!=='materials'||!e.materialItems)return;
+    const proj=projects.find(p=>p.id===e.projectId);
+    e.materialItems.forEach(item=>{
+      if(!search||item.desc.toLowerCase().includes(search)){
+        allItems.push({desc:item.desc,qty:item.qty,unit:item.unit,price:item.price,
+          supplier:e.supplier,location:e.supplierLocation,date:e.date,
+          project:proj?proj.name:'General'});
+      }
+    });
+  });
+  if(!allItems.length){el.innerHTML='<div style="font-size:0.8rem;color:var(--gray400);padding:0.5rem;">No items found. Try a different search term.</div>';return;}
+  // Group by item description
+  const grouped={};
+  allItems.forEach(item=>{
+    const key=item.desc.toLowerCase();
+    if(!grouped[key])grouped[key]=[];
+    grouped[key].push(item);
+  });
+  el.innerHTML=Object.entries(grouped).map(([key,items])=>{
+    const sorted=[...items].sort((a,b)=>a.price-b.price);
+    const cheapest=sorted[0];
+    return`<div style="margin-bottom:1rem;">
+      <div style="font-weight:800;font-size:0.82rem;margin-bottom:0.4rem;">🔍 ${esc(items[0].desc)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+        <thead><tr style="background:#e0f2fe;">
+          <th style="padding:0.3rem 0.5rem;text-align:left;">Supplier</th>
+          <th style="padding:0.3rem 0.5rem;text-align:left;">Location</th>
+          <th style="padding:0.3rem 0.5rem;text-align:right;">Unit Price</th>
+          <th style="padding:0.3rem 0.5rem;text-align:center;">Date</th>
+          <th style="padding:0.3rem 0.5rem;text-align:left;">Project</th>
+        </tr></thead>
+        <tbody>${sorted.map((item,i)=>`<tr style="background:${i===0?'#f0fdf4':'#fff'};border-bottom:1px solid #e2e8f0;">
+          <td style="padding:0.3rem 0.5rem;">${i===0?'⭐ ':''}<strong>${esc(item.supplier||'Unknown')}</strong></td>
+          <td style="padding:0.3rem 0.5rem;">${esc(item.location||'--')}</td>
+          <td style="padding:0.3rem 0.5rem;text-align:right;font-weight:${i===0?'900':'400'};color:${i===0?'var(--success)':'var(--text)'};">PHP ${Number(item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+          <td style="padding:0.3rem 0.5rem;text-align:center;">${fmtDate(item.date)}</td>
+          <td style="padding:0.3rem 0.5rem;font-size:0.7rem;color:var(--gray500);">${esc(item.project)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${sorted.length>1?`<div style="font-size:0.7rem;color:var(--success);margin-top:0.2rem;">⭐ Cheapest: ${esc(cheapest.supplier||'Unknown')} at PHP ${Number(cheapest.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</div>`:''}
+    </div>`;
+  }).join('<hr style="border:none;border-top:1px solid #e2e8f0;margin:0.5rem 0;">');
+}
+
+// ============ QUOTATION FUNCTIONS ============
+var quotations = JSON.parse(localStorage.getItem('cesv2_quotations')||'[]');
+var quotationLineItems = [];
+var editingQuotationId = null;
+
+function numberToWords(n){
+  const ones=['','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN','ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN','SEVENTEEN','EIGHTEEN','NINETEEN'];
+  const tens=['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+  if(n===0)return'ZERO';
+  if(n<0)return'MINUS '+numberToWords(-n);
+  let words='';
+  if(Math.floor(n/1000000)>0){words+=numberToWords(Math.floor(n/1000000))+' MILLION ';n%=1000000;}
+  if(Math.floor(n/1000)>0){words+=numberToWords(Math.floor(n/1000))+' THOUSAND ';n%=1000;}
+  if(Math.floor(n/100)>0){words+=numberToWords(Math.floor(n/100))+' HUNDRED ';n%=100;}
+  if(n>0){if(words!='')words+='AND ';if(n<20)words+=ones[n];else{words+=tens[Math.floor(n/10)];if(n%10>0)words+=' '+ones[n%10];}}
+  return words.trim();
+}
+
+function amountInWords(amount){
+  const whole=Math.floor(amount);
+  const cents=Math.round((amount-whole)*100);
+  let words=numberToWords(whole)+' PESOS';
+  if(cents>0)words+=' AND '+numberToWords(cents)+'/100 CENTAVOS';
+  words+=' ONLY';
+  return words;
+}
+
+function recalcQuotationTotal(){
+  const subtotal=quotationLineItems.reduce((s,i)=>s+(i.qty*i.price),0);
+  const vat=document.getElementById('q_vat').value;
+  let vatAmt=0,grand=subtotal;
+  if(vat==='exclusive'){vatAmt=subtotal*0.12;grand=subtotal+vatAmt;}
+  else if(vat==='inclusive'){vatAmt=subtotal-(subtotal/1.12);}
+  document.getElementById('q_subtotal').textContent='PHP '+subtotal.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('q_vatAmt').textContent='PHP '+vatAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('q_total').textContent='PHP '+grand.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('q_totalWords').textContent=amountInWords(grand);
+  document.getElementById('q_vatRow').style.display=vat==='exempt'?'none':'flex';
+}
+
+function renderQuotationLineItems(){
+  const el=document.getElementById('q_lineItems');
+  if(!el)return;
+  if(!quotationLineItems.length){el.innerHTML='<div style="font-size:0.75rem;color:var(--gray400);padding:0.5rem;">No items yet. Add line items above.</div>';recalcQuotationTotal();return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-bottom:0.5rem;">
+    <thead><tr style="background:var(--gray50);">
+      <th style="padding:0.4rem;text-align:left;border-bottom:1px solid var(--gray200);">Description</th>
+      <th style="padding:0.4rem;text-align:center;border-bottom:1px solid var(--gray200);width:60px;">Qty</th>
+      <th style="padding:0.4rem;text-align:center;border-bottom:1px solid var(--gray200);width:60px;">Unit</th>
+      <th style="padding:0.4rem;text-align:right;border-bottom:1px solid var(--gray200);width:100px;">Unit Price</th>
+      <th style="padding:0.4rem;text-align:right;border-bottom:1px solid var(--gray200);width:100px;">Amount</th>
+      <th style="padding:0.4rem;width:30px;border-bottom:1px solid var(--gray200);"></th>
+    </tr></thead>
+    <tbody>${quotationLineItems.map((item,i)=>`<tr>
+      <td style="padding:0.35rem 0.4rem;border-bottom:1px solid var(--gray100);">${esc(item.desc)}</td>
+      <td style="padding:0.35rem 0.4rem;text-align:center;border-bottom:1px solid var(--gray100);">${item.qty}</td>
+      <td style="padding:0.35rem 0.4rem;text-align:center;border-bottom:1px solid var(--gray100);">${esc(item.unit||'')}</td>
+      <td style="padding:0.35rem 0.4rem;text-align:right;border-bottom:1px solid var(--gray100);">${Number(item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.35rem 0.4rem;text-align:right;border-bottom:1px solid var(--gray100);font-weight:700;">${Number(item.qty*item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.35rem 0.4rem;text-align:center;border-bottom:1px solid var(--gray100);"><button onclick="removeQuotationLineItem(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.9rem;">✕</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+  recalcQuotationTotal();
+}
+
+function addQuotationLineItem(){
+  const desc=document.getElementById('q_itemDesc').value.trim();
+  const qty=document.getElementById('q_itemQty').value.trim()||'1';
+  const unit=document.getElementById('q_itemUnit').value.trim();
+  const price=Number(document.getElementById('q_itemPrice').value)||0;
+  if(!desc){alert('Please enter a description.');return;}
+  quotationLineItems.push({desc,qty,unit,price,total:parseFloat(qty)*price});
+  ['q_itemDesc','q_itemQty','q_itemUnit','q_itemPrice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderQuotationLineItems();
+}
+
+function removeQuotationLineItem(i){
+  quotationLineItems.splice(i,1);
+  renderQuotationLineItems();
+}
+
+function setQuotationPaymentTerms(type){var t='';if(type==='standard')t='*50% DOWN PAYMENT\n*50% FULL PAYMENT UPON COMPLETION OF PROJECT';else if(type==='progress')t='*50% DOWN PAYMENT\n*40% PROGRESS BILLING\n*10% RETENTION UPON COMPLETION OF PUNCHLIST / SUBMISSION OF AS-BUILT PLANS';else if(type==='unit')t='*50% DOWN PAYMENT\n*100% FULL PAYMENT OF UNIT UPON DELIVERY\n*REMAINING BALANCE UPON COMPLETION OF PROJECT';document.getElementById('q_paymentTerms').value=t;}
+
+function autoFillQuotationFromProject(){
+  const pid=document.getElementById('q_project').value;
+  if(!pid)return;
+  const p=projects.find(x=>x.id===pid);
+  if(!p)return;
+  if(!document.getElementById('q_client').value&&p.clientId){
+    const c=clients.find(x=>x.id===p.clientId);
+    if(c)document.getElementById('q_client').value=c.name||'';
+  }
+  if(!document.getElementById('q_subject').value&&p.types&&p.types.length){
+    const labels={ducting:'DUCTING WORKS',sprinkler:'SPRINKLER SYSTEM',airbalancing:'AIR BALANCING',fcuinstall:'FCU INSTALLATION',fcudismantling:'FCU DISMANTLING'};
+    document.getElementById('q_subject').value=p.types.map(t=>labels[t]||t.toUpperCase()).join(' / ');
+  }
+}
+
+function populateQuotationSelects(){
+  const ps=document.getElementById('q_project');
+  if(ps)ps.innerHTML='<option value="">None</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+
+function openNewQuotationModal(){
+  editingQuotationId=null;quotationLineItems=[];
+  ['q_client','q_clientAddress','q_attn','q_subject','q_notes','q_driveLink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('q_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('q_status').value='draft';
+  document.getElementById('q_vat').value='exclusive';
+  document.getElementById('q_paymentTerms').value='*50% DOWN PAYMENT\n*50% FULL PAYMENT UPON COMPLETION OF PROJECT';
+  document.getElementById('quotationModalTitle').textContent='New Quotation';
+  renderQuotationLineItems();populateQuotationSelects();openModal('newQuotationModal');
+}
+
+function openEditQuotationModal(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  editingQuotationId=id;
+  quotationLineItems=JSON.parse(JSON.stringify(q.lineItems||[]));
+  document.getElementById('q_client').value=q.client||'';
+  document.getElementById('q_clientAddress').value=q.clientAddress||'';
+  document.getElementById('q_attn').value=q.attn||'';
+  document.getElementById('q_subject').value=q.subject||'';
+  document.getElementById('q_date').value=q.date||'';
+  document.getElementById('q_status').value=q.status||'draft';
+  document.getElementById('q_vat').value=q.vat||'exclusive';
+  document.getElementById('q_paymentTerms').value=q.paymentTerms||'';
+  document.getElementById('q_notes').value=q.notes||'';
+  document.getElementById('q_driveLink').value=q.driveLink||'';
+  document.getElementById('quotationModalTitle').textContent='Edit Quotation';
+  renderQuotationLineItems();populateQuotationSelects();
+  setTimeout(()=>{if(document.getElementById('q_project'))document.getElementById('q_project').value=q.projectId||'';},100);
+  openModal('newQuotationModal');
+}
+
+function saveQuotation(){
+  const client=document.getElementById('q_client').value.trim();
+  const subject=document.getElementById('q_subject').value.trim();
+  if(!client||!subject){alert('Please enter client name and subject/work type.');return;}
+  const vat=document.getElementById('q_vat').value;
+  const subtotal=quotationLineItems.reduce((s,i)=>s+(parseFloat(i.qty)*i.price),0);
+  let vatAmt=0,grand=subtotal;
+  if(vat==='exclusive'){vatAmt=subtotal*0.12;grand=subtotal+vatAmt;}
+  else if(vat==='inclusive'){vatAmt=subtotal-(subtotal/1.12);}
+  const data={
+    client,clientAddress:document.getElementById('q_clientAddress').value.trim(),
+    attn:document.getElementById('q_attn').value.trim(),
+    subject,date:document.getElementById('q_date').value,
+    projectId:document.getElementById('q_project').value,
+    status:document.getElementById('q_status').value,
+    vat,subtotal,vatAmt,total:grand,
+    lineItems:JSON.parse(JSON.stringify(quotationLineItems)),
+    paymentTerms:document.getElementById('q_paymentTerms').value.trim(),
+    notes:document.getElementById('q_notes').value.trim(),
+    driveLink:document.getElementById('q_driveLink').value.trim()
+  };
+  if(editingQuotationId){Object.assign(quotations.find(q=>q.id===editingQuotationId),data);showToast('Quotation updated!');}
+  else{quotations.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Quotation created!');}
+  save('cesv2_quotations',quotations);
+  closeModal('newQuotationModal');renderQuotations();
+}
+
+function approveQuotation(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  q.status='approved';
+  save('cesv2_quotations',quotations);
+  renderQuotations();showToast('✅ Quotation approved!');
+}
+
+function deleteQuotation(id){
+  if(!confirm('Delete this quotation?'))return;
+  quotations=quotations.filter(q=>q.id!==id);
+  save('cesv2_quotations',quotations);renderQuotations();showToast('Deleted.');
+}
+
+function filterQuotations(f,el){
+  document.querySelectorAll('#page-quotation .tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');renderQuotations(f);
+}
+
+function renderQuotations(filter='all'){
+  const el=document.getElementById('quotationList');
+  if(!el)return;
+  let list=filter==='all'?quotations:quotations.filter(q=>q.status===filter);
+  list.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">No quotations yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewQuotationModal()">+ New Quotation</button></div>';return;}
+  const statusColor={draft:'var(--gray500)',sent:'var(--primary)',approved:'var(--success)',rejected:'var(--danger)'};
+  el.innerHTML=list.map(q=>{
+    const proj=projects.find(p=>p.id===q.projectId);
+    return`<div class="project-item" ondblclick="openEditQuotationModal('${q.id}')">
+      <div class="project-type-badge" style="background:#f0fdf4;">📄</div>
+      <div class="project-info">
+        <div class="project-name">${esc(q.subject)}</div>
+        <div class="project-meta">${esc(q.client)} ${q.clientAddress?'— '+esc(q.clientAddress):''} · ${fmtDate(q.date)}</div>
+        <div style="font-size:0.72rem;margin-top:0.2rem;">
+          <span style="color:var(--primary);font-weight:700;">Total: PHP ${Number(q.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+          ${proj?`<span style="color:var(--gray500);margin-left:0.5rem;">📋 ${esc(proj.name)}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+        <span class="badge" style="background:${statusColor[q.status]||'var(--gray500)'};color:#fff;">${q.status||'draft'}</span>
+        <div style="display:flex;gap:0.25rem;flex-wrap:wrap;justify-content:flex-end;">
+          ${q.status!=='approved'?`<button class="btn btn-success btn-xs" onclick="approveQuotation('${q.id}')">✅ Approve</button>`:''}
+          <button class="btn btn-secondary btn-xs" onclick="openEditQuotationModal('${q.id}')">Edit</button>
+          <button class="btn btn-primary btn-xs" onclick="printQuotation('${q.id}')">Print</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteQuotation('${q.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function printQuotation(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  const vatLabel={exclusive:'VAT Exclusive',inclusive:'VAT Inclusive',exempt:'VAT Exempt'};
+  const win=window.open('','_blank');
+  const terms=(q.paymentTerms||'').split('\n').filter(t=>t.trim()).map(t=>`<div style="margin-bottom:0.3rem;">${esc(t)}</div>`).join('');
+  win.document.write(`<!DOCTYPE html><html><head><title>Quotation - ${q.subject}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:2.5rem;color:#1a2332;font-size:0.88rem;max-width:800px;margin:0 auto;}
+    .header{text-align:center;margin-bottom:1.5rem;border-bottom:2px solid #0a2f52;padding-bottom:1rem;}
+    .company-name{font-size:1.2rem;font-weight:900;color:#0a2f52;letter-spacing:0.05em;}
+    .company-sub{font-size:0.72rem;color:#64748b;margin-top:0.2rem;}
+    .company-addr{font-size:0.72rem;color:#64748b;}
+    .meta{margin-bottom:1.2rem;}
+    .meta-row{margin-bottom:0.3rem;font-size:0.85rem;}
+    .subject-line{font-weight:800;font-size:0.9rem;margin-top:0.5rem;}
+    .intro{margin-bottom:1rem;font-size:0.85rem;line-height:1.6;}
+    table{width:100%;border-collapse:collapse;margin:1rem 0;}
+    th{background:#0a2f52;color:#fff;padding:0.5rem 0.7rem;text-align:left;font-size:0.78rem;}
+    td{padding:0.45rem 0.7rem;border-bottom:1px solid #e9ecef;font-size:0.82rem;}
+    .total-row td{font-weight:900;background:#f8fafc;font-size:0.9rem;border-top:2px solid #0a2f52;}
+    .amount-words{font-size:0.78rem;color:#64748b;font-style:italic;margin-top:0.3rem;}
+    .terms{margin-top:1.5rem;}
+    .terms-title{font-weight:800;margin-bottom:0.4rem;}
+    .note{margin-top:1rem;font-size:0.8rem;color:#64748b;}
+    .signature{margin-top:3rem;display:flex;justify-content:flex-end;}
+    .sig-block{text-align:center;}
+    .sig-name{font-weight:900;font-size:0.9rem;}
+    .sig-title{font-size:0.78rem;color:#64748b;}
+    .sig-contact{font-size:0.78rem;color:#64748b;}
+    @media print{body{padding:1.5rem;}}
+  </style></head><body>
+  <div class="header">
+    <div class="company-name">CAREX ENGINEERING SERVICES</div>
+    <div class="company-sub">Design, Estimate and Installation, Airconditioning, Plumbing Sanitary and Fire Protection Specialist (Sprinkler System)</div>
+  </div>
+  <div class="meta">
+    <div class="meta-row">${fmtDate(q.date)}</div>
+    <div class="meta-row" style="margin-top:0.5rem;"><strong>${esc(q.client)}</strong></div>
+    ${q.clientAddress?`<div class="meta-row">${esc(q.clientAddress)}</div>`:''}
+    ${q.attn?`<div class="meta-row">ATTN : <strong>${esc(q.attn)}</strong></div>`:''}
+    <div class="meta-row subject-line">SUBJECT : ${esc(q.subject)}</div>
+  </div>
+  <div class="intro">
+    Sir/Ma'am,<br><br>
+    Herewith we submit our proposal on the above subject for the complete supply of materials, labor and tools
+    amounting to <strong>${amountInWords(q.total||0)}</strong> <strong>(PHP ${Number(q.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})})</strong>.
+    Breakdown as follows:
+  </div>
+  <table>
+    <thead><tr>
+      <th>DESCRIPTION</th>
+      <th style="text-align:center;width:60px;">QTY</th>
+      <th style="text-align:center;width:60px;">UNIT</th>
+      <th style="text-align:right;width:110px;">UNIT PRICE</th>
+      <th style="text-align:right;width:110px;">AMOUNT</th>
+    </tr></thead>
+    <tbody>
+      ${(q.lineItems||[]).map(i=>`<tr>
+        <td>${esc(i.desc)}</td>
+        <td style="text-align:center;">${i.qty}</td>
+        <td style="text-align:center;">${esc(i.unit||'')}</td>
+        <td style="text-align:right;">${i.price?Number(i.price).toLocaleString('en-PH',{minimumFractionDigits:2}):''}</td>
+        <td style="text-align:right;font-weight:700;">P ${Number(parseFloat(i.qty)*i.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      </tr>`).join('')}
+      ${q.vat==='exclusive'?`<tr><td colspan="4" style="text-align:right;font-size:0.78rem;color:#64748b;">VAT (12%)</td><td style="text-align:right;">P ${Number(q.vatAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`:''}
+      <tr class="total-row"><td colspan="4" style="text-align:right;">TOTAL</td><td style="text-align:right;">P ${Number(q.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>
+    </tbody>
+  </table>
+  ${q.paymentTerms?`<div class="terms"><div class="terms-title">TERMS OF PAYMENT</div>${terms}</div>`:''}
+  ${q.notes?`<div class="note">NOTE: ${esc(q.notes)}</div>`:''}
+  <div style="margin-top:1rem;font-size:0.85rem;">Thank you very much.</div>
+  <div style="margin-top:0.5rem;font-size:0.85rem;">Very truly yours,</div>
+  <div class="signature">
+    <div class="sig-block">
+      <div style="margin-bottom:2rem;"></div>
+      <div class="sig-name">OSCAR CARY D. GADOR</div>
+      <div class="sig-title">General Manager</div>
+      <div class="sig-contact">CP # 0999-998-0594</div>
+      <div style="margin-top:1rem;font-size:0.72rem;color:#64748b;">56 F. Caparas St., Dutch Olandes IVC, Marikina City · Tel No. (02) 7148-7030</div>
+    </div>
+  </div>
+  </body></html>`);
+  win.document.close();win.print();
+}
+
 function renderBilling(filter='all'){
   const el=document.getElementById('billingList');
   let list=filter==='all'?billing:filter==='retention'?billing.filter(b=>b.retentionPct>0&&b.retentionRelease):billing.filter(b=>b.status===filter);
@@ -6045,6 +6761,137 @@ setInterval(updateHeaderDate,60000);
 </div>
 
 <!-- BILLING MODAL -->
+<!-- EXPENSE TRACKER MODAL -->
+<div class="modal-overlay" id="newExpenseModal">
+<div class="modal" style="max-width:650px;">
+<div class="modal-header"><h2 id="expenseModalTitle">Add Expense</h2><button class="modal-close" onclick="closeModal('newExpenseModal')">X Close</button></div>
+<div class="modal-body">
+<div class="form-grid">
+  <div class="fg"><label>Expense Type</label>
+    <select id="exp_type" onchange="toggleExpenseFields(this.value)">
+      <option value="materials">🧱 Materials</option>
+      <option value="labor">👷 Labor / Sub-contractor</option>
+      <option value="other">📦 Other</option>
+    </select>
+  </div>
+  <div class="fg"><label>Related Project</label><select id="exp_project"><option value="">None / General</option></select></div>
+  <div class="fg"><label>Date</label><input id="exp_date" type="date"/></div>
+  <div class="fg"><label>Status</label>
+    <select id="exp_status">
+      <option value="pending">Pending</option>
+      <option value="paid">Paid</option>
+    </select>
+  </div>
+
+  <!-- MATERIALS FIELDS -->
+  <div id="exp_materialsSection" class="fg full">
+    <div style="font-size:0.75rem;font-weight:800;color:var(--primary);margin-bottom:0.5rem;">🧱 Material Details</div>
+    <div id="exp_materialItems" style="margin-bottom:0.5rem;"></div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+      <input id="exp_matDesc" placeholder="Item name (e.g. GI Sheet 0.5mm)" style="flex:2;padding:0.4rem 0.6rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;min-width:130px;" type="text"/>
+      <input id="exp_matQty" placeholder="Qty" style="width:55px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="number"/>
+      <input id="exp_matUnit" placeholder="Unit" style="width:55px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="text"/>
+      <input id="exp_matPrice" placeholder="Unit Price" style="width:100px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="number"/>
+      <button class="btn btn-secondary btn-sm" onclick="addExpenseMaterialItem()">+ Add</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem;">
+      <div><label style="font-size:0.75rem;font-weight:700;">Supplier / Store</label><input id="exp_supplier" placeholder="e.g. Ace Hardware, Wilcon" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Supplier Location</label><input id="exp_supplierLocation" placeholder="e.g. Marikina, Cubao" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+    </div>
+    <div style="margin-top:0.5rem;padding:0.5rem;background:var(--gray50);border-radius:8px;border:1px solid var(--gray200);">
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:800;"><span>Materials Total:</span><span id="exp_matTotal" style="color:var(--primary);">PHP 0.00</span></div>
+    </div>
+  </div>
+
+  <!-- LABOR FIELDS -->
+  <div id="exp_laborSection" class="fg full" style="display:none;">
+    <div style="font-size:0.75rem;font-weight:800;color:var(--primary);margin-bottom:0.5rem;">👷 Labor / Sub-contractor Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+      <div><label style="font-size:0.75rem;font-weight:700;">Name / Company</label><input id="exp_laborName" placeholder="e.g. Juan dela Cruz / ABC Sub-con" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Scope of Work</label><input id="exp_laborScope" placeholder="e.g. Sprinkler installation" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Agreed Amount</label><input id="exp_laborAgreed" placeholder="0.00" type="number" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;" oninput="recalcLaborBalance()"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Amount Paid</label><input id="exp_laborPaid" placeholder="0.00" type="number" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;" oninput="recalcLaborBalance()"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Date Paid</label><input id="exp_laborPaidDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Balance</label><input id="exp_laborBalance" readonly placeholder="Auto-calculated" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;background:#f8fafc;"/></div>
+    </div>
+  </div>
+
+  <!-- OTHER FIELDS -->
+  <div id="exp_otherSection" class="fg full" style="display:none;">
+    <div style="font-size:0.75rem;font-weight:800;color:var(--primary);margin-bottom:0.5rem;">📦 Other Expense Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+      <div class="fg full"><label style="font-size:0.75rem;font-weight:700;">Description</label><input id="exp_otherDesc" placeholder="e.g. Equipment rental, Transport" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Amount</label><input id="exp_otherAmount" placeholder="0.00" type="number" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+      <div><label style="font-size:0.75rem;font-weight:700;">Supplier / Payee</label><input id="exp_otherSupplier" placeholder="e.g. Rental company" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
+    </div>
+  </div>
+
+  <div class="fg full"><label>Notes / Receipt Reference</label><textarea id="exp_notes" placeholder="e.g. OR #12345, receipt from Ace Hardware" style="min-height:50px;"></textarea></div>
+  <div class="fg"><label>Drive Link (Receipt/Invoice)</label><input id="exp_driveLink" type="url" placeholder="https://drive.google.com/..."/></div>
+</div>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-secondary" onclick="closeModal('newExpenseModal')">Cancel</button>
+  <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+</div>
+</div>
+</div>
+
+<!-- QUOTATION MODAL -->
+<div class="modal-overlay" id="newQuotationModal">
+<div class="modal" style="max-width:750px;">
+<div class="modal-header"><h2 id="quotationModalTitle">New Quotation</h2><button class="modal-close" onclick="closeModal('newQuotationModal')">X Close</button></div>
+<div class="modal-body">
+<div class="form-grid">
+  <div class="fg"><label>Date *</label><input id="q_date" type="date"/></div>
+  <div class="fg"><label>Related Project</label><select id="q_project" onchange="autoFillQuotationFromProject()"><option value="">None</option></select></div>
+  <div class="fg full"><label>Client / Company Name *</label><input id="q_client" placeholder="e.g. Miguel and Maria" type="text"/></div>
+  <div class="fg full"><label>Client Location / Address</label><input id="q_clientAddress" placeholder="e.g. Ayala Malls Trinoma" type="text"/></div>
+  <div class="fg"><label>Attention (ATTN)</label><input id="q_attn" placeholder="e.g. OWNER, MANAGER" type="text"/></div>
+  <div class="fg"><label>Work Type / Subject *</label><input id="q_subject" placeholder="e.g. PIPING WORKS – 3 T.R. F.C.U." type="text"/></div>
+  <div class="fg"><label>VAT Status</label><select id="q_vat"><option value="exclusive">VAT Exclusive</option><option value="inclusive">VAT Inclusive</option><option value="exempt">VAT Exempt</option></select></div>
+  <div class="fg"><label>Status</label><select id="q_status"><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved ✅</option><option value="rejected">Rejected</option></select></div>
+
+  <div class="form-divider full"><span>Line Items</span></div>
+  <div class="fg full">
+    <div id="q_lineItems" style="margin-bottom:0.5rem;"></div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+      <input id="q_itemDesc" placeholder="Description (e.g. Supply of FCU 3.0 TR)" style="flex:2;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;min-width:150px;" type="text"/>
+      <input id="q_itemQty" placeholder="Qty" style="width:60px;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+      <input id="q_itemUnit" placeholder="Unit" style="width:60px;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="text"/>
+      <input id="q_itemPrice" placeholder="Unit Price" style="width:110px;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;outline:none;" type="number"/>
+      <button class="btn btn-secondary btn-sm" onclick="addQuotationLineItem()">+ Add</button>
+    </div>
+    <div style="margin-top:0.75rem;padding:0.75rem;background:var(--gray50);border-radius:8px;border:1.5px solid var(--gray200);">
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;"><span>Subtotal:</span><span id="q_subtotal">PHP 0.00</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;" id="q_vatRow"><span>VAT (12%):</span><span id="q_vatAmt">PHP 0.00</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.9rem;font-weight:800;color:var(--primary);border-top:1px solid var(--gray200);padding-top:0.3rem;"><span>TOTAL:</span><span id="q_total">PHP 0.00</span></div>
+      <div style="font-size:0.72rem;color:var(--gray500);margin-top:0.3rem;" id="q_totalWords"></div>
+    </div>
+  </div>
+
+  <div class="form-divider full"><span>Payment Terms</span></div>
+  <div class="fg full">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setQuotationPaymentTerms('standard')">50% DP + 50% Final</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setQuotationPaymentTerms('progress')">50% DP + 40% Progress + 10% Retention</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setQuotationPaymentTerms('unit')">50% DP + 100% Unit upon delivery + Balance</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setQuotationPaymentTerms('custom')">Custom</button>
+    </div>
+    <textarea id="q_paymentTerms" style="width:100%;min-height:80px;padding:0.5rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" placeholder="Payment terms will appear here..."></textarea>
+  </div>
+
+  <div class="fg full"><label>Notes / Special Conditions</label><textarea id="q_notes" placeholder="e.g. INCLUDE MECHANICAL WORKS ON YOUR CARI (INSURANCE)&#10;Kitchen hood is supplied by owner." style="min-height:70px;"></textarea></div>
+  <div class="fg"><label>Drive Link (Signed Copy)</label><input id="q_driveLink" type="url" placeholder="https://drive.google.com/..."/></div>
+</div>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-secondary" onclick="closeModal('newQuotationModal')">Cancel</button>
+  <button class="btn btn-primary" onclick="saveQuotation()">Save Quotation</button>
+</div>
+</div>
+</div>
+
 <div class="modal-overlay" id="newBillingModal">
 <div class="modal" style="max-width:700px;">
 <div class="modal-header"><h2 id="billingModalTitle">New Quote / Billing</h2><button class="modal-close" onclick="closeModal('newBillingModal')">X Close</button></div>
