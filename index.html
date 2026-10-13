@@ -516,8 +516,9 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 </div>
 <!-- BILLING PAGE -->
 <div class="page" id="page-billing">
-<div class="page-header"><div><div class="page-title">Billing and Quotations</div><div class="page-subtitle">Create quotes, invoices and track payments</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewBillingModal()">+ New Quote</button></div></div>
-<div class="tab-bar"><button class="tab-btn active" onclick="filterBilling('all',this)">All</button><button class="tab-btn" onclick="filterBilling('draft',this)">Draft</button><button class="tab-btn" onclick="filterBilling('sent',this)">Sent</button><button class="tab-btn" onclick="filterBilling('approved',this)">Approved</button><button class="tab-btn" onclick="filterBilling('invoiced',this)">Invoiced</button><button class="tab-btn" onclick="filterBilling('paid',this)">Paid</button></div>
+<div class="page-header"><div><div class="page-title">Billing and Quotations</div><div class="page-subtitle">Track quotes, payment schedules and retention per project</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openNewBillingModal()">+ New Quote / Billing</button></div></div>
+<div class="tab-bar"><button class="tab-btn active" onclick="filterBilling('all',this)">All</button><button class="tab-btn" onclick="filterBilling('draft',this)">Draft</button><button class="tab-btn" onclick="filterBilling('sent',this)">Sent</button><button class="tab-btn" onclick="filterBilling('approved',this)">Approved</button><button class="tab-btn" onclick="filterBilling('invoiced',this)">Invoiced</button><button class="tab-btn" onclick="filterBilling('paid',this)">Paid</button><button class="tab-btn" onclick="filterBilling('retention',this)">Retention</button></div>
+<div id="billingRetentionNotif" style="display:none;background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;"></div>
 <div class="project-list" id="billingList"></div>
 </div>
 <!-- SERVICE REPORTS PAGE -->
@@ -1188,6 +1189,7 @@ function renderDashboard(){
   // Delivery due tomorrow notifications
   checkDeliveryReminders();
   checkScheduleReminders();
+  checkBillingRetentionNotifs();
 
   const dap=document.getElementById('dashActiveProjects');
   dap.innerHTML=active.length?'<div class="project-list">'+active.slice(0,5).map(p=>projectItemHtml(p)).join('')+'</div>':'<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No active projects</div></div>';
@@ -3011,73 +3013,290 @@ function populateBillingSelects(){
 }
 function renderBilling(filter='all'){
   const el=document.getElementById('billingList');
-  let list=filter==='all'?billing:billing.filter(b=>b.status===filter);
+  let list=filter==='all'?billing:filter==='retention'?billing.filter(b=>b.retentionPct>0&&b.retentionRelease):billing.filter(b=>b.status===filter);
   list.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
-  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128176;</div><div class="empty-title">No quotes/invoices yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewBillingModal()">+ New Quote</button></div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128176;</div><div class="empty-title">No quotes/invoices yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewBillingModal()">+ New Quote / Billing</button></div>';return;}
   const statusColor={draft:'var(--gray500)',sent:'var(--primary)',approved:'var(--warning)',invoiced:'var(--orange)',paid:'var(--success)'};
-  el.innerHTML=list.map(b=>`<div class="project-item"><div class="project-type-badge" style="background:#e8f1fb;">&#128176;</div><div class="project-info"><div class="project-name">${esc(b.title)}</div><div class="project-meta">${esc(b.clientName||'')} - ${fmtDate(b.date)} - PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;"><span class="badge" style="background:${statusColor[b.status]||'var(--gray500)'};color:#fff;">${b.status||'draft'}</span><div style="display:flex;gap:0.25rem;"><button class="btn btn-secondary btn-xs" onclick="openEditBillingModal('${b.id}')">Edit</button><button class="btn btn-primary btn-xs" onclick="printBilling('${b.id}')">Print</button><button class="btn btn-danger btn-xs" onclick="deleteBilling('${b.id}')">Delete</button></div></div></div>`).join('');
+  el.innerHTML=list.map(b=>{
+    const proj=projects.find(p=>p.id===b.projectId);
+    const totalRec=(b.dpReceivedDate?b.dpAmt:0)+(b.fcuReceivedDate?b.fcuAmt:0)+(b.finalReceivedDate?b.finalAmt:0);
+    const outstanding=Math.max(0,(b.total||0)-totalRec);
+    const hasRetention=b.retentionPct>0&&b.retentionRelease;
+    const retExpiring=hasRetention&&isRetentionExpiringSoon(b);
+    return `<div class="project-item" ondblclick="openEditBillingModal('${b.id}')">
+      <div class="project-type-badge" style="background:#e8f1fb;">&#128176;</div>
+      <div class="project-info">
+        <div class="project-name">${esc(b.title)}</div>
+        <div class="project-meta">${esc(b.clientName||'')} ${proj?'— '+esc(proj.name):''} · ${fmtDate(b.date)}</div>
+        <div style="font-size:0.72rem;margin-top:0.2rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <span style="color:var(--primary);font-weight:700;">Total: PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+          <span style="color:var(--success);font-weight:700;">Received: PHP ${totalRec.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+          ${outstanding>0?`<span style="color:var(--danger);font-weight:700;">Outstanding: PHP ${outstanding.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`:'<span style="color:var(--success);">✅ Fully Paid</span>'}
+          ${hasRetention?`<span style="color:${retExpiring?'var(--danger)':'var(--warning)'};font-weight:700;">⏳ Retention ${b.retentionPct}% — Release: ${fmtDate(b.retentionRelease)}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+        <span class="badge" style="background:${statusColor[b.status]||'var(--gray500)'};color:#fff;">${b.status||'draft'}</span>
+        <div style="display:flex;gap:0.25rem;">
+          <button class="btn btn-secondary btn-xs" onclick="openEditBillingModal('${b.id}')">Edit</button>
+          <button class="btn btn-primary btn-xs" onclick="printBilling('${b.id}')">Print</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteBilling('${b.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
+
+function isRetentionExpiringSoon(b){
+  if(!b.retentionRelease)return false;
+  const today=new Date();today.setHours(0,0,0,0);
+  const rel=new Date(b.retentionRelease);
+  const diff=(rel-today)/(1000*60*60*24);
+  return diff>=0&&diff<=7;
+}
+
+function checkBillingRetentionNotifs(){
+  const el=document.getElementById('billingRetentionNotif');
+  if(!el)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const expiring=billing.filter(b=>{
+    if(!b.retentionRelease||!b.retentionPct)return false;
+    const rel=new Date(b.retentionRelease);
+    const diff=(rel-today)/(1000*60*60*24);
+    return diff>=0&&diff<=7;
+  });
+  if(expiring.length>0){
+    el.style.display='block';
+    el.innerHTML='<div style="font-size:0.78rem;font-weight:800;color:#dc2626;margin-bottom:0.4rem;">⏳ Retention Release Due Soon!</div>'
+      +expiring.map(b=>`<div style="font-size:0.75rem;margin-bottom:0.2rem;">📋 <strong>${esc(b.title)}</strong> — ${b.retentionPct}% (PHP ${Number(b.retentionAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})}) releases on <strong>${fmtDate(b.retentionRelease)}</strong></div>`).join('');
+  } else {
+    el.style.display='none';
+  }
+}
+
 function filterBilling(f,el){document.querySelectorAll('#page-billing .tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderBilling(f);}
-function openNewBillingModal(){editingBillingId=null;billingLineItems=[];['b_title','b_notes'].forEach(i=>document.getElementById(i).value='');document.getElementById('b_date').value=new Date().toISOString().split('T')[0];document.getElementById('b_validUntil').value='';document.getElementById('b_status').value='draft';document.getElementById('b_lineItems').innerHTML='';document.getElementById('b_total').textContent='PHP 0.00';document.getElementById('billingModalTitle').textContent='New Quotation';populateBillingSelects();openModal('newBillingModal');}
-function openEditBillingModal(id){const b=billing.find(x=>x.id===id);if(!b)return;editingBillingId=id;billingLineItems=JSON.parse(JSON.stringify(b.lineItems||[]));document.getElementById('b_title').value=b.title||'';document.getElementById('b_date').value=b.date||'';document.getElementById('b_validUntil').value=b.validUntil||'';document.getElementById('b_status').value=b.status||'draft';document.getElementById('b_notes').value=b.notes||'';document.getElementById('billingModalTitle').textContent='Edit Quote/Invoice';populateBillingSelects();setTimeout(()=>{document.getElementById('b_client').value=b.clientId||'';document.getElementById('b_project').value=b.projectId||'';},100);renderBillingLineItems();openModal('newBillingModal');}
+function openNewBillingModal(){
+  editingBillingId=null;billingLineItems=[];
+  ['b_title','b_notes','b_driveLink','b_fcuAmt','b_fcuBilledDate','b_fcuReceivedDate',
+   'b_dpBilledDate','b_dpReceivedDate','b_finalBilledDate','b_finalReceivedDate',
+   'b_retentionStart','b_retentionRelease','b_validUntil'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  document.getElementById('b_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('b_status').value='draft';
+  document.getElementById('b_vat').value='exclusive';
+  document.getElementById('b_vat').onchange=recalcPaymentSchedule;
+  document.getElementById('b_dpPct').value='50';
+  document.getElementById('b_retentionPct').value='0';
+  document.getElementById('b_fcuPaymentSection').style.display='none';
+  document.getElementById('billingModalTitle').textContent='New Quote / Billing';
+  renderBillingLineItems();recalcPaymentSchedule();
+  populateBillingSelects();openModal('newBillingModal');
+}
+function openEditBillingModal(id){
+  const b=billing.find(x=>x.id===id);if(!b)return;
+  editingBillingId=id;
+  billingLineItems=JSON.parse(JSON.stringify(b.lineItems||[]));
+  document.getElementById('b_title').value=b.title||'';
+  document.getElementById('b_notes').value=b.notes||'';
+  document.getElementById('b_driveLink').value=b.driveLink||'';
+  document.getElementById('b_date').value=b.date||'';
+  document.getElementById('b_validUntil').value=b.validUntil||'';
+  document.getElementById('b_status').value=b.status||'draft';
+  document.getElementById('b_vat').value=b.vat||'exclusive';
+  document.getElementById('b_dpPct').value=b.dpPct||50;
+  document.getElementById('b_retentionPct').value=b.retentionPct||0;
+  document.getElementById('b_dpBilledDate').value=b.dpBilledDate||'';
+  document.getElementById('b_dpReceivedDate').value=b.dpReceivedDate||'';
+  document.getElementById('b_fcuAmt').value=b.fcuAmt||'';
+  document.getElementById('b_fcuBilledDate').value=b.fcuBilledDate||'';
+  document.getElementById('b_fcuReceivedDate').value=b.fcuReceivedDate||'';
+  document.getElementById('b_finalBilledDate').value=b.finalBilledDate||'';
+  document.getElementById('b_finalReceivedDate').value=b.finalReceivedDate||'';
+  document.getElementById('b_retentionStart').value=b.retentionStart||'';
+  document.getElementById('b_retentionRelease').value=b.retentionRelease||'';
+  const hasFcu=b.fcuAmt>0;
+  document.getElementById('b_fcuPaymentSection').style.display=hasFcu?'block':'none';
+  document.getElementById('billingModalTitle').textContent='Edit Billing';
+  renderBillingLineItems();recalcPaymentSchedule();
+  populateBillingSelects();
+  setTimeout(()=>{
+    if(document.getElementById('b_client'))document.getElementById('b_client').value=b.clientId||'';
+    if(document.getElementById('b_project'))document.getElementById('b_project').value=b.projectId||'';
+  },100);
+  openModal('newBillingModal');
+}
 function addBillingLineItem(){const desc=document.getElementById('b_itemDesc').value.trim();const qty=Number(document.getElementById('b_itemQty').value)||1;const price=Number(document.getElementById('b_itemPrice').value)||0;if(!desc){alert('Please enter a description.');return;}billingLineItems.push({desc,qty,price,total:qty*price});document.getElementById('b_itemDesc').value='';document.getElementById('b_itemQty').value='';document.getElementById('b_itemPrice').value='';renderBillingLineItems();}
 function renderBillingLineItems(){const el=document.getElementById('b_lineItems');el.innerHTML=billingLineItems.map((item,i)=>`<div style="display:flex;align-items:center;gap:0.5rem;padding:0.42rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;background:var(--gray50);margin-bottom:0.35rem;"><span style="flex:2;font-size:0.78rem;font-weight:700;color:var(--text);">${esc(item.desc)}</span><span style="font-size:0.75rem;color:var(--gray500);">x${item.qty}</span><span style="font-size:0.78rem;font-weight:800;color:var(--primary);">PHP ${Number(item.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</span><button onclick="billingLineItems.splice(${i},1);renderBillingLineItems()" style="background:#fee2e2;color:var(--danger);border:1.5px solid #fecaca;border-radius:6px;padding:0.18rem 0.45rem;font-size:0.68rem;font-weight:700;cursor:pointer;font-family:inherit;">x</button></div>`).join('');const total=billingLineItems.reduce((s,i)=>s+i.total,0);document.getElementById('b_total').textContent='PHP '+total.toLocaleString('en-PH',{minimumFractionDigits:2});}
-function saveBilling(){const title=document.getElementById('b_title').value.trim();if(!title){alert('Please enter a title.');return;}const clientId=document.getElementById('b_client').value;const clientName=clients.find(c=>c.id===clientId)?.name||'';const total=billingLineItems.reduce((s,i)=>s+i.total,0);const data={title,clientId,clientName,projectId:document.getElementById('b_project').value,date:document.getElementById('b_date').value,validUntil:document.getElementById('b_validUntil').value,status:document.getElementById('b_status').value,lineItems:JSON.parse(JSON.stringify(billingLineItems)),total,notes:document.getElementById('b_notes').value.trim()};if(editingBillingId){Object.assign(billing.find(b=>b.id===editingBillingId),data);showToast('Quote updated!');}else{billing.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Quote created!');}save('cesv2_billing',billing);closeModal('newBillingModal');renderBilling();}
+function recalcPaymentSchedule(){
+  const total=billingLineItems.reduce((s,i)=>s+i.total,0);
+  const vat=document.getElementById('b_vat').value;
+  let subtotal=total;
+  let vatAmt=0;
+  if(vat==='inclusive'){vatAmt=total-(total/1.12);subtotal=total/1.12;}
+  else if(vat==='exclusive'){vatAmt=total*0.12;}
+  document.getElementById('b_subtotal').textContent='PHP '+subtotal.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_vatAmt').textContent='PHP '+vatAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  const grandTotal=vat==='exclusive'?total+vatAmt:total;
+  document.getElementById('b_total').textContent='PHP '+grandTotal.toLocaleString('en-PH',{minimumFractionDigits:2});
+  const dpPct=Number(document.getElementById('b_dpPct').value)||0;
+  const retPct=Number(document.getElementById('b_retentionPct').value)||0;
+  const dpAmt=grandTotal*(dpPct/100);
+  const retAmt=grandTotal*(retPct/100);
+  const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
+  const finalAmt=grandTotal-dpAmt-fcuAmt-retAmt;
+  document.getElementById('b_dpAmt').value='PHP '+dpAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_retentionAmt').value='PHP '+retAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_finalAmt').value='PHP '+Math.max(0,finalAmt).toLocaleString('en-PH',{minimumFractionDigits:2});
+  // Auto-set retention release date (+3 months from start)
+  const retStart=document.getElementById('b_retentionStart').value;
+  if(retStart&&retPct>0){
+    const d=new Date(retStart);d.setMonth(d.getMonth()+3);
+    document.getElementById('b_retentionRelease').value=d.toISOString().split('T')[0];
+  }
+  // Payment summary
+  const dpRec=document.getElementById('b_dpReceivedDate').value?dpAmt:0;
+  const fcuRec=document.getElementById('b_fcuReceivedDate').value?fcuAmt:0;
+  const finalRec=document.getElementById('b_finalReceivedDate').value?Math.max(0,finalAmt):0;
+  const totalRec=dpRec+fcuRec+finalRec;
+  const outstanding=grandTotal-totalRec;
+  document.getElementById('b_totalReceived').textContent='PHP '+totalRec.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_outstanding').textContent='PHP '+Math.max(0,outstanding).toLocaleString('en-PH',{minimumFractionDigits:2});
+}
+
+function autoFillBillingFromProject(){
+  const pid=document.getElementById('b_project').value;
+  if(!pid)return;
+  const p=projects.find(x=>x.id===pid);
+  if(!p)return;
+  if(!document.getElementById('b_title').value)
+    document.getElementById('b_title').value=(p.name||'')+(p.types&&p.types.length?' - '+p.types.map(t=>({ducting:'Ducting',sprinkler:'Sprinkler',airbalancing:'Air Balancing',fcuinstall:'FCU Install',fcudismantling:'FCU Dismantling'})[t]||t).join(', '):'');
+  if(p.clientId&&document.getElementById('b_client'))
+    document.getElementById('b_client').value=p.clientId;
+  // Show FCU section if project has FCU
+  const hasFcu=p.types&&(p.types.includes('fcuinstall')||p.types.includes('fcudismantling'));
+  document.getElementById('b_fcuPaymentSection').style.display=hasFcu?'block':'none';
+}
+
+function saveBilling(){
+  const title=document.getElementById('b_title').value.trim();
+  if(!title){alert('Please enter a title.');return;}
+  const clientId=document.getElementById('b_client').value;
+  const clientName=clients.find(c=>c.id===clientId)?.name||'';
+  const vat=document.getElementById('b_vat').value;
+  const subtotal=billingLineItems.reduce((s,i)=>s+i.total,0);
+  let vatAmt=0,grandTotal=subtotal;
+  if(vat==='exclusive'){vatAmt=subtotal*0.12;grandTotal=subtotal+vatAmt;}
+  else if(vat==='inclusive'){vatAmt=subtotal-(subtotal/1.12);grandTotal=subtotal;}
+  const dpPct=Number(document.getElementById('b_dpPct').value)||0;
+  const retPct=Number(document.getElementById('b_retentionPct').value)||0;
+  const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
+  const dpAmt=grandTotal*(dpPct/100);
+  const retAmt=grandTotal*(retPct/100);
+  const finalAmt=Math.max(0,grandTotal-dpAmt-fcuAmt-retAmt);
+  const retStart=document.getElementById('b_retentionStart').value;
+  let retRelease='';
+  if(retStart&&retPct>0){const d=new Date(retStart);d.setMonth(d.getMonth()+3);retRelease=d.toISOString().split('T')[0];}
+  const data={
+    title,clientId,clientName,
+    projectId:document.getElementById('b_project').value,
+    date:document.getElementById('b_date').value,
+    validUntil:document.getElementById('b_validUntil').value,
+    status:document.getElementById('b_status').value,
+    vat,subtotal,vatAmt,total:grandTotal,
+    lineItems:JSON.parse(JSON.stringify(billingLineItems)),
+    notes:document.getElementById('b_notes').value.trim(),
+    driveLink:document.getElementById('b_driveLink').value.trim(),
+    dpPct,dpAmt,dpBilledDate:document.getElementById('b_dpBilledDate').value,dpReceivedDate:document.getElementById('b_dpReceivedDate').value,
+    fcuAmt,fcuBilledDate:document.getElementById('b_fcuBilledDate').value,fcuReceivedDate:document.getElementById('b_fcuReceivedDate').value,
+    finalAmt,finalBilledDate:document.getElementById('b_finalBilledDate').value,finalReceivedDate:document.getElementById('b_finalReceivedDate').value,
+    retentionPct:retPct,retentionAmt:retAmt,retentionStart:retStart,retentionRelease:retRelease
+  };
+  if(editingBillingId){Object.assign(billing.find(b=>b.id===editingBillingId),data);showToast('Billing updated!');}
+  else{billing.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Billing created!');}
+  save('cesv2_billing',billing);
+  closeModal('newBillingModal');
+  renderBilling();
+  checkBillingRetentionNotifs();
+}
+
 function deleteBilling(id){if(!confirm('Delete this quote/invoice?'))return;billing=billing.filter(b=>b.id!==id);save('cesv2_billing',billing);renderBilling();showToast('Deleted.');}
 function printBilling(id){
   const b=billing.find(x=>x.id===id);if(!b)return;
+  const proj=projects.find(p=>p.id===b.projectId);
+  const vatLabel={exclusive:'VAT Exclusive (12% added)',inclusive:'VAT Inclusive',exempt:'VAT Exempt'};
+  const totalRec=(b.dpReceivedDate?b.dpAmt:0)+(b.fcuReceivedDate?b.fcuAmt:0)+(b.finalReceivedDate?b.finalAmt:0);
+  const outstanding=Math.max(0,(b.total||0)-totalRec);
   const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Quote - ${b.title}</title><style>body{font-family:Arial,sans-serif;padding:2rem;color:#1a2332;}h1{font-size:1.4rem;margin-bottom:0.5rem;}table{width:100%;border-collapse:collapse;margin:1rem 0;}th,td{padding:0.6rem 0.8rem;text-align:left;border-bottom:1px solid #e9ecef;}th{background:#f1f3f5;font-weight:800;font-size:0.8rem;text-transform:uppercase;}tfoot td{font-weight:800;font-size:1rem;}.header{display:flex;justify-content:space-between;margin-bottom:2rem;}.badge{padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:800;background:#dcfce7;color:#16a34a;}</style></head><body>
-  <div class="header"><div><h1>CAREX ENGINEERING SERVICES</h1><p style="color:#64748b;font-size:0.85rem;">Design, Estimate and Installation</p><p style="color:#64748b;font-size:0.85rem;">Airconditioning, Plumbing Sanitary and Fire Protection Specialist</p></div><div style="text-align:right;"><span class="badge">${b.status.toUpperCase()}</span><p style="margin-top:0.5rem;font-size:0.85rem;color:#64748b;">Date: ${fmtDate(b.date)}</p>${b.validUntil?`<p style="font-size:0.85rem;color:#64748b;">Valid Until: ${fmtDate(b.validUntil)}</p>`:''}</div></div>
-  <h2 style="font-size:1.1rem;margin-bottom:0.5rem;">${b.title}</h2>
-  ${b.clientName?`<p style="color:#64748b;margin-bottom:1rem;">Client: <strong>${b.clientName}</strong></p>`:''}
-  <table><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>
-  ${(b.lineItems||[]).map(item=>`<tr><td>${item.desc}</td><td>${item.qty}</td><td>PHP ${Number(item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td><td>PHP ${Number(item.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`).join('')}
-  </tbody><tfoot><tr><td colspan="3" style="text-align:right;">TOTAL AMOUNT:</td><td>PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr></tfoot></table>
-  ${b.notes?`<p style="margin-top:1rem;font-size:0.85rem;color:#64748b;"><strong>Notes/Terms:</strong> ${b.notes}</p>`:''}
-  <div style="margin-top:3rem;display:flex;justify-content:space-between;"><div style="text-align:center;"><div style="border-top:1px solid #1a2332;padding-top:0.5rem;width:200px;">Prepared by</div></div><div style="text-align:center;"><div style="border-top:1px solid #1a2332;padding-top:0.5rem;width:200px;">Approved by</div></div></div>
-  
-<!-- GRILLES MODAL -->
-<div class="modal-overlay" id="newGrilleModal">
-  <div class="modal">
-    <div class="modal-header"><h2 id="grilleModalTitle">New Grille Order</h2><button class="modal-close" onclick="closeModal('newGrilleModal')">X Close</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="fg full"><label>Order Title *</label><input type="text" id="gr_title" placeholder="e.g. Supply Grilles - SM San Lazaro 2nd Floor"></div>
-        <div class="fg"><label>Order Type</label><select id="gr_type"><option value="project">For Project (our installation)</option><option value="client">Client Order (supply only)</option></select></div>
-        <div class="fg"><label>Related Project</label><select id="gr_project"><option value="">None / Standalone</option></select></div>
-        <div class="fg"><label>Client / Store</label><select id="gr_client"><option value="">Select client...</option></select></div>
-        <div class="fg full"><label>Client Name (type to search or create new)</label><input type="text" id="gr_clientSearch" placeholder="Type client name..." oninput="searchGrilleClient()" autocomplete="off"><div id="gr_clientSuggestions" style="position:relative;"></div><input type="hidden" id="gr_clientId"><input type="hidden" id="gr_clientName"></div>
-        <div class="fg"><label>Order Date</label><input type="date" id="gr_orderDate"></div>
-        <div class="fg"><label>Expected Delivery</label><input type="date" id="gr_deliveryDate"></div>
-        <div class="fg"><label>Status</label><select id="gr_status"><option value="pending">Pending Order</option><option value="ordered">Ordered</option><option value="delivered">Delivered</option><option value="installed">Installed</option></select></div>
-        <div class="form-divider full"><span>Grille Items (Size and Quantity)</span></div>
-        <div class="fg full">
-          <div id="gr_itemsList" style="margin-bottom:0.5rem;"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:0.4rem;align-items:end;">
-            <div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Type</label><select id="gr_itemType" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;font-family:inherit;outline:none;background:#fff;"><option value="supply">Supply Grille</option><option value="return">Return Grille</option><option value="exhaust">Exhaust Grille</option><option value="diffuser">Diffuser</option><option value="louver">Louver</option><option value="other">Other</option></select></div>
-            <div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Size (W x H mm)</label><input type="text" id="gr_itemSize" placeholder="e.g. 600x300" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;font-family:inherit;outline:none;"></div>
-            <div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Quantity</label><input type="number" id="gr_itemQty" placeholder="0" min="1" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;font-family:inherit;outline:none;"></div>
-            <div><label style="font-size:0.6rem;font-weight:800;color:var(--gray500);text-transform:uppercase;letter-spacing:0.07em;display:block;margin-bottom:0.25rem;">Unit Price (PHP)</label><input type="number" id="gr_itemPrice" placeholder="0" min="0" style="width:100%;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.78rem;font-family:inherit;outline:none;"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addGrilleItem()" style="align-self:flex-end;">+ Add</button>
-          </div>
-          <div style="margin-top:0.75rem;padding:0.75rem;background:var(--gray50);border-radius:8px;border:1.5px solid var(--gray200);display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:0.78rem;font-weight:700;color:var(--gray600);">Total Amount:</span>
-            <span id="gr_total" style="font-size:0.88rem;font-weight:900;color:var(--primary);">PHP 0.00</span>
-          </div>
-        </div>
-        <div class="fg full"><label>Delivery Receipt / PO (Google Drive Link)</label><input type="url" id="gr_driveLink" placeholder="https://drive.google.com/..."></div>
-        <div class="fg full"><label>Notes</label><textarea id="gr_notes" placeholder="Special instructions, color, finish, material..." style="min-height:55px;"></textarea></div>
+  win.document.write(`<!DOCTYPE html><html><head><title>Billing - ${b.title}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:2rem;color:#1a2332;font-size:0.9rem;}
+    h1{font-size:1.3rem;margin-bottom:0.25rem;color:#0a2f52;}
+    .meta{font-size:0.8rem;color:#64748b;margin-bottom:1.5rem;}
+    table{width:100%;border-collapse:collapse;margin:1rem 0;}
+    th,td{padding:0.5rem 0.7rem;text-align:left;border-bottom:1px solid #e9ecef;}
+    th{background:#f1f3f5;font-weight:800;font-size:0.78rem;text-transform:uppercase;}
+    .total-row{font-weight:800;background:#f8fafc;}
+    .section{margin-top:1.5rem;}
+    .section-title{font-size:0.85rem;font-weight:800;color:#0a2f52;border-bottom:2px solid #0a2f52;padding-bottom:0.3rem;margin-bottom:0.75rem;}
+    .pay-row{display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid #f1f3f5;font-size:0.82rem;}
+    .pay-label{color:#64748b;}
+    .pay-val{font-weight:700;}
+    .received{color:#16a34a;}
+    .pending{color:#dc2626;}
+    .highlight{background:#f0f9ff;padding:0.75rem;border-radius:8px;border:1px solid #bae6fd;margin-top:0.5rem;}
+    @media print{body{padding:1rem;}}
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <h1>CAREX ENGINEERING SERVICES</h1>
+      <div class="meta">56 F. Caparas St., Dutch Olandes IVC, Marikina City · Tel: (02) 7148-7030</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:1.1rem;font-weight:800;color:#0a2f52;">BILLING STATEMENT</div>
+      <div style="font-size:0.8rem;color:#64748b;">Date: ${fmtDate(b.date)}</div>
+      ${b.validUntil?`<div style="font-size:0.8rem;color:#64748b;">Valid Until: ${fmtDate(b.validUntil)}</div>`:''}
+    </div>
+  </div>
+  <div style="margin:1rem 0;padding:0.75rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+    <div style="font-weight:800;font-size:1rem;">${esc(b.title)}</div>
+    ${b.clientName?`<div style="font-size:0.82rem;color:#64748b;">Client: ${esc(b.clientName)}</div>`:''}
+    ${proj?`<div style="font-size:0.82rem;color:#64748b;">Project: ${esc(proj.name)}</div>`:''}
+    <div style="font-size:0.78rem;color:#94a3b8;margin-top:0.25rem;">${vatLabel[b.vat]||''}</div>
+  </div>
+  <div class="section">
+    <div class="section-title">Line Items</div>
+    <table>
+      <thead><tr><th>Description</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>
+        ${(b.lineItems||[]).map(i=>`<tr><td>${esc(i.desc)}</td><td style="text-align:center;">${i.qty}</td><td style="text-align:right;">PHP ${Number(i.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td><td style="text-align:right;">PHP ${Number(i.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`).join('')}
+        ${b.vat==='exclusive'?`<tr><td colspan="3" style="text-align:right;font-size:0.8rem;color:#64748b;">VAT (12%)</td><td style="text-align:right;">PHP ${Number(b.vatAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`:''}
+        <tr class="total-row"><td colspan="3" style="text-align:right;">TOTAL AMOUNT</td><td style="text-align:right;color:#0a2f52;">PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="section">
+    <div class="section-title">Payment Schedule</div>
+    <div class="highlight">
+      <div class="pay-row"><span class="pay-label">📥 Downpayment (${b.dpPct||50}%)</span><span class="pay-val ${b.dpReceivedDate?'received':'pending'}">PHP ${Number(b.dpAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})} ${b.dpReceivedDate?'✅ Received '+fmtDate(b.dpReceivedDate):b.dpBilledDate?'(Billed '+fmtDate(b.dpBilledDate)+')':'(Pending)'}</span></div>
+      ${b.fcuAmt>0?`<div class="pay-row"><span class="pay-label">📦 FCU/Equipment Payment</span><span class="pay-val ${b.fcuReceivedDate?'received':'pending'}">PHP ${Number(b.fcuAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})} ${b.fcuReceivedDate?'✅ Received '+fmtDate(b.fcuReceivedDate):b.fcuBilledDate?'(Billed '+fmtDate(b.fcuBilledDate)+')':'(Pending)'}</span></div>`:''}
+      <div class="pay-row"><span class="pay-label">✅ Final Payment</span><span class="pay-val ${b.finalReceivedDate?'received':'pending'}">PHP ${Number(b.finalAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})} ${b.finalReceivedDate?'✅ Received '+fmtDate(b.finalReceivedDate):b.finalBilledDate?'(Billed '+fmtDate(b.finalBilledDate)+')':'(Pending)'}</span></div>
+      ${b.retentionPct>0?`<div class="pay-row"><span class="pay-label">⏳ Retention (${b.retentionPct}%) — Release: ${fmtDate(b.retentionRelease)}</span><span class="pay-val pending">PHP ${Number(b.retentionAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span></div>`:''}
+      <div class="pay-row" style="border-top:2px solid #0a2f52;margin-top:0.5rem;padding-top:0.5rem;font-weight:800;">
+        <span>Total Received</span><span class="received">PHP ${totalRec.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+      </div>
+      <div class="pay-row" style="font-weight:800;">
+        <span>Outstanding Balance</span><span class="${outstanding>0?'pending':'received'}">PHP ${outstanding.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newGrilleModal')">Cancel</button><button class="btn btn-primary" onclick="saveGrille()">Save Order</button></div>
   </div>
-</div>
-</body></html>`);
+  ${b.notes?`<div class="section"><div class="section-title">Notes / Terms</div><div style="font-size:0.82rem;white-space:pre-wrap;">${esc(b.notes)}</div></div>`:''}
+  <div style="margin-top:3rem;display:flex;justify-content:space-between;">
+    <div style="text-align:center;"><div style="border-top:1px solid #1a2332;padding-top:0.3rem;width:200px;">Prepared by</div></div>
+    <div style="text-align:center;"><div style="border-top:1px solid #1a2332;padding-top:0.3rem;width:200px;">Received by / Client Signature</div></div>
+  </div>
+  </body></html>`);
   win.document.close();win.print();
 }
 
-// ══ SERVICE REPORTS ══
 function populateSRSelects(){
   const cs=document.getElementById('sr_client');if(cs)cs.innerHTML='<option value="">Select client...</option>'+clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const js=document.getElementById('sr_job');if(js)js.innerHTML='<option value="">None</option>'+jobs.map(j=>`<option value="${j.id}">${esc(j.scope)}</option>`).join('');
@@ -4729,6 +4948,21 @@ function checkScheduleReminders(){
     html+=warnings.join('');
   }
 
+  // Retention expiring soon
+  if(typeof billing!=='undefined'){
+    billing.forEach(function(b){
+      if(!b.retentionRelease||!b.retentionPct)return;
+      var today=new Date();today.setHours(0,0,0,0);
+      var rel=new Date(b.retentionRelease);
+      var diff=(rel-today)/(1000*60*60*24);
+      if(diff>=0&&diff<=7){
+        warnings.push(makeItem('⏳','Retention Release: '+esc(b.title),b.retentionRelease,'',
+          "showPage('billing',document.querySelector('[onclick*=billing]'));",
+          '#dc2626'));
+      }
+    });
+  }
+
   var finalHtml='';
   if(html) finalHtml+=html;
 
@@ -5812,15 +6046,16 @@ setInterval(updateHeaderDate,60000);
 
 <!-- BILLING MODAL -->
 <div class="modal-overlay" id="newBillingModal">
-<div class="modal">
-<div class="modal-header"><h2 id="billingModalTitle">New Quotation</h2><button class="modal-close" onclick="closeModal('newBillingModal')">X Close</button></div>
+<div class="modal" style="max-width:700px;">
+<div class="modal-header"><h2 id="billingModalTitle">New Quote / Billing</h2><button class="modal-close" onclick="closeModal('newBillingModal')">X Close</button></div>
 <div class="modal-body">
 <div class="form-grid">
-<div class="fg full"><label>Quote Title *</label><input id="b_title" placeholder="e.g. Ducting Works - SM North EDSA 2nd Floor" type="text"/></div>
+<div class="fg full"><label>Quote / Billing Title *</label><input id="b_title" placeholder="e.g. Ducting Works - SM North EDSA 2nd Floor" type="text"/></div>
 <div class="fg"><label>Client / Store</label><select id="b_client"><option value="">Select client...</option></select></div>
-<div class="fg"><label>Related Project</label><select id="b_project"><option value="">None</option></select></div>
+<div class="fg"><label>Related Project</label><select id="b_project" onchange="autoFillBillingFromProject()"><option value="">None</option></select></div>
 <div class="fg"><label>Quote Date</label><input id="b_date" type="date"/></div>
 <div class="fg"><label>Valid Until</label><input id="b_validUntil" type="date"/></div>
+<div class="fg"><label>VAT Status</label><select id="b_vat"><option value="exclusive">VAT Exclusive</option><option value="inclusive">VAT Inclusive</option><option value="exempt">VAT Exempt</option></select></div>
 <div class="fg"><label>Status</label><select id="b_status"><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option></select></div>
 <div class="form-divider full"><span>Line Items</span></div>
 <div class="fg full">
@@ -5832,16 +6067,84 @@ setInterval(updateHeaderDate,60000);
 <button class="btn btn-secondary btn-sm" onclick="addBillingLineItem()">+ Add</button>
 </div>
 <div style="margin-top:0.75rem;padding:0.75rem;background:var(--gray50);border-radius:8px;border:1.5px solid var(--gray200);">
-<div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:800;color:var(--text);">
-<span>Total Amount:</span>
-<span id="b_total" style="color:var(--primary);">PHP 0.00</span>
+<div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.3rem;">
+<span>Subtotal:</span><span id="b_subtotal">PHP 0.00</span>
 </div>
+<div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.3rem;" id="b_vatRow">
+<span>VAT (12%):</span><span id="b_vatAmt">PHP 0.00</span>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:800;color:var(--primary);border-top:1px solid var(--gray200);padding-top:0.3rem;">
+<span>Total Amount:</span><span id="b_total">PHP 0.00</span>
+</div>
+</div>
+</div>
+<div class="form-divider full"><span>Payment Schedule</span></div>
+<div class="fg full" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:1rem;">
+<div style="font-size:0.75rem;color:#0369a1;font-weight:800;margin-bottom:0.75rem;">💰 Payment Terms (auto-calculated from total)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+<div>
+<label style="font-size:0.75rem;font-weight:700;">Downpayment %</label>
+<select id="b_dpPct" onchange="recalcPaymentSchedule()" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;">
+<option value="50">50% Downpayment</option>
+<option value="30">30% Downpayment</option>
+<option value="0">No Downpayment</option>
+<option value="custom">Custom %</option>
+</select>
+</div>
+<div>
+<label style="font-size:0.75rem;font-weight:700;">DP Amount</label>
+<input id="b_dpAmt" type="text" readonly style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;background:#f8fafc;" placeholder="Auto-calculated"/>
+</div>
+<div>
+<label style="font-size:0.75rem;font-weight:700;">DP Date Billed</label>
+<input id="b_dpBilledDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/>
+</div>
+<div>
+<label style="font-size:0.75rem;font-weight:700;">DP Date Received</label>
+<input id="b_dpReceivedDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/>
+</div>
+</div>
+<div id="b_fcuPaymentSection" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #bae6fd;">
+<div style="font-size:0.75rem;color:#0369a1;font-weight:800;margin-bottom:0.5rem;">📦 FCU/Equipment Payment (100% upon delivery)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;">
+<div><label style="font-size:0.72rem;font-weight:700;">FCU Amount</label><input id="b_fcuAmt" type="number" placeholder="0.00" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Date Billed</label><input id="b_fcuBilledDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Date Received</label><input id="b_fcuReceivedDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+</div>
+</div>
+<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #bae6fd;">
+<div style="font-size:0.75rem;color:#0369a1;font-weight:800;margin-bottom:0.5rem;">✅ Final Payment (balance upon completion)</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;">
+<div><label style="font-size:0.72rem;font-weight:700;">Final Amount</label><input id="b_finalAmt" type="text" readonly style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;background:#f8fafc;" placeholder="Auto-calculated"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Date Billed</label><input id="b_finalBilledDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Date Received</label><input id="b_finalReceivedDate" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+</div>
+</div>
+<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #bae6fd;">
+<div style="font-size:0.75rem;color:#dc2626;font-weight:800;margin-bottom:0.5rem;">⏳ Retention</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;">
+<div><label style="font-size:0.72rem;font-weight:700;">Retention %</label>
+<select id="b_retentionPct" onchange="recalcPaymentSchedule()" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;">
+<option value="0">No Retention</option>
+<option value="5">5%</option>
+<option value="10">10%</option>
+</select></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Retention Amount</label><input id="b_retentionAmt" type="text" readonly style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;background:#f8fafc;" placeholder="Auto"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Start Date</label><input id="b_retentionStart" type="date" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;"/></div>
+<div><label style="font-size:0.72rem;font-weight:700;">Release Date</label><input id="b_retentionRelease" type="date" readonly style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;background:#f8fafc;" placeholder="Auto (+3 months)"/></div>
+</div>
+</div>
+<div style="margin-top:0.75rem;padding:0.6rem;background:#fff;border-radius:8px;border:1.5px solid #bae6fd;">
+<div style="font-size:0.75rem;font-weight:800;color:var(--text);margin-bottom:0.3rem;">📊 Payment Summary</div>
+<div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.2rem;"><span>Total Received:</span><span id="b_totalReceived" style="color:var(--success);font-weight:800;">PHP 0.00</span></div>
+<div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.2rem;"><span>Outstanding Balance:</span><span id="b_outstanding" style="color:var(--danger);font-weight:800;">PHP 0.00</span></div>
 </div>
 </div>
 <div class="fg full"><label>Notes / Terms</label><textarea id="b_notes" placeholder="Payment terms, scope inclusions/exclusions..."></textarea></div>
+<div class="fg"><label>Drive Link (Contract/Quote Doc)</label><input id="b_driveLink" type="url" placeholder="https://drive.google.com/..."/></div>
 </div>
 </div>
-<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newBillingModal')">Cancel</button><button class="btn btn-primary" onclick="saveBilling()">Save Quote</button></div>
+<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('newBillingModal')">Cancel</button><button class="btn btn-primary" onclick="saveBilling()">Save</button></div>
 </div>
 </div>
 <!-- SERVICE REPORT MODAL -->
