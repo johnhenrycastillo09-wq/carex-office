@@ -3855,11 +3855,16 @@ function recalcPaymentSchedule(){
   document.getElementById('b_total').textContent='PHP '+grandTotal.toLocaleString('en-PH',{minimumFractionDigits:2});
   const dpPct=Number(document.getElementById('b_dpPct').value)||0;
   const retPct=Number(document.getElementById('b_retentionPct').value)||0;
-  const dpAmt=grandTotal*(dpPct/100);
+  // Use manually entered DP amount if available, otherwise calculate from %
+  const dpAmtField=document.getElementById('b_dpAmt').value;
+  const dpAmtNum=dpAmtField&&!dpAmtField.startsWith('PHP')?Number(dpAmtField):grandTotal*(dpPct/100);
+  const dpAmt=dpAmtNum;
   const retAmt=grandTotal*(retPct/100);
   const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
   const finalAmt=grandTotal-dpAmt-fcuAmt-retAmt;
-  document.getElementById('b_dpAmt').value='PHP '+dpAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  // Only auto-fill DP amount if field is empty or was auto-calculated
+const existingDp=document.getElementById('b_dpAmt').value;
+if(!existingDp||existingDp.startsWith('PHP'))document.getElementById('b_dpAmt').value='PHP '+dpAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
   document.getElementById('b_retentionAmt').value='PHP '+retAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
   document.getElementById('b_finalAmt').value='PHP '+Math.max(0,finalAmt).toLocaleString('en-PH',{minimumFractionDigits:2});
   // Auto-set retention release date (+3 months from start)
@@ -3876,6 +3881,28 @@ function recalcPaymentSchedule(){
   const outstanding=grandTotal-totalRec;
   document.getElementById('b_totalReceived').textContent='PHP '+totalRec.toLocaleString('en-PH',{minimumFractionDigits:2});
   document.getElementById('b_outstanding').textContent='PHP '+Math.max(0,outstanding).toLocaleString('en-PH',{minimumFractionDigits:2});
+}
+
+function recalcPaymentFromDP(){
+  // When user manually types DP amount, recalculate final amount
+  const total=billingLineItems.reduce((s,i)=>s+i.total,0);
+  const vat=document.getElementById('b_vat').value;
+  let grandTotal=total;
+  if(vat==='exclusive')grandTotal=total+(total*0.12);
+  const dpAmt=Number(document.getElementById('b_dpAmt').value)||0;
+  const retPct=Number(document.getElementById('b_retentionPct').value)||0;
+  const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
+  const retAmt=grandTotal*(retPct/100);
+  const finalAmt=Math.max(0,grandTotal-dpAmt-fcuAmt-retAmt);
+  document.getElementById('b_finalAmt').value='PHP '+finalAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_retentionAmt').value='PHP '+retAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
+  // Update payment summary
+  const dpRec=document.getElementById('b_dpReceivedDate').value?dpAmt:0;
+  const fcuRec=document.getElementById('b_fcuReceivedDate').value?fcuAmt:0;
+  const finalRec=document.getElementById('b_finalReceivedDate').value?finalAmt:0;
+  const totalRec=dpRec+fcuRec+finalRec;
+  document.getElementById('b_totalReceived').textContent='PHP '+totalRec.toLocaleString('en-PH',{minimumFractionDigits:2});
+  document.getElementById('b_outstanding').textContent='PHP '+Math.max(0,grandTotal-totalRec).toLocaleString('en-PH',{minimumFractionDigits:2});
 }
 
 function autoFillBillingFromProject(){
@@ -6940,7 +6967,7 @@ setInterval(updateHeaderDate,60000);
 </div>
 <div>
 <label style="font-size:0.75rem;font-weight:700;">DP Amount</label>
-<input id="b_dpAmt" type="text" readonly style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;background:#f8fafc;" placeholder="Auto-calculated"/>
+<input id="b_dpAmt" type="number" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;" placeholder="Enter or auto-calculate" oninput="recalcPaymentFromDP()"/>
 </div>
 <div>
 <label style="font-size:0.75rem;font-weight:700;">DP Date Billed</label>
