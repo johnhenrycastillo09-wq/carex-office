@@ -3338,7 +3338,7 @@ function getCombinedPriceData(){
     const proj=projects.find(p=>p.id===e.projectId);
     e.materialItems.forEach(item=>{
       combined.push({id:e.id+'_'+item.desc,name:item.desc,category:'',unit:item.unit||'',
-        supplier:e.supplier||'',location:e.supplierLocation||'',
+        supplier:item.supplier||e.supplier||'',location:item.location||e.supplierLocation||'',
         price:item.price,date:e.date,notes:'From project: '+(proj?proj.name:'General'),source:'expense'});
     });
   });
@@ -3446,9 +3446,11 @@ function addExpenseMaterialItem(){
   const qty=Number(document.getElementById('exp_matQty').value)||1;
   const unit=document.getElementById('exp_matUnit').value.trim();
   const price=Number(document.getElementById('exp_matPrice').value)||0;
+  const supplier=document.getElementById('exp_matSupplier')?.value.trim()||'';
+  const location=document.getElementById('exp_matLocation')?.value.trim()||'';
   if(!desc){alert('Please enter item name.');return;}
-  expenseMaterialItems.push({desc,qty,unit,price,total:qty*price});
-  ['exp_matDesc','exp_matQty','exp_matUnit','exp_matPrice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  expenseMaterialItems.push({desc,qty,unit,price,total:qty*price,supplier,location});
+  ['exp_matDesc','exp_matQty','exp_matUnit','exp_matPrice','exp_matSupplier','exp_matLocation'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   renderExpenseMaterialItems();
 }
 
@@ -3470,6 +3472,8 @@ function renderExpenseMaterialItems(){
       <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:55px;">Unit</th>
       <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Price</th>
       <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Total</th>
+      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);width:120px;">Supplier</th>
+      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);width:100px;">Location</th>
       <th style="padding:0.3rem;width:55px;border-bottom:1px solid var(--gray200);text-align:center;">Action</th>
     </tr></thead>
     <tbody>${expenseMaterialItems.map((item,i)=>`<tr id="exp_mat_row_${i}">
@@ -3486,6 +3490,12 @@ function renderExpenseMaterialItems(){
         <input type="number" value="${item.price}" onchange="updateExpMatItem(${i},'price',this.value)" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem;font-size:0.78rem;font-family:inherit;text-align:right;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
       </td>
       <td style="padding:0.25rem;text-align:right;border-bottom:1px solid var(--gray100);font-weight:700;" id="exp_mat_total_${i}">${Number((parseFloat(item.qty)||0)*(parseFloat(item.price)||0)).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.25rem;border-bottom:1px solid var(--gray100);">
+        <input value="${esc(item.supplier||'')}" onchange="updateExpMatItem(${i},'supplier',this.value)" placeholder="Supplier" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem 0.3rem;font-size:0.75rem;font-family:inherit;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
+      <td style="padding:0.25rem;border-bottom:1px solid var(--gray100);">
+        <input value="${esc(item.location||'')}" onchange="updateExpMatItem(${i},'location',this.value)" placeholder="Location" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem 0.3rem;font-size:0.75rem;font-family:inherit;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
       <td style="padding:0.25rem;text-align:center;border-bottom:1px solid var(--gray100);">
         <button onclick="removeExpenseMaterialItem(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.9rem;" title="Remove">✕</button>
       </td>
@@ -3508,7 +3518,7 @@ function updateExpMatItem(i, field, value){
 
 function openNewExpenseModal(){
   editingExpenseId=null;expenseMaterialItems=[];
-  ['exp_supplier','exp_supplierLocation','exp_laborName','exp_laborScope','exp_laborAgreed',
+  ['exp_laborName','exp_laborScope','exp_laborAgreed',
    'exp_laborPaid','exp_laborPaidDate','exp_laborBalance','exp_otherDesc','exp_otherAmount',
    'exp_otherSupplier','exp_notes','exp_driveLink'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('exp_date').value=new Date().toISOString().split('T')[0];
@@ -3530,8 +3540,7 @@ function openEditExpenseModal(id){
   document.getElementById('exp_type').value=e.type||'materials';
   document.getElementById('exp_date').value=e.date||'';
   document.getElementById('exp_status').value=e.status||'pending';
-  document.getElementById('exp_supplier').value=e.supplier||'';
-  document.getElementById('exp_supplierLocation').value=e.supplierLocation||'';
+  // supplier/location now stored per material item
   document.getElementById('exp_laborName').value=e.laborName||'';
   document.getElementById('exp_laborScope').value=e.laborScope||'';
   document.getElementById('exp_laborAgreed').value=e.laborAgreed||'';
@@ -3564,8 +3573,7 @@ function saveExpense(){
     amount,
     // Materials
     materialItems:JSON.parse(JSON.stringify(expenseMaterialItems)),
-    supplier:document.getElementById('exp_supplier').value.trim(),
-    supplierLocation:document.getElementById('exp_supplierLocation').value.trim(),
+    supplier:'',supplierLocation:'',
     // Labor
     laborName:document.getElementById('exp_laborName').value.trim(),
     laborScope:document.getElementById('exp_laborScope').value.trim(),
@@ -7118,12 +7126,11 @@ setInterval(updateHeaderDate,60000);
       <input id="exp_matQty" placeholder="Qty" style="width:55px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="number"/>
       <input id="exp_matUnit" placeholder="Unit" style="width:55px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="text"/>
       <input id="exp_matPrice" placeholder="Unit Price" style="width:100px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="number"/>
+      <input id="exp_matSupplier" placeholder="Supplier / Store" style="flex:1;min-width:110px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="text"/>
+      <input id="exp_matLocation" placeholder="Location" style="width:90px;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;font-family:inherit;" type="text"/>
       <button class="btn btn-secondary btn-sm" onclick="addExpenseMaterialItem()">+ Add</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem;">
-      <div><label style="font-size:0.75rem;font-weight:700;">Supplier / Store</label><input id="exp_supplier" placeholder="e.g. Ace Hardware, Wilcon" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
-      <div><label style="font-size:0.75rem;font-weight:700;">Supplier Location</label><input id="exp_supplierLocation" placeholder="e.g. Marikina, Cubao" type="text" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.8rem;"/></div>
-    </div>
+    <!-- Supplier/Location now per item in the table above -->
     <div style="margin-top:0.5rem;padding:0.5rem;background:var(--gray50);border-radius:8px;border:1px solid var(--gray200);">
       <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:800;"><span>Materials Total:</span><span id="exp_matTotal" style="color:var(--primary);">PHP 0.00</span></div>
     </div>
