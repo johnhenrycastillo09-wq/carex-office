@@ -3460,27 +3460,50 @@ function removeExpenseMaterialItem(i){
 function renderExpenseMaterialItems(){
   const el=document.getElementById('exp_materialItems');
   if(!el)return;
-  const total=expenseMaterialItems.reduce((s,i)=>s+i.total,0);
+  const total=expenseMaterialItems.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
   document.getElementById('exp_matTotal').textContent='PHP '+total.toLocaleString('en-PH',{minimumFractionDigits:2});
   if(!expenseMaterialItems.length){el.innerHTML='';return;}
   el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-bottom:0.5rem;">
     <thead><tr style="background:var(--gray50);">
       <th style="padding:0.3rem 0.4rem;text-align:left;border-bottom:1px solid var(--gray200);">Item</th>
-      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:50px;">Qty</th>
-      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:50px;">Unit</th>
-      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:90px;">Price</th>
-      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:90px;">Total</th>
-      <th style="padding:0.3rem;width:25px;border-bottom:1px solid var(--gray200);"></th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:55px;">Qty</th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:55px;">Unit</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Price</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Total</th>
+      <th style="padding:0.3rem;width:55px;border-bottom:1px solid var(--gray200);text-align:center;">Action</th>
     </tr></thead>
-    <tbody>${expenseMaterialItems.map((item,i)=>`<tr>
-      <td style="padding:0.3rem 0.4rem;border-bottom:1px solid var(--gray100);">${esc(item.desc)}</td>
-      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);">${item.qty}</td>
-      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);">${esc(item.unit||'')}</td>
-      <td style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray100);">${Number(item.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
-      <td style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray100);font-weight:700;">${Number(item.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
-      <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray100);"><button onclick="removeExpenseMaterialItem(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;">✕</button></td>
+    <tbody>${expenseMaterialItems.map((item,i)=>`<tr id="exp_mat_row_${i}">
+      <td style="padding:0.25rem 0.4rem;border-bottom:1px solid var(--gray100);">
+        <input value="${esc(item.desc)}" onchange="updateExpMatItem(${i},'desc',this.value)" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem 0.3rem;font-size:0.78rem;font-family:inherit;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
+      <td style="padding:0.25rem;border-bottom:1px solid var(--gray100);">
+        <input type="number" value="${item.qty}" onchange="updateExpMatItem(${i},'qty',this.value)" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem;font-size:0.78rem;font-family:inherit;text-align:center;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
+      <td style="padding:0.25rem;border-bottom:1px solid var(--gray100);">
+        <input value="${esc(item.unit||'')}" onchange="updateExpMatItem(${i},'unit',this.value)" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem;font-size:0.78rem;font-family:inherit;text-align:center;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
+      <td style="padding:0.25rem;border-bottom:1px solid var(--gray100);">
+        <input type="number" value="${item.price}" onchange="updateExpMatItem(${i},'price',this.value)" style="width:100%;border:1px solid transparent;border-radius:4px;padding:0.2rem;font-size:0.78rem;font-family:inherit;text-align:right;background:transparent;" onfocus="this.style.border='1px solid var(--primary)';this.style.background='#fff'" onblur="this.style.border='1px solid transparent';this.style.background='transparent'"/>
+      </td>
+      <td style="padding:0.25rem;text-align:right;border-bottom:1px solid var(--gray100);font-weight:700;" id="exp_mat_total_${i}">${Number((parseFloat(item.qty)||0)*(parseFloat(item.price)||0)).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td style="padding:0.25rem;text-align:center;border-bottom:1px solid var(--gray100);">
+        <button onclick="removeExpenseMaterialItem(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.9rem;" title="Remove">✕</button>
+      </td>
     </tr>`).join('')}</tbody>
   </table>`;
+}
+
+function updateExpMatItem(i, field, value){
+  if(!expenseMaterialItems[i])return;
+  expenseMaterialItems[i][field]=field==='qty'||field==='price'?Number(value):value;
+  expenseMaterialItems[i].total=(parseFloat(expenseMaterialItems[i].qty)||0)*(parseFloat(expenseMaterialItems[i].price)||0);
+  // Update total cell without re-rendering whole table
+  const totalCell=document.getElementById('exp_mat_total_'+i);
+  if(totalCell)totalCell.textContent=expenseMaterialItems[i].total.toLocaleString('en-PH',{minimumFractionDigits:2});
+  // Update grand total
+  const grandTotal=expenseMaterialItems.reduce((s,item)=>s+(parseFloat(item.qty)||0)*(parseFloat(item.price)||0),0);
+  const totalEl=document.getElementById('exp_matTotal');
+  if(totalEl)totalEl.textContent='PHP '+grandTotal.toLocaleString('en-PH',{minimumFractionDigits:2});
 }
 
 function openNewExpenseModal(){
