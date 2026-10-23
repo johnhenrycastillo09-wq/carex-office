@@ -6321,7 +6321,13 @@ function autoCreateProjectRecords(p){
     save('cesv2_grilles',grilles);
   }
 
-  showToast('Project records auto-created (PTW, Delivery, Equipment'+((p.type==='ducting'||(p.types&&p.types.includes('ducting')))?', Grilles':'')+')');
+    // 5. Auto-create Expense Tracker
+  if(typeof expenses!=='undefined'){expenses.push({id:uid(),type:'materials',date:today,projectId:pid,status:'pending',amount:0,materialItems:[],supplier:'',supplierLocation:'',laborName:'',laborScope:'',laborAgreed:0,laborPaid:0,otherDesc:'',otherAmount:0,otherSupplier:'',notes:'Auto-created for project: '+pname,createdAt:new Date().toISOString()});save('cesv2_expenses',expenses);}
+  // 6. Auto-create Billing
+  if(typeof billing!=='undefined'){billing.push({id:uid(),title:pname,clientId:p.clientId||'',clientName:p.clientName||p.client||'',projectId:pid,date:today,status:'draft',vat:'exclusive',subtotal:0,vatAmt:0,total:0,lineItems:[],dpPct:50,dpAmt:0,dpBilledDate:'',dpReceivedDate:'',fcuAmt:0,fcuBilledDate:'',fcuReceivedDate:'',finalAmt:0,finalBilledDate:'',finalReceivedDate:'',retentionPct:0,retentionAmt:0,retentionStart:'',retentionRelease:'',notes:'Auto-created for project: '+pname,createdAt:new Date().toISOString()});save('cesv2_billing',billing);}
+  // 7. Auto-create Quotation
+  if(typeof quotations!=='undefined'){var tl={ducting:'DUCTING WORKS',sprinkler:'SPRINKLER SYSTEM',airbalancing:'AIR BALANCING',fcuinstall:'FCU INSTALLATION',fcudismantling:'FCU DISMANTLING'};var subj=(p.types||[p.type]).filter(Boolean).map(function(t){return tl[t]||t.toUpperCase();}).join(' / ');quotations.push({id:uid(),client:p.clientName||p.client||'',clientAddress:p.location||'',attn:'OWNER',subject:subj||'MECHANICAL WORKS',date:today,projectId:pid,status:'draft',vat:'exclusive',subtotal:0,vatAmt:0,total:0,lineItems:[],paymentTerms:'*50% DOWN PAYMENT\n*50% FULL PAYMENT UPON COMPLETION OF PROJECT',notes:'',driveLink:'',createdAt:new Date().toISOString()});save('cesv2_quotations',quotations);}
+  showToast('Project records auto-created \u2705 (PTW, Delivery, Equipment'+((p.type==='ducting'||(p.types&&p.types.includes('ducting')))?', Grilles':'')+', Expense, Billing, Quotation)');
 }
 
 // ══ DELIVERY REMINDER CHECK ══
