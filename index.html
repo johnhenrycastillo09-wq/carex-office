@@ -242,6 +242,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 <div class="nav-item" onclick="showPage('quotation',this)"><span class="nav-icon">📄</span> Quotations</div>
 <div class="nav-item" onclick="showPage('billing',this)"><span class="nav-icon">💰</span> Billing and Quotes</div>
 <div class="nav-item" onclick="showPage('expenses',this)"><span class="nav-icon">💸</span> Expense Tracker</div>
+<div class="nav-item" onclick="showPage('suppliers',this)"><span class="nav-icon">🏪</span> Supplier Price List</div>
 <div class="nav-item" onclick="showPage('servicereports',this)"><span class="nav-icon">📋</span> Service Reports</div>
 <div class="nav-item" onclick="showPage('ptw',this)"><span class="nav-icon">📜</span> Permit to Work <span class="nav-badge" id="ptwExpiringCount">0</span></div>
 <div class="nav-item" onclick="showPage('delivery',this)"><span class="nav-icon">🚛</span> Site Delivery</div>
@@ -563,6 +564,70 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
   <div id="priceComparisonResults"></div>
 </div>
 <div id="expenseList"></div>
+</div>
+
+<!-- SUPPLIER PRICE LIST PAGE -->
+<div class="page" id="page-suppliers">
+<div class="page-header">
+  <div><div class="page-title">Supplier Price List</div><div class="page-subtitle">Track suppliers, item prices and find the cheapest source</div></div>
+  <div class="page-actions">
+    <button class="btn btn-secondary btn-sm" onclick="renderSupplierComparison()">📊 Compare Prices</button>
+    <button class="btn btn-primary btn-sm" onclick="openNewSupplierItemModal()">+ Add Item Price</button>
+  </div>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="filterSupplierItems('all',this)">All Items</button>
+  <button class="tab-btn" onclick="filterSupplierItems('compare',this)">📊 Price Comparison</button>
+</div>
+<div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+  <input id="supplierSearch" placeholder="🔍 Search item or supplier..." style="flex:1;min-width:200px;padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.82rem;" type="text" oninput="renderSupplierItems()"/>
+  <select id="supplierCategoryFilter" onchange="renderSupplierItems()" style="padding:0.45rem 0.7rem;border:1.5px solid var(--gray200);border-radius:8px;font-size:0.82rem;">
+    <option value="">All Categories</option>
+    <option value="pipes">Pipes & Fittings</option>
+    <option value="sheets">GI Sheets & Ductwork</option>
+    <option value="electrical">Electrical</option>
+    <option value="tools">Tools & Equipment</option>
+    <option value="hardware">Hardware & Fasteners</option>
+    <option value="insulation">Insulation</option>
+    <option value="valves">Valves & Controls</option>
+    <option value="other">Other</option>
+  </select>
+</div>
+<div id="supplierItemList"></div>
+</div>
+
+<!-- SUPPLIER ITEM MODAL -->
+<div class="modal-overlay" id="newSupplierItemModal">
+<div class="modal" style="max-width:550px;">
+<div class="modal-header"><h2 id="supplierItemModalTitle">Add Item Price</h2><button class="modal-close" onclick="closeModal('newSupplierItemModal')">X Close</button></div>
+<div class="modal-body">
+<div class="form-grid">
+  <div class="fg full"><label>Item Name *</label><input id="si_name" placeholder="e.g. GI Sheet 0.5mm, 25mm Gate Valve" type="text"/></div>
+  <div class="fg"><label>Category</label>
+    <select id="si_category">
+      <option value="pipes">Pipes & Fittings</option>
+      <option value="sheets">GI Sheets & Ductwork</option>
+      <option value="electrical">Electrical</option>
+      <option value="tools">Tools & Equipment</option>
+      <option value="hardware">Hardware & Fasteners</option>
+      <option value="insulation">Insulation</option>
+      <option value="valves">Valves & Controls</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div class="fg"><label>Unit</label><input id="si_unit" placeholder="e.g. pcs, length, roll, kg" type="text"/></div>
+  <div class="fg"><label>Supplier / Store *</label><input id="si_supplier" placeholder="e.g. Ace Hardware, Wilcon" type="text"/></div>
+  <div class="fg"><label>Supplier Location</label><input id="si_location" placeholder="e.g. Marikina, Cubao" type="text"/></div>
+  <div class="fg"><label>Unit Price (PHP) *</label><input id="si_price" type="number" placeholder="0.00"/></div>
+  <div class="fg"><label>Date Checked</label><input id="si_date" type="date"/></div>
+  <div class="fg full"><label>Notes</label><input id="si_notes" placeholder="e.g. Price as of July 2026, bulk discount available" type="text"/></div>
+</div>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-secondary" onclick="closeModal('newSupplierItemModal')">Cancel</button>
+  <button class="btn btn-primary" onclick="saveSupplierItem()">Save</button>
+</div>
+</div>
 </div>
 
 <!-- SERVICE REPORTS PAGE -->
@@ -1083,6 +1148,7 @@ function updateInMemory(key,arr){
     case 'cesv2_billing': billing=arr; break;
     case 'cesv2_quotations': quotations=arr; break;
     case 'cesv2_expenses': expenses=arr; break;
+    case 'cesv2_supplierItems': supplierItems=arr; break;
     case 'cesv2_serviceReports': serviceReports=arr; break;
     case 'cesv2_ptws': ptws=arr; break;
     case 'cesv2_deliveries': deliveries=arr; break;
@@ -1173,6 +1239,7 @@ function showPage(pageId,navEl){
   if(pageId==='clients'){if(typeof renderClients==='function')renderClients();}
   if(pageId==='quotation'){if(typeof populateQuotationSelects==='function')populateQuotationSelects();if(typeof renderQuotations==='function')renderQuotations();}
   if(pageId==='expenses'){if(typeof renderExpenses==='function')renderExpenses();}
+  if(pageId==='suppliers'){if(typeof renderSupplierItems==='function')renderSupplierItems();}
   if(pageId==='billing'){if(typeof populateBillingSelects==='function')populateBillingSelects();if(typeof renderBilling==='function')renderBilling();if(typeof checkBillingRetentionNotifs==='function')checkBillingRetentionNotifs();}
   if(pageId==='servicereports'){if(typeof populateSRSelects==='function')populateSRSelects();if(typeof renderServiceReports==='function')renderServiceReports();}
   if(pageId==='ptw'){if(typeof populatePtwSelects==='function')populatePtwSelects();if(typeof renderPtw==='function')renderPtw();if(typeof updatePtwBadge==='function')updatePtwBadge();}
@@ -2470,7 +2537,8 @@ function openProjectDetail(id){
     +'</div></div>'
     )
     +statusHtml
-    +renderProjectDeliveries(p.id);
+    +renderProjectDeliveries(p.id)
+    +renderProjectFinancialSummary(p.id);
 
   openModal('projectDetailModal');
 }
@@ -3148,6 +3216,213 @@ function populateBillingSelects(){
   const cs=document.getElementById('b_client');if(cs)cs.innerHTML='<option value="">Select client...</option>'+clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const ps=document.getElementById('b_project');if(ps)ps.innerHTML='<option value="">None</option>'+projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
+// ============ PROJECT FINANCIAL SUMMARY ============
+function renderProjectFinancialSummary(projectId){
+  // Get billing for this project
+  const projBilling = (typeof billing!=='undefined'?billing:[]).filter(b=>b.projectId===projectId);
+  const projExpenses = (typeof expenses!=='undefined'?expenses:[]).filter(e=>e.projectId===projectId);
+  const projQuotations = (typeof quotations!=='undefined'?quotations:[]).filter(q=>q.projectId===projectId);
+
+  // Totals
+  const totalContracted = projBilling.reduce((s,b)=>s+Number(b.total||0),0);
+  const totalReceived = projBilling.reduce((s,b)=>{
+    return s+(b.dpReceivedDate?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
+  },0);
+  const totalOutstanding = Math.max(0,totalContracted-totalReceived);
+  const totalExpenses = projExpenses.reduce((s,e)=>s+Number(e.amount||0),0);
+  const netProfit = totalContracted - totalExpenses;
+  const cashOnHand = totalReceived - totalExpenses;
+  const isExceeded = totalExpenses > totalContracted;
+  const isCashNegative = cashOnHand < 0;
+
+  if(!projBilling.length && !projExpenses.length){
+    return '<div style="margin-top:1rem;padding:0.75rem;background:#f8fafc;border-radius:10px;border:1.5px solid var(--gray200);font-size:0.78rem;color:var(--gray400);text-align:center;">No billing or expense records yet for this project.</div>';
+  }
+
+  return`<div style="margin-top:1rem;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;padding:1rem;">
+    <div style="font-size:0.82rem;font-weight:800;color:#0369a1;margin-bottom:0.75rem;">📊 Financial Summary</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.5rem;margin-bottom:0.75rem;">
+      <div style="background:#fff;border-radius:8px;padding:0.6rem;border:1px solid #bae6fd;">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">💰 CONTRACT AMOUNT</div>
+        <div style="font-size:0.88rem;font-weight:900;color:var(--primary);">PHP ${totalContracted.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:0.6rem;border:1px solid #bae6fd;">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">✅ RECEIVED</div>
+        <div style="font-size:0.88rem;font-weight:900;color:var(--success);">PHP ${totalReceived.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:0.6rem;border:1px solid #bae6fd;">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">⏳ OUTSTANDING</div>
+        <div style="font-size:0.88rem;font-weight:900;color:${totalOutstanding>0?'var(--warning)':'var(--success)'};">PHP ${totalOutstanding.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:0.6rem;border:1px solid #bae6fd;">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">💸 TOTAL EXPENSES</div>
+        <div style="font-size:0.88rem;font-weight:900;color:${isExceeded?'var(--danger)':'var(--text)'};">PHP ${totalExpenses.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="background:${isExceeded?'#fee2e2':'#dcfce7'};border-radius:8px;padding:0.6rem;border:2px solid ${isExceeded?'var(--danger)':'var(--success)'};">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">📈 NET PROFIT</div>
+        <div style="font-size:0.88rem;font-weight:900;color:${isExceeded?'var(--danger)':'var(--success)'};">${isExceeded?'⚠️ ':''} PHP ${netProfit.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="background:${isCashNegative?'#fee2e2':'#f0fdf4'};border-radius:8px;padding:0.6rem;border:2px solid ${isCashNegative?'var(--danger)':'var(--success)'};">
+        <div style="font-size:0.65rem;color:var(--gray500);font-weight:700;">💵 CASH ON HAND</div>
+        <div style="font-size:0.88rem;font-weight:900;color:${isCashNegative?'var(--danger)':'var(--success)'};">${isCashNegative?'⚠️ ':''} PHP ${cashOnHand.toLocaleString('en-PH',{minimumFractionDigits:2})}</div>
+      </div>
+    </div>
+    ${isExceeded?'<div style="background:#fee2e2;border-radius:7px;padding:0.5rem 0.75rem;font-size:0.75rem;font-weight:800;color:var(--danger);">⚠️ WARNING: Total expenses exceed contract amount by PHP '+(totalExpenses-totalContracted).toLocaleString('en-PH',{minimumFractionDigits:2})+'!</div>':''}
+    ${isCashNegative&&!isExceeded?'<div style="background:#fef3c7;border-radius:7px;padding:0.5rem 0.75rem;font-size:0.75rem;font-weight:800;color:var(--warning);">⚠️ Cash on hand is negative — expenses exceed amount received so far.</div>':''}
+    ${projExpenses.length?`<div style="margin-top:0.6rem;font-size:0.72rem;color:var(--gray500);">Expense breakdown: 🧱 Materials: PHP ${projExpenses.filter(e=>e.type==='materials').reduce((s,e)=>s+Number(e.amount||0),0).toLocaleString('en-PH',{minimumFractionDigits:2})} · 👷 Labor: PHP ${projExpenses.filter(e=>e.type==='labor').reduce((s,e)=>s+Number(e.amount||0),0).toLocaleString('en-PH',{minimumFractionDigits:2})} · 📦 Other: PHP ${projExpenses.filter(e=>e.type==='other').reduce((s,e)=>s+Number(e.amount||0),0).toLocaleString('en-PH',{minimumFractionDigits:2})}</div>`:''}
+  </div>`;
+}
+
+// ============ SUPPLIER PRICE LIST FUNCTIONS ============
+var supplierItems = JSON.parse(localStorage.getItem('cesv2_supplierItems')||'[]');
+var editingSupplierItemId = null;
+
+function openNewSupplierItemModal(){
+  editingSupplierItemId=null;
+  ['si_name','si_unit','si_supplier','si_location','si_price','si_notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('si_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('si_category').value='other';
+  document.getElementById('supplierItemModalTitle').textContent='Add Item Price';
+  openModal('newSupplierItemModal');
+}
+
+function openEditSupplierItemModal(id){
+  const s=supplierItems.find(x=>x.id===id);if(!s)return;
+  editingSupplierItemId=id;
+  document.getElementById('si_name').value=s.name||'';
+  document.getElementById('si_category').value=s.category||'other';
+  document.getElementById('si_unit').value=s.unit||'';
+  document.getElementById('si_supplier').value=s.supplier||'';
+  document.getElementById('si_location').value=s.location||'';
+  document.getElementById('si_price').value=s.price||'';
+  document.getElementById('si_date').value=s.date||'';
+  document.getElementById('si_notes').value=s.notes||'';
+  document.getElementById('supplierItemModalTitle').textContent='Edit Item Price';
+  openModal('newSupplierItemModal');
+}
+
+function saveSupplierItem(){
+  const name=document.getElementById('si_name').value.trim();
+  const supplier=document.getElementById('si_supplier').value.trim();
+  const price=Number(document.getElementById('si_price').value);
+  if(!name||!supplier){alert('Please enter item name and supplier.');return;}
+  const data={name,category:document.getElementById('si_category').value,
+    unit:document.getElementById('si_unit').value.trim(),
+    supplier,location:document.getElementById('si_location').value.trim(),
+    price,date:document.getElementById('si_date').value,
+    notes:document.getElementById('si_notes').value.trim()};
+  if(editingSupplierItemId){Object.assign(supplierItems.find(s=>s.id===editingSupplierItemId),data);showToast('Item updated!');}
+  else{supplierItems.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Item added!');}
+  save('cesv2_supplierItems',supplierItems);
+  closeModal('newSupplierItemModal');renderSupplierItems();
+}
+
+function deleteSupplierItem(id){
+  if(!confirm('Delete this price record?'))return;
+  supplierItems=supplierItems.filter(s=>s.id!==id);
+  save('cesv2_supplierItems',supplierItems);renderSupplierItems();showToast('Deleted.');
+}
+
+function filterSupplierItems(f,el){
+  document.querySelectorAll('#page-suppliers .tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(f==='compare')renderSupplierComparison();
+  else renderSupplierItems();
+}
+
+function getCombinedPriceData(){
+  // Combine manual supplier items + expense tracker material items
+  const combined=[...supplierItems.map(s=>({...s,source:'manual'}))];
+  (typeof expenses!=='undefined'?expenses:[]).forEach(e=>{
+    if(e.type!=='materials'||!e.materialItems)return;
+    const proj=projects.find(p=>p.id===e.projectId);
+    e.materialItems.forEach(item=>{
+      combined.push({id:e.id+'_'+item.desc,name:item.desc,category:'',unit:item.unit||'',
+        supplier:e.supplier||'',location:e.supplierLocation||'',
+        price:item.price,date:e.date,notes:'From project: '+(proj?proj.name:'General'),source:'expense'});
+    });
+  });
+  return combined;
+}
+
+function renderSupplierItems(){
+  const el=document.getElementById('supplierItemList');
+  if(!el)return;
+  const search=(document.getElementById('supplierSearch')?.value||'').toLowerCase();
+  const cat=document.getElementById('supplierCategoryFilter')?.value||'';
+  const combined=getCombinedPriceData();
+  let list=combined.filter(s=>{
+    const matchSearch=!search||(s.name||'').toLowerCase().includes(search)||(s.supplier||'').toLowerCase().includes(search)||(s.location||'').toLowerCase().includes(search);
+    const matchCat=!cat||s.category===cat;
+    return matchSearch&&matchCat;
+  });
+  list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No price records yet</div><button class="btn btn-primary btn-sm" style="margin-top:0.5rem" onclick="openNewSupplierItemModal()">+ Add Item Price</button></div>';return;}
+  const catLabels={pipes:'Pipes & Fittings',sheets:'GI Sheets & Ductwork',electrical:'Electrical',tools:'Tools & Equipment',hardware:'Hardware & Fasteners',insulation:'Insulation',valves:'Valves & Controls',other:'Other'};
+  el.innerHTML=`<div style="font-size:0.75rem;color:var(--gray500);margin-bottom:0.5rem;">${list.length} price record(s) found</div>`+list.map(s=>`<div class="project-item" ondblclick="${s.source==='manual'?`openEditSupplierItemModal('${s.id}')`:''}">
+    <div class="project-type-badge" style="background:#fef9c3;">🏪</div>
+    <div class="project-info">
+      <div class="project-name">${esc(s.name)}</div>
+      <div class="project-meta">🏪 ${esc(s.supplier||'--')} ${s.location?'📍 '+esc(s.location):''}</div>
+      <div style="font-size:0.7rem;color:var(--gray400);">${s.category?catLabels[s.category]||s.category:''} ${s.unit?'· '+esc(s.unit):''} ${s.date?'· '+fmtDate(s.date):''}</div>
+      ${s.notes?`<div style="font-size:0.68rem;color:var(--gray500);margin-top:0.15rem;">${esc(s.notes)}</div>`:''}
+      ${s.source==='expense'?'<div style="font-size:0.65rem;color:var(--primary);margin-top:0.1rem;">📋 From Expense Tracker</div>':''}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+      <span style="font-size:1rem;font-weight:900;color:var(--primary-dark);">PHP ${Number(s.price||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+      <span style="font-size:0.65rem;color:var(--gray400);">per ${esc(s.unit||'unit')}</span>
+      ${s.source==='manual'?`<div style="display:flex;gap:0.25rem;"><button class="btn btn-secondary btn-xs" onclick="openEditSupplierItemModal('${s.id}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteSupplierItem('${s.id}')">Delete</button></div>`:''}
+    </div>
+  </div>`).join('');
+}
+
+function renderSupplierComparison(){
+  const el=document.getElementById('supplierItemList');
+  if(!el)return;
+  const search=(document.getElementById('supplierSearch')?.value||'').toLowerCase();
+  const combined=getCombinedPriceData();
+  // Group by item name (case-insensitive)
+  const grouped={};
+  combined.forEach(s=>{
+    if(!s.supplier||!s.price)return;
+    const key=(s.name||'').toLowerCase().trim();
+    if(search&&!key.includes(search)&&!(s.supplier||'').toLowerCase().includes(search))return;
+    if(!grouped[key])grouped[key]={name:s.name,items:[]};
+    grouped[key].items.push(s);
+  });
+  const entries=Object.entries(grouped).filter(([k,v])=>v.items.length>=1);
+  if(!entries.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No price data to compare yet.<br>Add items or record expenses with supplier info.</div></div>';return;}
+  el.innerHTML=entries.map(([key,group])=>{
+    const sorted=[...group.items].sort((a,b)=>Number(a.price)-Number(b.price));
+    const cheapest=sorted[0];
+    const mostExpensive=sorted[sorted.length-1];
+    const savings=Number(mostExpensive.price)-Number(cheapest.price);
+    return`<div style="background:#fff;border:1.5px solid var(--gray200);border-radius:10px;padding:1rem;margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+        <div style="font-weight:800;font-size:0.88rem;">🔍 ${esc(group.name)}</div>
+        ${savings>0?`<div style="font-size:0.72rem;color:var(--success);font-weight:700;">💡 Save up to PHP ${savings.toLocaleString('en-PH',{minimumFractionDigits:2})} by choosing cheapest</div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead><tr style="background:#f0f9ff;">
+          <th style="padding:0.35rem 0.5rem;text-align:left;border-bottom:1px solid var(--gray200);">Supplier</th>
+          <th style="padding:0.35rem 0.5rem;text-align:left;border-bottom:1px solid var(--gray200);">Location</th>
+          <th style="padding:0.35rem 0.5rem;text-align:right;border-bottom:1px solid var(--gray200);">Unit Price</th>
+          <th style="padding:0.35rem 0.5rem;text-align:center;border-bottom:1px solid var(--gray200);">Date</th>
+          <th style="padding:0.35rem 0.5rem;text-align:left;border-bottom:1px solid var(--gray200);">Source</th>
+        </tr></thead>
+        <tbody>${sorted.map((s,i)=>`<tr style="background:${i===0?'#f0fdf4':i===sorted.length-1&&sorted.length>1?'#fff7f7':'#fff'};border-bottom:1px solid #f1f5f9;">
+          <td style="padding:0.35rem 0.5rem;font-weight:${i===0?'800':'400'};">${i===0?'⭐ ':i===sorted.length-1&&sorted.length>1?'🔴 ':''}<strong>${esc(s.supplier||'--')}</strong></td>
+          <td style="padding:0.35rem 0.5rem;color:var(--gray500);">${esc(s.location||'--')}</td>
+          <td style="padding:0.35rem 0.5rem;text-align:right;font-weight:${i===0?'900':'400'};color:${i===0?'var(--success)':i===sorted.length-1&&sorted.length>1?'var(--danger)':'var(--text)'};">PHP ${Number(s.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+          <td style="padding:0.35rem 0.5rem;text-align:center;color:var(--gray400);">${fmtDate(s.date)}</td>
+          <td style="padding:0.35rem 0.5rem;font-size:0.68rem;color:var(--gray400);">${s.source==='expense'?'📋 Expense':'📝 Manual'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${sorted.length>1?`<div style="margin-top:0.4rem;font-size:0.72rem;"><span style="color:var(--success);">⭐ Cheapest: ${esc(cheapest.supplier)} — PHP ${Number(cheapest.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>${sorted.length>1?` &nbsp;|&nbsp; <span style="color:var(--danger);">🔴 Most expensive: ${esc(mostExpensive.supplier)} — PHP ${Number(mostExpensive.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`:''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 // ============ EXPENSE TRACKER FUNCTIONS ============
 var expenses = JSON.parse(localStorage.getItem('cesv2_expenses')||'[]');
 var expenseMaterialItems = [];
