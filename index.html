@@ -3465,16 +3465,16 @@ function renderExpenseMaterialItems(){
   const total=expenseMaterialItems.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
   document.getElementById('exp_matTotal').textContent='PHP '+total.toLocaleString('en-PH',{minimumFractionDigits:2});
   if(!expenseMaterialItems.length){el.innerHTML='';return;}
-  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.78rem;margin-bottom:0.5rem;">
+  el.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;min-width:700px;border-collapse:collapse;font-size:0.78rem;margin-bottom:0.5rem;table-layout:auto;">
     <thead><tr style="background:var(--gray50);">
-      <th style="padding:0.3rem 0.4rem;text-align:left;border-bottom:1px solid var(--gray200);">Item</th>
-      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:55px;">Qty</th>
-      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:55px;">Unit</th>
-      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Price</th>
-      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:95px;">Total</th>
-      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);width:120px;">Supplier</th>
-      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);width:100px;">Location</th>
-      <th style="padding:0.3rem;width:55px;border-bottom:1px solid var(--gray200);text-align:center;">Action</th>
+      <th style="padding:0.3rem 0.4rem;text-align:left;border-bottom:1px solid var(--gray200);min-width:140px;">Item</th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:45px;">Qty</th>
+      <th style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--gray200);width:45px;">Unit</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:80px;">Price</th>
+      <th style="padding:0.3rem;text-align:right;border-bottom:1px solid var(--gray200);width:80px;">Total</th>
+      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);min-width:130px;">Supplier</th>
+      <th style="padding:0.3rem;text-align:left;border-bottom:1px solid var(--gray200);min-width:100px;">Location</th>
+      <th style="padding:0.3rem;width:30px;border-bottom:1px solid var(--gray200);text-align:center;">Del</th>
     </tr></thead>
     <tbody>${expenseMaterialItems.map((item,i)=>`<tr id="exp_mat_row_${i}">
       <td style="padding:0.25rem 0.4rem;border-bottom:1px solid var(--gray100);">
@@ -7097,7 +7097,7 @@ setInterval(updateHeaderDate,60000);
 <!-- BILLING MODAL -->
 <!-- EXPENSE TRACKER MODAL -->
 <div class="modal-overlay" id="newExpenseModal">
-<div class="modal" style="max-width:650px;">
+<div class="modal" style="max-width:900px;">
 <div class="modal-header"><h2 id="expenseModalTitle">Add Expense</h2><button class="modal-close" onclick="closeModal('newExpenseModal')">X Close</button></div>
 <div class="modal-body">
 <div class="form-grid">
