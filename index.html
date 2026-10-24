@@ -2541,6 +2541,19 @@ function openProjectDetail(id){
     +renderProjectFinancialSummary(p.id);
 
   openModal('projectDetailModal');
+  // Restore previously active tab for this project
+  try{
+    var savedTab=localStorage.getItem('ces_activeTab_'+p.id);
+    if(savedTab){
+      setTimeout(function(){
+        var bar=document.getElementById('detTabBar_'+p.id);
+        if(bar){
+          var btn=bar.querySelector('[data-type="'+savedTab+'"]');
+          if(btn)switchDetailTab(btn);
+        }
+      },50);
+    }
+  }catch(e){}
 }
 
 function switchDetailTab(btn){
@@ -3226,7 +3239,7 @@ function renderProjectFinancialSummary(projectId){
   // Totals
   const totalContracted = projBilling.reduce((s,b)=>s+Number(b.total||0),0);
   const totalReceived = projBilling.reduce((s,b)=>{
-    return s+(b.dpReceivedDate?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
+    return s+(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
   },0);
   const totalOutstanding = Math.max(0,totalContracted-totalReceived);
   const totalExpenses = projExpenses.reduce((s,e)=>s+Number(e.amount||0),0);
@@ -4041,7 +4054,7 @@ function renderBilling(filter='all'){
   const statusColor={draft:'var(--gray500)',sent:'var(--primary)',approved:'var(--warning)',invoiced:'var(--orange)',paid:'var(--success)'};
   el.innerHTML=list.map(b=>{
     const proj=projects.find(p=>p.id===b.projectId);
-    const totalRec=(b.dpReceivedDate?b.dpAmt:0)+(b.fcuReceivedDate?b.fcuAmt:0)+(b.finalReceivedDate?b.finalAmt:0);
+    const totalRec=(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
     const outstanding=Math.max(0,(b.total||0)-totalRec);
     const hasRetention=b.retentionPct>0&&b.retentionRelease;
     const retExpiring=hasRetention&&isRetentionExpiringSoon(b);
@@ -4175,7 +4188,7 @@ function recalcPaymentSchedule(){
     document.getElementById('b_retentionRelease').value=d.toISOString().split('T')[0];
   }
   // Payment summary
-  const dpRec=document.getElementById('b_dpReceivedDate').value?dpAmt:0;
+  const dpRec=dpAmt>0?dpAmt:0;
   const fcuRec=document.getElementById('b_fcuReceivedDate').value?fcuAmt:0;
   const finalRec=document.getElementById('b_finalReceivedDate').value?Math.max(0,finalAmt):0;
   const totalRec=dpRec+fcuRec+finalRec;
@@ -4267,7 +4280,7 @@ function printBilling(id){
   const b=billing.find(x=>x.id===id);if(!b)return;
   const proj=projects.find(p=>p.id===b.projectId);
   const vatLabel={exclusive:'VAT Exclusive (12% added)',inclusive:'VAT Inclusive',exempt:'VAT Exempt'};
-  const totalRec=(b.dpReceivedDate?b.dpAmt:0)+(b.fcuReceivedDate?b.fcuAmt:0)+(b.finalReceivedDate?b.finalAmt:0);
+  const totalRec=(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
   const outstanding=Math.max(0,(b.total||0)-totalRec);
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Billing - ${b.title}</title>
