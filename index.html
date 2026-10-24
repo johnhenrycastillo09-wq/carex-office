@@ -3239,7 +3239,7 @@ function renderProjectFinancialSummary(projectId){
   // Totals
   const totalContracted = projBilling.reduce((s,b)=>s+Number(b.total||0),0);
   const totalReceived = projBilling.reduce((s,b)=>{
-    return s+(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
+    return s+(parsePHP(b.dpAmt)>0?parsePHP(b.dpAmt):0)+(b.fcuReceivedDate?parsePHP(b.fcuAmt):0)+(b.finalReceivedDate?parsePHP(b.finalAmt):0);
   },0);
   const totalOutstanding = Math.max(0,totalContracted-totalReceived);
   const totalExpenses = projExpenses.reduce((s,e)=>s+Number(e.amount||0),0);
@@ -4046,6 +4046,13 @@ function printQuotation(id){
   win.document.close();win.print();
 }
 
+function parsePHP(val){
+  if(!val)return 0;
+  if(typeof val==='number')return val;
+  // Handle "PHP 150,000.00" format
+  return Number(String(val).replace(/[^0-9.]/g,''))||0;
+}
+
 function renderBilling(filter='all'){
   const el=document.getElementById('billingList');
   let list=filter==='all'?billing:filter==='retention'?billing.filter(b=>b.retentionPct>0&&b.retentionRelease):billing.filter(b=>b.status===filter);
@@ -4054,8 +4061,8 @@ function renderBilling(filter='all'){
   const statusColor={draft:'var(--gray500)',sent:'var(--primary)',approved:'var(--warning)',invoiced:'var(--orange)',paid:'var(--success)'};
   el.innerHTML=list.map(b=>{
     const proj=projects.find(p=>p.id===b.projectId);
-    const totalRec=(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
-    const outstanding=Math.max(0,(b.total||0)-totalRec);
+    const totalRec=(parsePHP(b.dpAmt)>0?parsePHP(b.dpAmt):0)+(b.fcuReceivedDate?parsePHP(b.fcuAmt):0)+(b.finalReceivedDate?parsePHP(b.finalAmt):0);
+    const outstanding=Math.max(0,parsePHP(b.total)-totalRec);
     const hasRetention=b.retentionPct>0&&b.retentionRelease;
     const retExpiring=hasRetention&&isRetentionExpiringSoon(b);
     return `<div class="project-item" ondblclick="openEditBillingModal('${b.id}')">
@@ -4064,7 +4071,7 @@ function renderBilling(filter='all'){
         <div class="project-name">${esc(b.title)}</div>
         <div class="project-meta">${esc(b.clientName||'')} ${proj?'— '+esc(proj.name):''} · ${fmtDate(b.date)}</div>
         <div style="font-size:0.72rem;margin-top:0.2rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <span style="color:var(--primary);font-weight:700;">Total: PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+          <span style="color:var(--primary);font-weight:700;">Total: PHP ${parsePHP(b.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
           <span style="color:var(--success);font-weight:700;">Received: PHP ${totalRec.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
           ${outstanding>0?`<span style="color:var(--danger);font-weight:700;">Outstanding: PHP ${outstanding.toLocaleString('en-PH',{minimumFractionDigits:2})}</span>`:'<span style="color:var(--success);">✅ Fully Paid</span>'}
           ${hasRetention?`<span style="color:${retExpiring?'var(--danger)':'var(--warning)'};font-weight:700;">⏳ Retention ${b.retentionPct}% — Release: ${fmtDate(b.retentionRelease)}</span>`:''}
@@ -4174,7 +4181,7 @@ function recalcPaymentSchedule(){
   document.getElementById('b_total').textContent='PHP '+grandTotal.toLocaleString('en-PH',{minimumFractionDigits:2});
   const dpPct=Number(document.getElementById('b_dpPct').value)||0;
   const retPct=Number(document.getElementById('b_retentionPct').value)||0;
-  const dpAmt=Number(document.getElementById('b_dpAmt').value)||grandTotal*(dpPct/100);
+  const dpAmt=parsePHP(document.getElementById('b_dpAmt').value)||grandTotal*(dpPct/100);
   const retAmt=grandTotal*(retPct/100);
   const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
   const finalAmt=grandTotal-dpAmt-fcuAmt-retAmt;
@@ -4203,7 +4210,7 @@ function recalcPaymentFromDP(){
   const vat=document.getElementById('b_vat').value;
   let grandTotal=total;
   if(vat==='exclusive')grandTotal=total+(total*0.12);
-  const dpAmt=Number(document.getElementById('b_dpAmt').value)||0;
+  const dpAmt=parsePHP(document.getElementById('b_dpAmt').value)||0;
   const retPct=Number(document.getElementById('b_retentionPct').value)||0;
   const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
   const retAmt=grandTotal*(retPct/100);
@@ -4280,8 +4287,8 @@ function printBilling(id){
   const b=billing.find(x=>x.id===id);if(!b)return;
   const proj=projects.find(p=>p.id===b.projectId);
   const vatLabel={exclusive:'VAT Exclusive (12% added)',inclusive:'VAT Inclusive',exempt:'VAT Exempt'};
-  const totalRec=(Number(b.dpAmt||0)>0?Number(b.dpAmt||0):0)+(b.fcuReceivedDate?Number(b.fcuAmt||0):0)+(b.finalReceivedDate?Number(b.finalAmt||0):0);
-  const outstanding=Math.max(0,(b.total||0)-totalRec);
+  const totalRec=(parsePHP(b.dpAmt)>0?parsePHP(b.dpAmt):0)+(b.fcuReceivedDate?parsePHP(b.fcuAmt):0)+(b.finalReceivedDate?parsePHP(b.finalAmt):0);
+  const outstanding=Math.max(0,parsePHP(b.total)-totalRec);
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Billing - ${b.title}</title>
   <style>
@@ -4326,7 +4333,7 @@ function printBilling(id){
       <tbody>
         ${(b.lineItems||[]).map(i=>`<tr><td>${esc(i.desc)}</td><td style="text-align:center;">${i.qty}</td><td style="text-align:right;">PHP ${Number(i.price).toLocaleString('en-PH',{minimumFractionDigits:2})}</td><td style="text-align:right;">PHP ${Number(i.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`).join('')}
         ${b.vat==='exclusive'?`<tr><td colspan="3" style="text-align:right;font-size:0.8rem;color:#64748b;">VAT (12%)</td><td style="text-align:right;">PHP ${Number(b.vatAmt||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>`:''}
-        <tr class="total-row"><td colspan="3" style="text-align:right;">TOTAL AMOUNT</td><td style="text-align:right;color:#0a2f52;">PHP ${Number(b.total||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>
+        <tr class="total-row"><td colspan="3" style="text-align:right;">TOTAL AMOUNT</td><td style="text-align:right;color:#0a2f52;">PHP ${parsePHP(b.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</td></tr>
       </tbody>
     </table>
   </div>
