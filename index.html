@@ -4313,6 +4313,8 @@ function saveBilling(){
   if(editingBillingId){Object.assign(billing.find(b=>b.id===editingBillingId),data);showToast('Billing updated!');}
   else{billing.push({id:uid(),...data,createdAt:new Date().toISOString()});showToast('Billing created!');}
   save('cesv2_billing',billing);
+  // Also sync to Firebase immediately
+  if(typeof syncToFirebase==='function')syncToFirebase('cesv2_billing',billing);
   closeModal('newBillingModal');
   renderBilling();
   checkBillingRetentionNotifs();
@@ -7333,21 +7335,14 @@ setInterval(updateHeaderDate,60000);
 <div class="form-divider full"><span>Payment Schedule</span></div>
 <div class="fg full" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:1rem;">
 <div style="font-size:0.75rem;color:#0369a1;font-weight:800;margin-bottom:0.75rem;">💰 Payment Terms (auto-calculated from total)</div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
-<div>
-<label style="font-size:0.75rem;font-weight:700;">Quick Fill DP %</label>
-<select id="b_dpPct" onchange="recalcPaymentSchedule()" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;">
-<option value="50">50% DP</option>
-<option value="30">30% DP</option>
-<option value="40">40% DP</option>
-<option value="0">No DP</option>
-</select>
-</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
 <div>
 <label style="font-size:0.75rem;font-weight:700;">DP Amount Received ★</label>
 <input id="b_dpAmt" type="number" style="width:100%;padding:0.4rem;border:2px solid var(--primary);border-radius:7px;font-size:0.8rem;font-weight:700;" placeholder="Enter actual DP received" oninput="recalcPaymentFromDP()"/>
+<input type="hidden" id="b_dpPct" value="50"/>
 </div>
-<div style="display:flex;align-items:flex-end;gap:0.3rem;flex-wrap:wrap;">
+<div style="display:flex;align-items:flex-end;gap:0.3rem;flex-wrap:wrap;padding-bottom:0.1rem;">
+<span style="font-size:0.72rem;color:var(--gray500);width:100%;margin-bottom:0.2rem;">Quick fill:</span>
 <button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(50)">50%</button>
 <button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(30)">30%</button>
 <button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(40)">40%</button>
