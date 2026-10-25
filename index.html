@@ -1151,8 +1151,13 @@ function updateInMemory(key,arr){
       ['dpAmt','fcuAmt','finalAmt','retentionAmt','total','subtotal','vatAmt'].forEach(function(k){
         if(b[k]&&typeof b[k]==='string')b[k]=Number(String(b[k]).replace(/[^0-9.]/g,''))||0;
       });
+      // Fix dpAmt if missing but dpPct and total are set
+      if((!b.dpAmt||b.dpAmt===0)&&b.dpPct&&b.total>0){
+        b.dpAmt=b.total*(Number(b.dpPct)/100);
+      }
       return b;
-    }); 
+    });
+    save('cesv2_billing',billing);
     break;
     case 'cesv2_quotations': quotations=arr; break;
     case 'cesv2_expenses': expenses=arr; break;
@@ -4222,6 +4227,17 @@ if(!currentDp||currentDp==='0')document.getElementById('b_dpAmt').value=dpAmt.to
   const outstanding=grandTotal-totalRec;
   document.getElementById('b_totalReceived').textContent='PHP '+totalRec.toLocaleString('en-PH',{minimumFractionDigits:2});
   document.getElementById('b_outstanding').textContent='PHP '+Math.max(0,outstanding).toLocaleString('en-PH',{minimumFractionDigits:2});
+}
+
+function setDpFromPct(pct){
+  const total=billingLineItems.reduce((s,i)=>s+i.total,0);
+  const vat=document.getElementById('b_vat').value;
+  let grand=total;
+  if(vat==='exclusive')grand=total+(total*0.12);
+  const amt=grand*(pct/100);
+  document.getElementById('b_dpAmt').value=amt>0?amt.toFixed(2):'';
+  document.getElementById('b_dpPct').value=pct;
+  recalcPaymentFromDP();
 }
 
 function recalcPaymentFromDP(){
@@ -7317,19 +7333,25 @@ setInterval(updateHeaderDate,60000);
 <div class="form-divider full"><span>Payment Schedule</span></div>
 <div class="fg full" style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:1rem;">
 <div style="font-size:0.75rem;color:#0369a1;font-weight:800;margin-bottom:0.75rem;">💰 Payment Terms (auto-calculated from total)</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
 <div>
-<label style="font-size:0.75rem;font-weight:700;">Downpayment %</label>
+<label style="font-size:0.75rem;font-weight:700;">Quick Fill DP %</label>
 <select id="b_dpPct" onchange="recalcPaymentSchedule()" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;">
-<option value="50">50% Downpayment</option>
-<option value="30">30% Downpayment</option>
-<option value="0">No Downpayment</option>
-<option value="custom">Custom %</option>
+<option value="50">50% DP</option>
+<option value="30">30% DP</option>
+<option value="40">40% DP</option>
+<option value="0">No DP</option>
 </select>
 </div>
 <div>
-<label style="font-size:0.75rem;font-weight:700;">DP Amount</label>
-<input id="b_dpAmt" type="number" style="width:100%;padding:0.4rem;border:1.5px solid var(--gray200);border-radius:7px;font-size:0.8rem;" placeholder="Enter or auto-calculate" oninput="recalcPaymentFromDP()"/>
+<label style="font-size:0.75rem;font-weight:700;">DP Amount Received ★</label>
+<input id="b_dpAmt" type="number" style="width:100%;padding:0.4rem;border:2px solid var(--primary);border-radius:7px;font-size:0.8rem;font-weight:700;" placeholder="Enter actual DP received" oninput="recalcPaymentFromDP()"/>
+</div>
+<div style="display:flex;align-items:flex-end;gap:0.3rem;flex-wrap:wrap;">
+<button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(50)">50%</button>
+<button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(30)">30%</button>
+<button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(40)">40%</button>
+<button type="button" class="btn btn-secondary btn-xs" onclick="setDpFromPct(0)">Clear</button>
 </div>
 <div>
 <label style="font-size:0.75rem;font-weight:700;">DP Date Billed</label>
