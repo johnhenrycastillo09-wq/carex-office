@@ -1145,7 +1145,15 @@ function updateInMemory(key,arr){
     case 'cesv2_orders': orders=arr; break;
     case 'cesv2_jobs': jobs=arr; break;
     case 'cesv2_clients': clients=arr; break;
-    case 'cesv2_billing': billing=arr; break;
+    case 'cesv2_billing': 
+    billing=arr.map(function(b){
+      // Normalize PHP string amounts to numbers
+      ['dpAmt','fcuAmt','finalAmt','retentionAmt','total','subtotal','vatAmt'].forEach(function(k){
+        if(b[k]&&typeof b[k]==='string')b[k]=Number(String(b[k]).replace(/[^0-9.]/g,''))||0;
+      });
+      return b;
+    }); 
+    break;
     case 'cesv2_quotations': quotations=arr; break;
     case 'cesv2_expenses': expenses=arr; break;
     case 'cesv2_supplierItems': supplierItems=arr; break;
@@ -3074,7 +3082,15 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('mouse
 
 // ══ NEW MODULE DATA ══
 let clients=JSON.parse(localStorage.getItem('cesv2_clients')||'[]');
-let billing=JSON.parse(localStorage.getItem('cesv2_billing')||'[]');
+let billing=(function(){
+  var arr=JSON.parse(localStorage.getItem('cesv2_billing')||'[]');
+  return arr.map(function(b){
+    ['dpAmt','fcuAmt','finalAmt','retentionAmt','total','subtotal','vatAmt'].forEach(function(k){
+      if(b[k]&&typeof b[k]==='string')b[k]=Number(String(b[k]).replace(/[^0-9.]/g,''))||0;
+    });
+    return b;
+  });
+})();
 let serviceReports=JSON.parse(localStorage.getItem('cesv2_serviceReports')||'[]');
 let ptws=JSON.parse(localStorage.getItem('cesv2_ptws')||'[]');
 let deliveries=JSON.parse(localStorage.getItem('cesv2_deliveries')||'[]');
