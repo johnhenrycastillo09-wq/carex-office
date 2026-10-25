@@ -4162,11 +4162,13 @@ function openEditBillingModal(id){
   document.getElementById('b_vat').value=b.vat||'exclusive';
   document.getElementById('b_dpPct').value=b.dpPct||50;
   document.getElementById('b_retentionPct').value=b.retentionPct||0;
+  document.getElementById('b_dpAmt').value=parsePHP(b.dpAmt)||'';
   document.getElementById('b_dpBilledDate').value=b.dpBilledDate||'';
   document.getElementById('b_dpReceivedDate').value=b.dpReceivedDate||'';
   document.getElementById('b_fcuAmt').value=b.fcuAmt||'';
   document.getElementById('b_fcuBilledDate').value=b.fcuBilledDate||'';
   document.getElementById('b_fcuReceivedDate').value=b.fcuReceivedDate||'';
+  document.getElementById('b_finalAmt').value=parsePHP(b.finalAmt)||'';
   document.getElementById('b_finalBilledDate').value=b.finalBilledDate||'';
   document.getElementById('b_finalReceivedDate').value=b.finalReceivedDate||'';
   document.getElementById('b_retentionStart').value=b.retentionStart||'';
@@ -4201,7 +4203,9 @@ function recalcPaymentSchedule(){
   const retAmt=grandTotal*(retPct/100);
   const fcuAmt=Number(document.getElementById('b_fcuAmt').value)||0;
   const finalAmt=grandTotal-dpAmt-fcuAmt-retAmt;
-  document.getElementById('b_dpAmt').value=dpAmt.toFixed(2);
+  // Only auto-fill if user hasn't entered a custom amount
+const currentDp=document.getElementById('b_dpAmt').value;
+if(!currentDp||currentDp==='0')document.getElementById('b_dpAmt').value=dpAmt.toFixed(2);
   document.getElementById('b_retentionAmt').value='PHP '+retAmt.toLocaleString('en-PH',{minimumFractionDigits:2});
   document.getElementById('b_finalAmt').value='PHP '+Math.max(0,finalAmt).toLocaleString('en-PH',{minimumFractionDigits:2});
   // Auto-set retention release date (+3 months from start)
