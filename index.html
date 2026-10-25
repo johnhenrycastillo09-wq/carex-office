@@ -7084,6 +7084,22 @@ if(typeof grilles==='undefined')window.grilles=JSON.parse(localStorage.getItem('
     }
   }catch(e){}
 })();
+// Repair billing records with missing dpAmt
+(function repairBillingData(){
+  var repaired=false;
+  billing.forEach(function(b){
+    // Fix dpAmt if it's 0 or missing but dpPct and total are set
+    if((!b.dpAmt||parsePHP(b.dpAmt)===0)&&b.dpPct&&parsePHP(b.total)>0){
+      b.dpAmt=parsePHP(b.total)*(Number(b.dpPct)/100);
+      repaired=true;
+    }
+    // Normalize all PHP string amounts to numbers
+    ['dpAmt','fcuAmt','finalAmt','retentionAmt','total','subtotal','vatAmt'].forEach(function(k){
+      if(b[k]&&typeof b[k]==='string')b[k]=Number(String(b[k]).replace(/[^0-9.]/g,''))||0;
+    });
+  });
+  if(repaired){save('cesv2_billing',billing);}
+})();
 renderDashboard(); // Always update dashboard stats and notifications
 initAdminAccount(); // Create default admin if none exists
 
